@@ -28,8 +28,8 @@ const WORLD_MIN_POS_T:Vector2i = BORDER_MIN_POS_T + Vector2i.ONE; #leave gap for
 const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
-const LEVEL_COUNT:int = 16;
-var current_level_index:int = 15;
+const LEVEL_COUNT:int = 17;
+var current_level_index:int = 16;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
@@ -183,10 +183,12 @@ enum BackId { #8 bits
 	RED_WALL,
 	SAVEPOINT,
 	GOAL,
+	BOARD_CELL,
 }
 
 const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
 const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
+const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_CELL];
 const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID];
 
 enum LayerId {
@@ -237,7 +239,7 @@ enum SASearchId {
 };
 
 var tile_push_limits:Dictionary = {
-	TypeId.PLAYER : 1,
+	TypeId.PLAYER : 2,
 	TypeId.INVINCIBLE : 1,
 	TypeId.HOSTILE : 1,
 	TypeId.VOID : 1,

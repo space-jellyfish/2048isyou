@@ -225,10 +225,11 @@ func get_tile_id(pos_t:Vector2i):
 	return $Cells.get_cell_atlas_coords(GV.LayerId.TILE, pos_t).x + 1;
 
 func get_type_id(pos_t:Vector2i):
-	return $Cells.get_cell_atlas_coords(GV.LayerId.TILE, pos_t).y;
+	var tile_atlas_y:int = $Cells.get_cell_atlas_coords(GV.LayerId.TILE, pos_t).y;
+	return GV.TypeId.REGULAR if tile_atlas_y == -1 else tile_atlas_y;
 
 func get_back_id(pos_t:Vector2i):
-	return $Cells.get_cell_atlas_coords(GV.LayerId.BACK, pos_t).x;
+	return maxi($Cells.get_cell_atlas_coords(GV.LayerId.BACK, pos_t).x, 0);
 
 func is_tile(pos_t:Vector2i):
 	return get_tile_id(pos_t) != 0;
@@ -255,7 +256,7 @@ func is_pow_splittable(pow:int):
 	return pow > 0;
 
 func is_compatible(type_id:int, back_id:int):
-	if back_id == GV.BackId.EMPTY:
+	if back_id in GV.B_EMPTY:
 		return true;
 	if back_id in GV.B_WALL_OR_BORDER:
 		return false;
@@ -375,13 +376,28 @@ func set_player_pos_t(pos_t:Vector2i):
 	$Pathfinder.set_player_pos(pos_t);
 
 #update player_pos_t
-func try_slide(pos_t:Vector2i, dir:Vector2i) -> bool:
+func try_slide(pos_t:Vector2i, dir:Vector2i, is_splitted=false) -> bool:
 	var push_count:int = get_slide_push_count(pos_t, dir);
 	if push_count != -1:
+		#get tile_id at target pos
+		var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
+		var target_tile_id:int = get_tile_id(merge_pos_t);
+		
+		#update board
 		perform_slide(pos_t, dir, push_count);
-		set_player_pos_t(player_pos_t + dir);
+		if pos_t == player_pos_t:
+			set_player_pos_t(player_pos_t + dir);
 		if get_type_id(player_pos_t) != GV.TypeId.PLAYER:
 			is_player_alive = false;
+		
+		#play merge sound
+		if target_tile_id:
+			game.get_node("Audio/Combine").play();
+		
+		#play slide sound
+		if not is_splitted:
+			game.get_node("Audio/Slide").play();
+		
 		return true;
 	return false;
 
@@ -395,10 +411,11 @@ func try_split(pos_t:Vector2i, dir:Vector2i) -> bool:
 	#halve tile, try_slide, then (re)set tile at pos_t
 	var splitted_coord:Vector2i = Vector2i(coord.x - val.y, coord.y);
 	$Cells.set_cell(GV.LayerId.TILE, pos_t, GV.LayerId.TILE, splitted_coord);
-	if try_slide(pos_t, dir):
+	if try_slide(pos_t, dir, true):
 		var parent_coord:Vector2i = Vector2i(splitted_coord.x, GV.TypeId.REGULAR);
 		$Cells.set_cell(GV.LayerId.TILE, pos_t, GV.LayerId.TILE, parent_coord);
 		#don't update player_pos_t since try_slide() already did it
+		game.get_node("Audio/Split").play();
 		return true;
 	else:
 		$Cells.set_cell(GV.LayerId.TILE, pos_t, GV.LayerId.TILE, coord);
@@ -410,6 +427,7 @@ func try_shift(pos_t:Vector2i, dir:Vector2i) -> bool:
 	if distance:
 		perform_shift(pos_t, dir, distance);
 		set_player_pos_t(player_pos_t + distance * dir);
+		game.get_node("Audio/Shift").play();
 		return true;
 	return false;
 
@@ -428,7 +446,10 @@ func consume_premove():
 	var action_func:Callable = Callable(self, "try_" + action);
 	if action_func.call(player_pos_t, dir):
 		#start animation
-		#play sound effect
+		#instantiate sprite (TileMap updates are batched at end of frame, so tile will remain visible)
+		
+		
+		#sound effects are called from action_func
 		#update last_action_finished, emit signal
 		#update player_pos_t?
 		#update player_last_dir?
