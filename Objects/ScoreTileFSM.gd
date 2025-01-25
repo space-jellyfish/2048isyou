@@ -21,7 +21,7 @@ var snapshot_locations_new:Array[Vector2i] = [];
 
 var score_tile:PackedScene = preload("res://Objects/ScoreTile.tscn");
 var img:Sprite2D;
-var animators:Array[ScoreTileAnimator] = [];
+var animators:Array[ScoreTileAnimatorOld] = [];
 var pusheds:Array[ScoreTile] = []; #tiles pushed by self; to update collider's pusher after player is instantiated in split
 var pusher:ScoreTile; #player at start of line, not immediate neighbor
 var partner:ScoreTile;

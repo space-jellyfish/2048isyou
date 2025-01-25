@@ -89,8 +89,8 @@ const PLAYER_SNAP_RANGE:float = TILE_WIDTH * (1 - PLAYER_COLLIDER_SCALE);
 const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;
-const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
-const TILE_SLIDE_SPEED:float = 320;
+#const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
+const TILE_SLIDE_SPEED:float = 288; #320
 const COMBINING_MERGE_RATIO:float = 1/2.7;
 
 const SNAP_FRAME_COUNT:int = 1;
@@ -114,10 +114,32 @@ enum InputType {
 	UNDO
 }
 
-enum ScaleAnim {
-	DUANG=0,
-	DWING
-};
+#animation-related stuff
+enum AnimatorId {
+	SLIDE, #uniform speed
+	SHIFT, #accelerates to cover shift dist in same time as a slide
+	DWING, #temp shrink upon split
+	DUANG, #temp expand upon merge
+	FADE_IN,
+	FADE_OUT,
+}
+
+#z_index
+enum ZId {
+	BACKGROUND = -10,
+	HIDDEN_LABEL = -9,
+	SAVE_OR_GOAL = -2,
+	MOVING = -1, #tiles merging into another (stationary) tile; for simplicity, all sliding/shifting tiles are grouped here
+	DEFAULT = 0, #walls, stationary tiles
+	SPLITTING_NEW = 1,
+	SPLITTING_OLD = 2,
+	COMBINING_NEW = 3,
+	COMBINING_OLD = 4,
+	LEVEL_NAME = 10,
+}
+
+const TILE_SHEET_HFRAMES = 31;
+const TILE_SHEET_VFRAMES = 6;
 
 const DUANG_START_MODULATE:float = 0; #0.2;
 const DUANG_START_ANGLE:float = 1;
@@ -183,17 +205,41 @@ enum BackId { #8 bits
 	RED_WALL,
 	SAVEPOINT,
 	GOAL,
-	BOARD_CELL,
+	BOARD_FRAME,
+}
+
+enum EntityId {
+	PLAYER,
+	INVINCIBLE,
+	HOSTILE,
+	VOID,
+	STP_SPAWNING,
+	STP_SPAWNED,
+	SQUID,
 }
 
 const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
 const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
-const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_CELL];
+const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
 const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID];
 
 enum LayerId {
 	BACK,
-	TILE
+	TILE,
+	COLLISION,
+}
+
+enum CollisionId {
+	STABLE, #unanimated, ready for action
+	HORIZONTAL,
+	VERTICAL,
+	SOLID, #scaling animation
+}
+
+enum AlternativeId {
+	EMPTY = -1,
+	STABLE,
+	ANIMATING,
 }
 
 enum ColorId {
@@ -246,11 +292,52 @@ var tile_push_limits:Dictionary = {
 	TypeId.REGULAR : 0,
 };
 
+var merge_priorities:Dictionary = {
+	-1 : -1,
+	TypeId.REGULAR : 0,
+	TypeId.PLAYER : 1,
+	TypeId.HOSTILE : 2,
+	TypeId.INVINCIBLE : 3,
+	TypeId.VOID : 4,
+}
+
+#each entity is pushable by entities with equal or greater priority
+var push_priorities:Dictionary = {
+	EntityId.STP_SPAWNING : 0,
+	EntityId.VOID : 1,
+	EntityId.HOSTILE : 2,
+	EntityId.INVINCIBLE : 3,
+	EntityId.STP_SPAWNED : 4,
+	EntityId.PLAYER : 5,
+	EntityId.SQUID : 6,
+}
+
+#for tiebreaking if 2+ entities have premoves queued
+var premove_priorities:Dictionary = {
+	EntityId.STP_SPAWNING : 0,
+	EntityId.PLAYER : 1,
+	EntityId.HOSTILE : 2,
+	EntityId.INVINCIBLE : 3,
+	EntityId.VOID : 4,
+	EntityId.STP_SPAWNED : 5,
+	EntityId.SQUID : 6,
+	#snake continuity at 90deg turns?
+}
+
+var max_shift_dists:Dictionary = {
+	TypeId.PLAYER : 4,
+	TypeId.INVINCIBLE : 4,
+	TypeId.HOSTILE : 0,
+	TypeId.VOID : 8,
+	TypeId.REGULAR : 0,
+}
+
 #const PHYSICS_ENABLER_SHAPE:RectangleShape2D = preload("res://Objects/PhysicsEnablerShape.tres");
 const PHYSICS_ENABLER_BASE_SIZE:Vector2 = Vector2(144, 144); #px, px; at tile_push_limit = 0
 
 
 func _ready():
+	#TODO remove these
 	level_scores.resize(LEVEL_COUNT);
 	level_scores.fill(0);
 	level_last_savepoint_ids.resize(LEVEL_COUNT);
@@ -356,6 +443,12 @@ func is_approx_equal(a:float, b:float, tolerance:float) -> bool:
 	if absf(a - b) <= tolerance:
 		return true;
 	return false;
+
+func dir_to_collision_id(dir:Vector2i) -> int:
+	return 2 * abs(dir.y) + dir.x;
+
+func collision_id_to_vec(collision_id:int) -> Vector2i:
+	return Vector2i(collision_id & 0b01, collision_id & 0b10);
 
 #func set_tile_push_limit(_tile_push_limit):
 #	abilities["tile_push_limit"] = _tile_push_limit;

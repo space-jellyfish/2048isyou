@@ -10,7 +10,7 @@ func enter():
 	frame_count = 0;
 	
 	#start animation
-	var animator = ScoreTileAnimator.new(actor.power, actor.ssign, GV.ScaleAnim.DUANG, 4, 3);
+	var animator = ScoreTileAnimatorOld.new(actor.power, actor.ssign, GV.ScaleAnim.DUANG, 4, 3);
 	actor.add_child(animator);
 	
 	#inherit partner's premoves

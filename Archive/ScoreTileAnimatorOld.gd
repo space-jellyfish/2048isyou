@@ -1,4 +1,4 @@
-class_name ScoreTileAnimator
+class_name ScoreTileAnimatorOld
 extends Node
 #used to animate ScoreTile combining/splitting
 #parent.img modulate.a and scale may start at any value

@@ -770,3 +770,23 @@ func can_shift(pos_t:Vector2i, dir:Vector2i):
 			#$Pathfinder.reset_sa_cumulative_search_times();
 			#return;
 '''
+
+'''
+var action_buffer:Dictionary; #pos_t, tile atlas_coords; stores true result of action
+#use ScoreTileAnimator frame coords instead? NAH, not "secure" enough, and awkward for handling interrupts
+'''
+
+'''
+# base class for animated ScoreTile sprite
+# inits texture based on tile_id
+# child classes specialize to handle different animation types
+# animation parameters: position, scale, modulate, z_index
+class_name ScoreTileAnimator
+'''
+
+'''
+enum ScaleAnim {
+	DUANG=0,
+	DWING
+};
+'''

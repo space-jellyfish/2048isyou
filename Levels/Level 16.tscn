@@ -1,16 +1,19 @@
-[gd_scene load_steps=5 format=3 uid="uid://dmi0wxdbq57th"]
+[gd_scene load_steps=6 format=3 uid="uid://dmi0wxdbq57th"]
 
 [ext_resource type="Script" path="res://Levels/Level 16.gd" id="1_0046r"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_nrldh"]
 [ext_resource type="Script" path="res://Camera/TrackingCamWorld.gd" id="3_ersi7"]
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="4_ddlr5"]
+[ext_resource type="Texture2D" uid="uid://cdovid55dbxns" path="res://Sprites/Sheets/tile_sheet.png" id="5_80ya5"]
 
 [node name="lv" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_0046r")
 resolution_t = Vector2i(20, 15)
+min_pos = null
 max_pos = Vector2(3680, 1200)
 player_pos_t = Vector2i(6, 8)
+metadata/_edit_lock_ = true
 
 [node name="LevelName" type="Label" parent="."]
 modulate = Color(1, 1, 1, 0)
@@ -51,5 +54,14 @@ layer_0/tile_data = PackedInt32Array(0, 262144, 0, 65536, 262144, 0, 131072, 262
 layer_1/name = "tile"
 layer_1/z_index = 1
 layer_1/tile_data = PackedInt32Array(458760, 1114113, 4, 327687, 1376257, 4, 393221, 1376257, 4, 393222, 1179649, 4, 327685, 1703937, 4, 327686, 1507329, 4, 524294, 1114113, 0)
+layer_2/name = "collision"
+metadata/_edit_lock_ = true
 
 [node name="Pathfinder" type="Pathfinder" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(400, 200)
+texture = ExtResource("5_80ya5")
+centered = false
+hframes = 31
+vframes = 6

@@ -22,7 +22,7 @@ func enter():
 	actor.set_color(GV.ColorId.GRAY, false);
 	
 	#start animation
-	var animator = ScoreTileAnimator.new(actor.power, actor.ssign, GV.ScaleAnim.DWING, 2, 1);
+	var animator = ScoreTileAnimatorOld.new(actor.power, actor.ssign, GV.ScaleAnim.DWING, 2, 1);
 	actor.add_child(animator);
 	
 	#create and slide/merge player in slide_dir
