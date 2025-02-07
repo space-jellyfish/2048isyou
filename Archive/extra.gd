@@ -55,7 +55,7 @@ extends Node
 		States.IDLE:
 			pass;'''
 
-'''		if collider is ScoreTile:
+'''		if collider is TileForFSM:
 			#slide if normal_dir and player_dir agree
 			var slide_dir:Vector2 = collision.get_normal() * (-1);
 			if abs(slide_dir.x) >= abs(slide_dir.y):
@@ -104,7 +104,7 @@ func slide(slide_dir:Vector2, collide_with_player:bool) -> bool:
 		var collider := ray.get_collider();
 		if collider.is_in_group("wall"): #obstructed
 			return false;
-		if collider is ScoreTile:
+		if collider is TileForFSM:
 			if collider.power == power: #merge
 				change_state("merging1");
 				game.combine_sound.play();
@@ -266,7 +266,7 @@ func next_state(dir:Vector2) -> Node2D:
 		
 		if collider.is_in_group("wall"):
 			return null;
-		elif collider is ScoreTile:
+		elif collider is TileForFSM:
 			if collider.power == actor.power:
 				return states.merging1;
 			else: #try to slide tile
@@ -300,7 +300,7 @@ func slide(dir:Vector2) -> bool:
 			if collider.is_in_group("wall"): #obstructed
 				return false;
 				
-			if collider is ScoreTile:
+			if collider is TileForFSM:
 				if not xaligned or not yaligned: #in snap mode, must be aligned to do stuff
 					return false;
 				if collider.get_state() not in ["tile", "snap"]:
@@ -367,7 +367,7 @@ func _physics_process(_delta):
 '''
 
 '''
-func _init(level_, tiles_:Array[ScoreTile], new_tiles_:Array[ScoreTile]):
+func _init(level_, tiles_:Array[TileForFSM], new_tiles_:Array[TileForFSM]):
 	level = level_;
 	tiles = tiles_.duplicate();
 	new_tiles = new_tiles_.duplicate();
@@ -444,10 +444,10 @@ func has_non_player():
 
 ''' from lv5.gd
 func _ready():
-	#init random score tiles
-	for score_tile in scoretiles.get_children():
-		score_tile.power = GV.rng.randi_range(1, 11);
-		score_tile.update_texture(score_tile.img, score_tile.power, score_tile.ssign, false);
+	#init random tiles
+	for tile in tiles.get_children():
+		tile.power = GV.rng.randi_range(1, 11);
+		tile.update_texture(tile.img, tile.power, tile.ssign, false);
 
 '''
 
@@ -502,7 +502,7 @@ func is_snapshot_valid(snapshot):
 
 ''' under change_level, if GV.reverting
 		#update all snapshot_location refs
-		for tile in current_level.scoretiles.get_children():
+		for tile in current_level.tiles.get_children():
 			for location in tile.snapshot_locations:
 				GV.temp_player_snapshots[location.x].tiles[location.y] = tile;
 			for location_new in tile.snapshot_locations_new:
@@ -523,7 +523,7 @@ func is_snapshot_valid(snapshot):
 '''
 
 ''' pack does not duplicate member arrays
-	var packed_tile = load("res://Objects/ScoreTile.tscn");
+	var packed_tile = load("res://Objects/TileForFSM.tscn");
 	var test = packed_tile.instantiate();
 	test.snapshot_locations.push_back(Vector2i(1,1));
 	print(test.snapshot_locations);
@@ -582,7 +582,7 @@ func add_premove():
 
 ''' trick for pusher updating
 	#create and slide/merge player in slide_dir
-	player = actor.score_tile.instantiate();
+	player = actor.packed_tile.instantiate();
 	if actor.partner != null:
 		actor.partner.pusher = player;
 		actor.partner = null;
@@ -604,7 +604,7 @@ func add_premove():
 	if global_tile_pos == Vector2i.ZERO: #player
 		chunk.cells[local_tile_pos.y][local_tile_pos.x] = GV.StuffId.POS_ONE;
 		
-		var player = score_tile.instantiate();
+		var player = packed_tile.instantiate();
 		#player.call_deferred("set_position", GV.pos_t_to_world(local_tile_pos)); #relative
 		player.position = GV.pos_t_to_world(local_tile_pos);
 		player.is_player = true;
@@ -773,15 +773,15 @@ func can_shift(pos_t:Vector2i, dir:Vector2i):
 
 '''
 var action_buffer:Dictionary; #pos_t, tile atlas_coords; stores true result of action
-#use ScoreTileAnimator frame coords instead? NAH, not "secure" enough, and awkward for handling interrupts
+#use TileForTilemap frame coords instead? NAH, not "secure" enough, and awkward for handling interrupts
 '''
 
 '''
-# base class for animated ScoreTile sprite
+# base class for animated TileForFSM sprite
 # inits texture based on tile_id
 # child classes specialize to handle different animation types
 # animation parameters: position, scale, modulate, z_index
-class_name ScoreTileAnimator
+class_name TileForFSMAnimator
 '''
 
 '''
@@ -789,4 +789,285 @@ enum ScaleAnim {
 	DUANG=0,
 	DWING
 };
+'''
+
+'''
+#create an AnimationSprite (if it doesn't exist) and add its animators for every tile affected by the action
+func animate_action(action:String, pos_t:Vector2i, dir:Vector2i, target_dist:int = 1, tile_push_count:int = 0):
+	match action:
+		"slide":
+			animate_slide(pos_t, dir, tile_push_count);
+		"split":
+			animate_slide(pos_t, dir, tile_push_count);
+			animate_split(pos_t);
+		"shift":
+			animate_shift(pos_t, dir, target_dist);
+'''
+
+'''
+		#check for head-on slide-slide
+		var from_pos_t:Vector2i = pos_t + (push_count + 2) * dir;
+		var animator:TileForTilemapAnimator = transit_tiles.get(from_pos_t);
+		if animator is TileForTilemapSlideAnimator and animator.dir == -dir:
+			#TODO start bounce animation
+			#TODO if split, reverse parent splitting animation
+			
+			return false;
+		
+'''
+
+''' deprecated, using TileForTilemap.CollisionShape instead (to handle collisions with squid)
+enum CollisionId {
+	STABLE, #unanimated, ready for action
+	HORIZONTAL,
+	VERTICAL,
+	SOLID, #scaling animation
+}
+
+func dir_to_collision_id(dir:Vector2i) -> int:
+	return 2 * abs(dir.y) + dir.x;
+
+func collision_id_to_vec(collision_id:int) -> Vector2i:
+	return Vector2i(collision_id & 0b01, collision_id & 0b10);
+'''
+
+'''
+func get_collision_id(pos_t:Vector2i):
+	return get_atlas_coords(GV.LayerId.COLLISION, pos_t).x + 1;
+
+func get_collision_atlas_coords(collision_id:int):
+	return Vector2i(-1, collision_id - 1);
+	
+func is_immediate_collision(dir:Vector2i, collision_id:int):
+	return (collision_id | GV.dir_to_collision_id(dir)) == GV.CollisionId.SOLID;
+
+func is_stable(pos_t:Vector2i):
+	if get_collision_id(pos_t) == GV.CollisionId.STABLE:
+		assert(get_alternative_id(pos_t) != GV.AlternativeId.ANIMATING);
+	
+	return get_collision_id(pos_t) == GV.CollisionId.STABLE;
+'''
+
+''' with collision_id updating
+#TODO set target_collision_id to SOLID if there is tile at target
+func initiate_slide(pos_t:Vector2i, dir:Vector2i, push_count:int, is_splitted:bool):
+	#update collision_id; tile_id is updated after slide completes
+	var collision_id:int = GV.dir_to_collision_id(dir);
+	var source_collision_id:int = GV.CollisionId.SOLID if is_splitted else collision_id;
+	var collision_atlas_coords:Vector2i = get_collision_atlas_coords(collision_id);
+	var source_collision_atlas_coords:Vector2i = get_collision_atlas_coords(source_collision_id);
+	set_atlas_coords(GV.LayerId.COLLISION, pos_t, source_collision_atlas_coords);
+	
+	for dist_to_src in range(1, push_count + 2):
+		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
+		set_atlas_coords(GV.LayerId.COLLISION, curr_pos_t, collision_atlas_coords);
+	
+	#start audio and animation
+	animate_slide(pos_t, dir, push_count);
+	
+	var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
+	if get_stable_tile_id(merge_pos_t):
+		game.get_node("Audio/Combine").play();
+	if is_splitted:
+		animate_split(pos_t);
+		game.get_node("Audio/Split").play();
+	else:
+		game.get_node("Audio/Slide").play();
+
+# update board, player_pos_t, is_player_alive
+# if splitted, make sure to use splitted src coords
+func finalize_slide(pos_t:Vector2i, dir:Vector2i, push_count:int, is_splitted:bool):
+	var collision_id:int = GV.dir_to_collision_id(dir);
+	var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
+	for dist_to_merge_pos_t in range(0, push_count + 1):
+		var curr_pos_t:Vector2i = merge_pos_t - dist_to_merge_pos_t * dir;
+		var prev_pos_t:Vector2i = curr_pos_t - dir;
+		assert(is_stable(prev_pos_t));
+		var prev_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, prev_pos_t);
+		var result_coords = prev_coords;
+		
+		#merge if curr_pos_t == merge_pos_t
+		if dist_to_merge_pos_t == 0:
+			var curr_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, curr_pos_t) if is_stable(curr_pos_t) else -Vector2i.ONE;
+			result_coords = get_merged_atlas_coords(prev_coords, curr_coords); #this propagates tile type
+		
+		#update player_pos_t
+		if prev_pos_t == player_pos_t:
+			set_player_pos_t(curr_pos_t);
+		
+		#tile_id, alternative_id, collision_id
+		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, result_coords, 1); #TileMap updates are batched at end of frame, so tile will remain visible
+		set_atlas_coords(GV.LayerId.COLLISION, curr_pos_t, get_collision_atlas_coords(collision_id));
+	
+	#tile_id, alternative_id, collision_id (remove source tile)
+	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
+	var source_collision_id:int = GV.CollisionId.SOLID if is_splitted else collision_id;
+	set_atlas_coords(GV.LayerId.COLLISION, pos_t, get_collision_atlas_coords(source_collision_id));
+	
+	#update is_player_alive
+	if get_type_id(player_pos_t) != GV.TypeId.PLAYER:
+		is_player_alive = false;
+'''
+
+''' from TileForTilemapSlideAnimator.step()
+#collision_id at target_pos_t was set by current slide, not useful to check
+'''
+
+'''
+var transit_tiles:Dictionary;
+
+#fetch animation_sprite, or create one and add to dict if it doesn't exist
+#check is necessary bc VOID tile always has it
+func get_animation_sprite(key:Vector3i) -> TileForTilemap:
+	var ans:TileForTilemap = transit_tiles.get(key);
+	if not ans:
+		var pos_t:Vector2i = Vector2i(key.x, key.y);
+		ans = get_pooled_tile(tile_sheet, get_atlas_coords(GV.LayerId.TILE, pos_t), pos_t);
+		transit_tiles[key] = ans;
+	return ans;
+
+#hides tiles (by setting alternative_id) and initializes transit_tiles
+func animate_slide(pos_t:Vector2i, dir:Vector2i, tile_push_count:int):
+	for dist_to_src in range(tile_push_count + 1):
+		#get animation_sprite
+		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
+		var key:Vector3i = Vector3i(curr_pos_t.x, curr_pos_t.y, GV.ZId.MOVING);
+		var curr_sprite:TileForTilemap = get_animation_sprite(key);
+		
+		#add animator
+		curr_sprite.add_animator(GV.AnimatorId.SLIDE).finished.connect(_on_animator_finished);
+		
+		#set alternative_id
+		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, get_atlas_coords(GV.LayerId.TILE, curr_pos_t), 1);
+
+func animate_split(pos_t:Vector2i):
+	#get transit_tiles
+	var old_key:Vector3i = Vector3i(pos_t.x, pos_t.y, GV.ZId.SPLITTING_OLD);
+	var new_key:Vector3i = Vector3i(pos_t.x, pos_t.y, GV.ZId.SPLITTING_NEW);
+	var old_sprite:TileForTilemap = get_animation_sprite(old_key);
+	var new_sprite:TileForTilemap = get_animation_sprite(new_key);
+	
+	#add animators
+	old_sprite.add_animator(GV.AnimatorId.DWING).finished.connect(_on_animator_finished);
+	old_sprite.add_animator(GV.AnimatorId.FADE_OUT).finished.connect(_on_animator_finished);
+	new_sprite.add_animator(GV.AnimatorId.DWING).finished.connect(_on_animator_finished);
+	new_sprite.add_animator(GV.AnimatorId.FADE_IN).finished.connect(_on_animator_finished);
+
+	#set alternative_id
+	set_atlas_coords(GV.LayerId.TILE, pos_t, get_atlas_coords(GV.LayerId.TILE, pos_t), 1);
+
+func animate_shift(pos_t:Vector2i, dir:Vector2i, target_dist:int):
+	#get animation_sprite
+	var key:Vector3i = Vector3i(pos_t.x, pos_t.y, GV.ZId.MOVING);
+	var sprite:TileForTilemap = get_animation_sprite(key);
+	
+	#add animator
+	sprite.add_animator(GV.AnimatorId.SHIFT).finished.connect(_on_animator_finished);
+
+	#set alternative_id
+	set_atlas_coords(GV.LayerId.TILE, pos_t, get_atlas_coords(GV.LayerId.TILE, pos_t), 1);
+
+func _on_animation_sprite_freed(key:Vector3i):
+	#remove from transit_tiles
+	transit_tiles.erase(key);
+	
+	#update TileMap and player stats (NAH, do it in Animator to stay consistent)
+	
+
+'''
+
+'''
+#step_id == GV.animator_stepped indicates animator step()ed in current frame
+#determines where to move tile for collision (midpoint vs. touching)
+var step_id:bool;
+
+
+func _init():
+	step_id = GV.animator_stepped;
+'''
+
+''' from TileFromTilemapSlideAnimator
+func step(sprite:TileForTilemap, delta:float) -> bool:
+	var step_dist:float = min(speed * delta, remaining_dist);
+	
+	#check for bounce (ignore touching tile if it's sliding in same dir)
+	#remember sprite might not be first tile in the line (of sliding tiles)
+	#immediate collision (PERP/SOLID) not possible
+	for dt in range(1, 3):
+		var collider_pos_t:Vector2i = src_pos_t + dt * dir;
+		var key:Vector3i = Vector3i(collider_pos_t.x, collider_pos_t.y, GV.ZId.MOVING);
+		var collider:TileForTilemap = world.transit_tiles.get(key);
+		var d_pos:Vector2i = collider.position - sprite.position;
+		if collider.position + collider.animators.get(GV.AnimatorType.MOVE).speed -
+	
+	#slide
+	sprite.position += step_dist * dir;
+	remaining_dist -= step_dist;
+	
+	if not remaining_dist:
+		finished.emit();
+	
+	return remaining_dist;
+	
+	#TODO upon COMBINING_MERGE_RATIO, add merge animators if merge_pos_t has tile
+'''
+
+
+'''
+# update board, player_pos_t, is_player_alive
+# if splitted, make sure to use splitted src coords
+func finalize_slide(pos_t:Vector2i, dir:Vector2i, push_count:int, is_splitted:bool):
+	var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
+	for dist_to_merge_pos_t in range(0, push_count + 1):
+		var curr_pos_t:Vector2i = merge_pos_t - dist_to_merge_pos_t * dir;
+		var prev_pos_t:Vector2i = curr_pos_t - dir;
+		assert(is_stable(prev_pos_t));
+		var prev_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, prev_pos_t);
+		var result_coords = prev_coords;
+		
+		#merge if curr_pos_t == merge_pos_t
+		if dist_to_merge_pos_t == 0:
+			var curr_coords:Vector2i = get_stable_tile_atlas_coords(curr_pos_t);
+			result_coords = get_merged_atlas_coords(prev_coords, curr_coords); #this propagates tile type
+		
+		#update player_pos_t
+		if prev_pos_t == player_pos_t:
+			set_player_pos_t(curr_pos_t);
+		
+		#tile_id, alternative_id
+		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, result_coords, 1); #TileMap updates are batched at end of frame, so tile will remain visible
+	
+	#tile_id, alternative_id (remove source tile)
+	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
+	
+	#update is_player_alive
+	if get_type_id(player_pos_t) != GV.TypeId.PLAYER:
+		is_player_alive = false;
+
+func finalize_split(pos_t:Vector2i):
+	var parent_coords:Vector2i = get_splitted_tile_atlas_coords(get_atlas_coords(GV.LayerId.TILE, pos_t), false);
+	set_atlas_coords(GV.LayerId.TILE, pos_t, parent_coords);
+	#don't update player_pos_t since finalize_slide() already did it
+'''
+
+'''
+					if collider_mover.dir == dir:
+						if collider_mover is TileForTilemapShiftAnimator and collider_mover.is_reverse_queued:
+							bounce();
+						if collider_mover is TileForTilemapSlideAnimator 
+					elif collider.mover.dir == -dir: 
+						
+					else: #perpendicular
+						bounce();
+'''
+
+'''
+# stores collider_mover that caused queued_reverse if is_reverse_queued and collider has one, else null
+var reverser_mover:TileForTilemapAnimator; #if SlideAnimator, assume it didn't bounce
+var is_reverse_queued:bool = false;
+
+					elif collider_mover.dir == dir:
+						if collider_mover is TileForTilemapShiftAnimator:
+							if collider_mover.reverser and collider_mover.reverser is TileForTilemap and collider_mover.reverser.move_animator and collider_mover.reverser.move_animator is TileForTilemapSlideAnimator:
+								collider_mover.reverser.bounce();
 '''

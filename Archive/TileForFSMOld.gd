@@ -1,4 +1,4 @@
-#class_name ScoreTile
+class_name TileForFSMOld
 extends CharacterBody2D
 
 @onready var GV:Node = $"/root/GV";
@@ -23,7 +23,7 @@ var duang_factor:float = 1/sin(duang_start_angle);
 var duang_curr_angle:float;
 var duang_end_angle:float = PI - duang_start_angle;
 var duang_speed:float = 0.07;
-var partner:ScoreTile;
+var partner:TileForFSMOld;
 
 
 func _ready():
@@ -106,7 +106,7 @@ func slide(slide_dir:Vector2i, collide_with_player:bool) -> bool:
 		var collider := ray.get_collider();
 		if collider.is_in_group("wall"): #obstructed
 			return false;
-		if collider is ScoreTile:
+		if collider is TileForFSMOld:
 			if collider.power == power: #merge
 				state = States.MERGING;
 				game_audio.get_node("Combine").play();

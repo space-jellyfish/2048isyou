@@ -4,13 +4,13 @@ extends Node2D
 
 #the first player to enter any savepoint, whose value will be respawned
 #on save, other players will become regular tiles
-@export var player_saved:ScoreTile;
+@export var player_saved:TileForFSM;
 @export var resolution_t:Vector2i = GV.RESOLUTION_T;
 @export var min_pos:Vector2 = Vector2.ZERO;
 @export var max_pos:Vector2 = GV.RESOLUTION;
 
 @onready var game:Node2D = $"/root/Game";
-var scoretiles:Node2D;
+var tiles:Node2D;
 var savepoints:Node2D;
 var baddies:Node2D;
 
@@ -53,7 +53,7 @@ func set_level_name():
 
 func _ready():
 	print("level player saved: ", player_saved);
-	scoretiles = $ScoreTiles;
+	tiles = $Tiles;
 	savepoints = $SavePoints;
 	baddies = $Baddies;
 	
@@ -142,7 +142,7 @@ func on_copy():
 				level_array[pos_t.y][pos_t.x] = GV.StuffId.SAVEPOINT;
 		
 		#store tile stuff ids (add value id as offset)
-		for tile in scoretiles.get_children():
+		for tile in tiles.get_children():
 			var pos_t = GV.world_to_pos_t(tile.position);
 			var id = GV.tile_val_to_id(tile.power, tile.ssign);
 			if id == GV.StuffId.ZERO:

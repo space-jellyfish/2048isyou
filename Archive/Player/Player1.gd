@@ -23,7 +23,7 @@ func _physics_process(_delta):
 	for index in get_slide_collision_count():
 		var collision := get_slide_collision(index);
 		var collider := collision.get_collider();
-		if collider is ScoreTile:
+		if collider is TileForFSM:
 			#find slide direction
 			var slide_dir:Vector2 = collision.get_normal() * (-1);
 			if abs(slide_dir.x) >= abs(slide_dir.y):
@@ -44,7 +44,7 @@ func die():
 
 
 func _on_physics_enabler_body_entered(body):
-	if body is ScoreTile:
+	if body is TileForFSM:
 		body.get_node("FSM").set_process(true);
 		body.get_node("FSM").set_physics_process(true);
 		for i in range(1, 5):
@@ -53,7 +53,7 @@ func _on_physics_enabler_body_entered(body):
 
 
 func _on_physics_enabler_body_exited(body):
-	if body is ScoreTile:
+	if body is TileForFSM:
 		body.get_node("FSM").set_process(false);
 		body.get_node("FSM").set_physics_process(false);
 		for i in range(1, 5):

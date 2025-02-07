@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://drayn2lsacylt"]
 
-[ext_resource type="Script" path="res://Objects/Freedom.gd" id="1_1gnah"]
+[ext_resource type="Script" path="res://Objects/LevelPeripheryCuller.gd" id="1_1gnah"]
 
 [node name="Freedom" type="Area2D"]
 script = ExtResource("1_1gnah")

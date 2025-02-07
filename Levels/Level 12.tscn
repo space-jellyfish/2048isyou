@@ -45,7 +45,7 @@ script = ExtResource("3_yelvu")
 tile_set = ExtResource("4_5jc0c")
 format = 2
 
-[node name="ScoreTiles" type="Node2D" parent="."]
+[node name="Tiles" type="Node2D" parent="."]
 
 [node name="SavePoints" type="Node2D" parent="."]
 

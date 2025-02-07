@@ -114,19 +114,19 @@ func add_level(n):
 	if current_level is Level:
 		var player_saved = current_level.player_saved;
 		if is_instance_valid(player_saved):
-			current_level.get_node("ScoreTiles").remove_child(current_level.player_saved);
+			current_level.get_node("Tiles").remove_child(current_level.player_saved);
 			player_saved.free();
 	
 	#migrate old snapshot locations
 	if GV.reverting and GV.current_level_from_save:
-		var scoretiles = current_level.get_node("ScoreTiles");
+		var tiles = current_level.get_node("Tiles");
 		var baddies = current_level.get_node("Baddies");
 		var tiles_snapshot_locations = GV.current_savepoint_tiles_snapshot_locations.pop_back();
 		var tiles_snapshot_locations_new = GV.current_savepoint_tiles_snapshot_locations_new.pop_back();
 		var baddies_snapshot_locations = GV.current_savepoint_baddies_snapshot_locations.pop_back();
 		
-		for tile_itr in scoretiles.get_child_count():
-			var tile = scoretiles.get_child(tile_itr);
+		for tile_itr in tiles.get_child_count():
+			var tile = tiles.get_child(tile_itr);
 			tile.snapshot_locations = tiles_snapshot_locations[tile_itr];
 			tile.snapshot_locations_new = tiles_snapshot_locations_new[tile_itr];
 		for baddie_itr in baddies.get_child_count():
@@ -165,9 +165,9 @@ func change_level(n):
 		GV.current_savepoint_baddies_snapshot_locations.clear();
 		
 		#clear snapshot locations
-		for scoretile in current_level.scoretiles.get_children():
-			scoretile.snapshot_locations.clear();
-			scoretile.snapshot_locations_new.clear();
+		for tile in current_level.tiles.get_children():
+			tile.snapshot_locations.clear();
+			tile.snapshot_locations_new.clear();
 		for baddie in current_level.baddies.get_children():
 			baddie.snapshot_locations.clear();
 

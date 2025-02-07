@@ -1,6 +1,6 @@
-class_name ScoreTileAnimatorOld
+class_name TileForFSMAnimator
 extends Node
-#used to animate ScoreTile combining/splitting
+#used to animate TileForFSM combining/splitting
 #parent.img modulate.a and scale may start at any value
 #if halted, swap images, stop modifying parent.img and fade out and free img
 #else finish animation with scale = Vector2.ONE and parent img at 100% opacity

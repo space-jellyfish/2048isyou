@@ -33,7 +33,7 @@ func inPhysicsProcess(delta):
 			var pos = collider.local_to_map(actor.position + ray.position + ray.target_position);
 			var id = collider.get_cell_source_id(0, pos);
 			obstructed = false if id == 1 else true;
-		elif collider is ScoreTile:
+		elif collider is TileForFSM:
 			if collider.power == actor.power:
 				#merge
 				pass;

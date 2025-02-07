@@ -1,4 +1,4 @@
-class_name ScoreTile
+class_name TileForFSM
 extends CharacterBody2D
 
 signal action_started; #tells spawning savepoint to save; should be emitted before current snapshot becomes meaningful
@@ -19,12 +19,12 @@ signal premove_added; #signals snap state to consume premove
 var snapshot_locations:Array[Vector2i] = [];
 var snapshot_locations_new:Array[Vector2i] = [];
 
-var score_tile:PackedScene = preload("res://Objects/ScoreTile.tscn");
+var packed_tile:PackedScene = preload("res://Objects/TileForFSM.tscn");
 var img:Sprite2D;
-var animators:Array[ScoreTileAnimatorOld] = [];
-var pusheds:Array[ScoreTile] = []; #tiles pushed by self; to update collider's pusher after player is instantiated in split
-var pusher:ScoreTile; #player at start of line, not immediate neighbor
-var partner:ScoreTile;
+var animators:Array[TileForFSMAnimator] = [];
+var pusheds:Array[TileForFSM] = []; #tiles pushed by self; to update collider's pusher after player is instantiated in split
+var pusher:TileForFSM; #player at start of line, not immediate neighbor
+var partner:TileForFSM;
 var shift_shape:ShapeCast2D;
 var tile_push_count:int = 0; #if merge possible, don't multipush (except for 0 at end)
 
@@ -178,18 +178,18 @@ func debug_frame():
 		#print("physics on: ", physics_on);
 		pass;
 
-func update_texture(s:Sprite2D, score_pow, score_sign, _is_player, _is_hostile, _is_invincible):
-	assert(score_pow <= GV.TILE_POW_MAX);
+func update_texture(s:Sprite2D, power, ssign, _is_player, _is_hostile, _is_invincible):
+	assert(power <= GV.TILE_POW_MAX);
 	var texture_path:String = "res://Sprites/Sprites/2_";
 	
 	#power
-	if score_pow == -1:
+	if power == -1:
 		texture_path += "n";
 	else:
-		texture_path += str(score_pow);
+		texture_path += str(power);
 	
 	#sign
-	if score_sign == -1 and score_pow >= 0:
+	if ssign == -1 and power >= 0:
 		texture_path += "m";
 	
 	#dark
@@ -317,7 +317,7 @@ func slide(dir:Vector2i) -> bool:
 			if collider.is_in_group("wall"): #obstructed
 				return false;
 				
-			if collider is ScoreTile:
+			if collider is TileForFSM:
 				if collider.get_state() not in ["tile", "snap", "idle"]:
 					#print("SLIDE FAILED, collider state is ", collider.get_state());
 					return false;
@@ -331,7 +331,7 @@ func slide(dir:Vector2i) -> bool:
 					else:
 						collider.pusher = self;
 		
-				var zeros:Array[ScoreTile] = pushable_zeros(dir, GV.tile_push_limits[GV.TypeId.PLAYER] - push_count);
+				var zeros:Array[TileForFSM] = pushable_zeros(dir, GV.tile_push_limits[GV.TypeId.PLAYER] - push_count);
 				if zeros: #bubble (manually)
 					for zero in zeros:
 						zero.slide_dir = dir;
@@ -357,7 +357,7 @@ func slide(dir:Vector2i) -> bool:
 					pusheds.clear(); #only necessary if self is pusher (pusher == null)
 					print("SLIDE FAILED, nan");
 					return false;
-			#else collider not wall or scoretile, proceed with slide
+			#else collider not wall or tile, proceed with slide
 	
 	#check pusher tile count
 	push_count = pusher.tile_push_count if is_instance_valid(pusher) else tile_push_count;
@@ -375,10 +375,10 @@ func slide(dir:Vector2i) -> bool:
 
 #assume self is base pusher, aligned, and in tile/snap mode
 #returns the row of 0s if bubbling possible, else an empty array
-func pushable_zeros(dir:Vector2i, tile_push_limit:int) -> Array[ScoreTile]:
-	var ans:Array[ScoreTile];
+func pushable_zeros(dir:Vector2i, tile_push_limit:int) -> Array[TileForFSM]:
+	var ans:Array[TileForFSM];
 	var zero_count:int = 0;
-	var curr_tile:ScoreTile = self;
+	var curr_tile:TileForFSM = self;
 	
 	while zero_count <= tile_push_limit:
 		#find shapecast in slide direction
@@ -390,11 +390,11 @@ func pushable_zeros(dir:Vector2i, tile_push_limit:int) -> Array[ScoreTile]:
 		var collid:bool = false;
 		for i in shape.get_collision_count():
 			var collider := shape.get_collider(i);
-			if zero_count == tile_push_limit and collider is ScoreTile:
+			if zero_count == tile_push_limit and collider is TileForFSM:
 				return [];
 			if collider.is_in_group("wall"):
 				return [];
-			if collider is ScoreTile:
+			if collider is TileForFSM:
 				if collider.power == -1:
 					if collider.get_state() not in ["tile", "snap", "idle"]:
 						return [];
@@ -431,7 +431,7 @@ func split(dir:Vector2i) -> bool:
 		if collider.is_in_group("wall"): #obstructed
 			return false;
 			
-		if collider is ScoreTile:
+		if collider is TileForFSM:
 			if not collider.is_xaligned() or not collider.is_yaligned():
 				return false;
 			if collider.get_state() not in ["tile", "snap", "idle"]:
@@ -484,7 +484,7 @@ func shift(dir:Vector2i) -> bool:
 		#check for obstruction
 		for i in shape.get_collision_count():
 			var collider := shape.get_collider(i);
-			if collider is ScoreTile or collider.is_in_group("wall"):
+			if collider is TileForFSM or collider.is_in_group("wall"):
 				return false;
 		shape.enabled = false;
 	
@@ -537,7 +537,7 @@ func change_state(s:String):
 
 
 func _on_physics_enabler_body_entered(body):
-	if body != self and body is ScoreTile and body.color != GV.ColorId.GRAY:
+	if body != self and body is TileForFSM and body.color != GV.ColorId.GRAY:
 		if body.physics_enabler_count == 0 and not body.physics_on:
 			body.set_physics(true);
 			body.physics_on = true;
@@ -545,7 +545,7 @@ func _on_physics_enabler_body_entered(body):
 		body.physics_enabler_count += 1;
 
 func _on_physics_enabler_body_exited(body):
-	if body != self and body is ScoreTile and body.color != GV.ColorId.GRAY:
+	if body != self and body is TileForFSM and body.color != GV.ColorId.GRAY:
 		body.physics_enabler_count -= 1;
 		if body.physics_enabler_count == 0 and body.physics_on:
 			body.set_physics(false);
@@ -558,7 +558,7 @@ func enable_physics_immediately():
 	for i in $PhysicsEnabler2.get_collision_count():
 		var body = $PhysicsEnabler2.get_collider(i);
 		
-		if body is ScoreTile and body.color != GV.ColorId.GRAY and not body.physics_on:
+		if body is TileForFSM and body.color != GV.ColorId.GRAY and not body.physics_on:
 			body.set_physics(true);
 			body.physics_on = true;
 	$PhysicsEnabler2.enabled = false;
@@ -687,8 +687,8 @@ func snap_range(offset_range:float):
 	if offset.y and absf(offset.y) <= offset_range:
 		position.y -= offset.y;
 
-func duplicate_custom() -> ScoreTile:
-	var dup = score_tile.instantiate();
+func duplicate_custom() -> TileForFSM:
+	var dup = packed_tile.instantiate();
 	
 	dup.position = position;
 	dup.velocity = Vector2.ZERO;

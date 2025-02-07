@@ -8,7 +8,7 @@ var initial_tiles_ready:bool;
 var initial_tile_count:int; #main then chunker
 var initial_ready_count:int;
 
-var score_tile:PackedScene = preload("res://Objects/ScoreTile.tscn");
+var packed_tile:PackedScene = preload("res://Objects/TileForFSM.tscn");
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
 var difficulty:float = 0; #probability of hostile, noise roughness
@@ -30,10 +30,9 @@ var max_tiles_per_frame:int = 16;
 var load_queue:Dictionary; #shared; main adds/removes, CM removes
 var pool_queue:Dictionary; #main thread
 
-#ScoreTile
-var free_queue:Array; #main thread
+var free_queue:Array[TileForFSM]; #main thread
 
-#pos_t, ScoreTile
+#pos_t, TileForFSM
 var loaded_tiles:Dictionary; #main thread;
 var constructed_tiles:Dictionary; #shared; main removes, CM adds
 
@@ -147,7 +146,7 @@ func _process(_delta):
 		constructed_positions = constructed_positions.slice(0, max_tiles_per_frame);
 	for pos_t in constructed_positions:
 		constructed_mutex.lock();
-		var tile:ScoreTile = constructed_tiles[pos_t];
+		var tile:TileForFSM = constructed_tiles[pos_t];
 		constructed_tiles.erase(pos_t);
 		constructed_mutex.unlock();
 		
@@ -163,7 +162,7 @@ func _process(_delta):
 	var pool_positions:Array = pool_queue.keys().slice(0, max_tiles_per_frame);
 	for pos_t in pool_positions:
 		pool_queue.erase(pos_t);
-		var tile:ScoreTile = loaded_tiles[pos_t];
+		var tile:TileForFSM = loaded_tiles[pos_t];
 		loaded_tiles.erase(pos_t);
 		pool_tile(tile);
 	
@@ -233,7 +232,7 @@ func enqueue_for_unload(pos_t_min:Vector2i, pos_t_max:Vector2i):
 			#check if constructed
 			constructed_mutex.lock();
 			if constructed_tiles.has(pos_t):
-				var tile:ScoreTile = constructed_tiles[pos_t];
+				var tile:TileForFSM = constructed_tiles[pos_t];
 				constructed_tiles.erase(pos_t);
 				constructed_mutex.unlock();
 				if tile.is_inside_tree(): #pool tile
@@ -284,7 +283,7 @@ func generate_tiles():
 		#push_error("END_SIG");
 
 #inits a tile in constructed_tiles or updates tilemap accordingly
-func generate_cell(pos_t:Vector2i) -> ScoreTile:
+func generate_cell(pos_t:Vector2i) -> TileForFSM:
 	#print("generate tile ", global_tile_pos);
 	if is_world_border(pos_t):
 		$Walls.call_deferred("set_cell", 0, pos_t, 0, Vector2i.ZERO);
@@ -302,7 +301,7 @@ func generate_cell(pos_t:Vector2i) -> ScoreTile:
 		call_deferred("_on_cell_ready");
 		return null;
 	
-	var tile:ScoreTile = get_tile();
+	var tile:TileForFSM = get_tile();
 	if tile.is_inside_tree():
 		call_deferred("build_tile", tile, pos_t);
 	else:
@@ -314,7 +313,7 @@ func generate_cell(pos_t:Vector2i) -> ScoreTile:
 	
 	return tile;
 
-func build_tile(tile:ScoreTile, pos_t:Vector2i):
+func build_tile(tile:TileForFSM, pos_t:Vector2i):
 	#tile.pos_t = pos_t;
 	tile.position = GV.pos_t_to_world(pos_t);
 	
@@ -328,13 +327,13 @@ func build_tile(tile:ScoreTile, pos_t:Vector2i):
 func load_player():
 	#remove wall/tile at cell
 	if loaded_tiles.has(player_global_spawn_pos_t):
-		var tile:ScoreTile = loaded_tiles[player_global_spawn_pos_t];
+		var tile:TileForFSM = loaded_tiles[player_global_spawn_pos_t];
 		loaded_tiles.erase(player_global_spawn_pos_t);
 		pool_tile(tile);
 	$Walls.set_cell(0, player_global_spawn_pos_t, -1, Vector2i.ZERO);
 	
 	#add player
-	var player:ScoreTile = score_tile.instantiate();
+	var player:TileForFSM = packed_tile.instantiate();
 	player.pos_t = player_global_spawn_pos_t;
 	player.position = GV.pos_t_to_world(player_global_spawn_pos_t);
 	player.color = GV.ColorId.GRAY;
@@ -347,7 +346,7 @@ func load_player():
 #called from CM
 #returned tile's physics is off
 #returned tile might not be in active tree (use is_inside_tree() to check)
-func get_tile() -> ScoreTile:
+func get_tile() -> TileForFSM:
 	pool_mutex.lock();
 	if not tile_pool.is_empty(): #retrieve from tile_pool
 		var tile = tile_pool.pop_back();
@@ -363,13 +362,13 @@ func get_tile() -> ScoreTile:
 	pool_mutex.unlock();
 	
 	#instantiate new tile
-	var tile:ScoreTile = score_tile.instantiate();
+	var tile:TileForFSM = packed_tile.instantiate();
 	tile.ready.connect(_on_cell_ready);
 	return tile;
 
 #called from main
 #resets tile parameters
-func pool_tile(tile:ScoreTile):
+func pool_tile(tile:TileForFSM):
 	assert(not tile.is_queued_for_deletion());
 	
 	tile.get_node("CollisionPolygon2D").disabled = true;
@@ -407,7 +406,7 @@ func move_tile(old_pos_t:Vector2i, new_pos_t:Vector2i):
 #	if not loaded_tiles.has(old_pos_t):
 #		print_loaded_tiles(old_pos_t - Vector2i(2, 2), old_pos_t + Vector2i(2, 2));
 	
-	var tile:ScoreTile = loaded_tiles[old_pos_t];
+	var tile:TileForFSM = loaded_tiles[old_pos_t];
 	loaded_tiles.erase(old_pos_t);
 	loaded_tiles[new_pos_t] = tile;
 

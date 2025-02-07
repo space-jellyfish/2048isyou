@@ -81,8 +81,8 @@ func _input(event):
 				#start_pos = Vector2i(randi_range(-20, 19), randi_range(-15, 14));
 			#
 			##set type at start_pos to PLAYER
-			#var start_atlas_coord:Vector2i = $Cells.get_cell_atlas_coords(GV.LayerId.TILE, start_pos);
-			#$Cells.set_cell(GV.LayerId.TILE, start_pos, GV.LayerId.TILE, Vector2i(start_atlas_coord.x, GV.TypeId.PLAYER));
+			#var start_atlas_coords:Vector2i = $Cells.get_cell_atlas_coords(GV.LayerId.TILE, start_pos);
+			#$Cells.set_cell(GV.LayerId.TILE, start_pos, GV.LayerId.TILE, Vector2i(start_atlas_coords.x, GV.TypeId.PLAYER));
 			##generate random end pos
 			#var end_pos:Vector2i = start_pos + Vector2i(randi_range(-5, 5), randi_range(-5, 5));
 			#while (!is_compatible(GV.TypeId.PLAYER, get_back_id(end_pos)) or end_pos.x < -20 or end_pos.x > 19 or end_pos.y < -15 or end_pos.y > 14):

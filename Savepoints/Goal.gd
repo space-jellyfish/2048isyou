@@ -29,14 +29,14 @@ func _on_body_entered(body):
 func spawn_player(): #spawns player at spawn_point
 	print(id, " SPAWN PLAYER");
 	spawned = true;
-	var player = score_tile.instantiate();
+	var player = packed_tile.instantiate();
 	player_spawned = player;
 	player.color = GV.ColorId.GRAY;
 	player.power = GV.player_power;
 	player.ssign = GV.player_ssign;
 	player.position = spawn_point;
 	#player.debug = true;
-	game.current_level.get_node("ScoreTiles").add_child(player); #lv not ready yet, scoretiles not init
+	game.current_level.get_node("Tiles").add_child(player); #lv not ready yet, tiles not init
 
 func save_id_and_player_value(player):
 	GV.savepoint_id = id;

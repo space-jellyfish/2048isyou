@@ -8,9 +8,9 @@ extends RefCounted
 #only allow undo when not changing level
 #upon die(), revert to last savepoint
 
-var new_tiles:Array[ScoreTile] = []; #created by action
-var tiles:Array[ScoreTile] = []; #changed by action
-var tile_duplicates:Array[ScoreTile] = [];
+var new_tiles:Array[TileForFSM] = []; #created by action
+var tiles:Array[TileForFSM] = []; #changed by action
+var tile_duplicates:Array[TileForFSM] = [];
 var tiles_all_player:bool = true;
 var enter_savepoint:bool = false;
 
@@ -85,7 +85,7 @@ func checkout(): #reset to snapshot
 				new_tile.remove_from_players();
 			new_tile.queue_free();
 			
-	reset_objects("tiles", "tile_duplicates", "scoretiles");
+	reset_objects("tiles", "tile_duplicates", "tiles");
 	reset_objects("baddies", "baddie_duplicates", "baddies");
 	
 	#queue_free();
@@ -105,7 +105,7 @@ func reset_objects(objects_name, duplicates_name, category_name):
 		
 		#remove changed object
 		if is_instance_valid(object):
-			if object is ScoreTile and object.color == GV.ColorId.GRAY:
+			if object is TileForFSM and object.color == GV.ColorId.GRAY:
 				object.remove_from_players();
 			object.queue_free();
 			#print("REMOVE TILE at ", object.position);
@@ -120,7 +120,7 @@ func reset_objects(objects_name, duplicates_name, category_name):
 			#print("UPDATED REF at ", location);
 		
 		#update tile reference in last new_tiles
-		if dup is ScoreTile:
+		if dup is TileForFSM:
 			var locations_new = dup.snapshot_locations_new;
 			if locations_new:
 				var location_new:Vector2i = locations_new.back();
