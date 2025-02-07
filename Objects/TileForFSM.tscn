@@ -1,7 +1,7 @@
 [gd_scene load_steps=9 format=3 uid="uid://bs5pnnv5k17ao"]
 
-[ext_resource type="Script" path="res://Objects/ScoreTileFSM.gd" id="1_4wq03"]
-[ext_resource type="PackedScene" uid="uid://b5xshtev3l7ey" path="res://Objects/scoretile_fsm.tscn" id="2_6q1l5"]
+[ext_resource type="Script" path="res://Objects/TileForFSM.gd" id="1_ywtkn"]
+[ext_resource type="PackedScene" uid="uid://b5xshtev3l7ey" path="res://Objects/TileFSM.tscn" id="2_1xuwc"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_xcrd5"]
 resource_local_to_scene = true
@@ -26,11 +26,17 @@ size = Vector2(224, 224)
 resource_local_to_scene = true
 size = Vector2(224, 224)
 
-[node name="ScoreTile" type="CharacterBody2D"]
+[node name="Tile" type="CharacterBody2D"]
 collision_layer = 4294967283
 collision_mask = 0
 motion_mode = 1
-script = ExtResource("1_4wq03")
+script = ExtResource("1_ywtkn")
+color = null
+is_hostile = null
+is_invincible = null
+power = null
+ssign = null
+debug = null
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
 polygon = PackedVector2Array(-16, -19, -14, -20, 14, -20, 16, -19, 19, -16, 20, -14, 20, 14, 19, 16, 16, 19, 14, 20, -14, 20, -16, 19, -19, 16, -20, 14, -20, -14, -19, -16)
@@ -87,7 +93,7 @@ target_position = Vector2(0, 0)
 max_results = 36
 collision_mask = 2
 
-[node name="FSM" parent="." instance=ExtResource("2_6q1l5")]
+[node name="FSM" parent="." instance=ExtResource("2_1xuwc")]
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
 scale = Vector2(2.1, 2.1)

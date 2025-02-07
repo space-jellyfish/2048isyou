@@ -1,9 +1,9 @@
 class_name SavePoint
 extends Area2D
 
-var score_tile:PackedScene = preload("res://Objects/ScoreTile.tscn");
+var packed_tile:PackedScene = preload("res://Objects/TileForFSM.tscn");
 var spawned:bool = false;
-var player_spawned:ScoreTile = null; #will be invalid after player splits
+var player_spawned:TileForFSM = null; #will be invalid after player splits
 @export var saved:bool = false;
 
 @export var id:int = 0; #unique id for each savepoint, except connected goals' ids must match
@@ -44,7 +44,7 @@ func _on_player_action_started():
 func spawn_player(): #spawns player at spawn_point
 	#print("SPAWN PLAYER AT SAVEPOINT ", id);
 	spawned = true;
-	var player = score_tile.instantiate();
+	var player = packed_tile.instantiate();
 	player_spawned = player;
 	player.color = GV.ColorId.GRAY;
 	player.power = GV.current_savepoint_powers.pop_back();
@@ -53,7 +53,7 @@ func spawn_player(): #spawns player at spawn_point
 	player.snapshot_locations_new = GV.temp_player_snapshot_locations_new;
 	player.position = spawn_point;
 	#player.debug = true;
-	game.current_level.get_node("ScoreTiles").add_child(player); #lv not ready yet, scoretiles not init
+	game.current_level.get_node("Tiles").add_child(player); #lv not ready yet, tiles not init
 	player.action_started.connect(_on_player_action_started);
 
 func save_id_and_player_value(player):
@@ -70,7 +70,7 @@ func save_id_and_player_value(player):
 
 	var tiles_snapshot_locations = [];
 	var tiles_snapshot_locations_new = [];
-	for tile in game.current_level.scoretiles.get_children():
+	for tile in game.current_level.tiles.get_children():
 		if tile != player:
 			tiles_snapshot_locations.push_back(tile.snapshot_locations);
 			tiles_snapshot_locations_new.push_back(tile.snapshot_locations_new);

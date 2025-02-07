@@ -1,8 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://dmi0wxdbq57th"]
+[gd_scene load_steps=5 format=3 uid="uid://dmi0wxdbq57th"]
 
 [ext_resource type="Script" path="res://Levels/Level 16.gd" id="1_0046r"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_nrldh"]
-[ext_resource type="Script" path="res://Camera/TrackingCamWorld.gd" id="3_ersi7"]
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="4_ddlr5"]
 [ext_resource type="Texture2D" uid="uid://cdovid55dbxns" path="res://Sprites/Sheets/tile_sheet.png" id="5_80ya5"]
 
@@ -10,7 +9,6 @@
 process_mode = 1
 script = ExtResource("1_0046r")
 resolution_t = Vector2i(20, 15)
-min_pos = null
 max_pos = Vector2(3680, 1200)
 player_pos_t = Vector2i(6, 8)
 metadata/_edit_lock_ = true
@@ -43,9 +41,6 @@ mouse_filter = 2
 color = Color(0.666667, 0.666667, 0.666667, 1)
 metadata/_edit_lock_ = true
 
-[node name="TrackingCam" type="Camera2D" parent="."]
-script = ExtResource("3_ersi7")
-
 [node name="Cells" type="TileMap" parent="." groups=["wall"]]
 tile_set = ExtResource("4_ddlr5")
 format = 2
@@ -65,3 +60,5 @@ texture = ExtResource("5_80ya5")
 centered = false
 hframes = 31
 vframes = 6
+
+[node name="TransitTiles" type="Node2D" parent="."]

@@ -1,7 +1,7 @@
 extends State
 
 var frame_count:int;
-var player:ScoreTile;
+var player:TileForFSM;
 @onready var game:Node2D = $"/root/Game";
 
 
@@ -22,11 +22,11 @@ func enter():
 	actor.set_color(GV.ColorId.GRAY, false);
 	
 	#start animation
-	var animator = ScoreTileAnimatorOld.new(actor.power, actor.ssign, GV.ScaleAnim.DWING, 2, 1);
+	var animator = TileForFSMAnimator.new(actor.power, actor.ssign, GV.ScaleAnim.DWING, 2, 1);
 	actor.add_child(animator);
 	
 	#create and slide/merge player in slide_dir
-	player = game.current_level.get_tile() if game.current_level.pooled else actor.score_tile.instantiate();
+	player = game.current_level.get_tile() if game.current_level.pooled else actor.packed_tile.instantiate();
 	player.pusheds = actor.pusheds.duplicate();
 	actor.pusheds.clear();
 	for tile in player.pusheds:

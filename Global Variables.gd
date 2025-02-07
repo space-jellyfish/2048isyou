@@ -92,6 +92,7 @@ const PLAYER_SLIDE_SPEED_MIN:float = 8;
 #const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
 const TILE_SLIDE_SPEED:float = 288; #320
 const COMBINING_MERGE_RATIO:float = 1/2.7;
+const SNAP_TOLERANCE:float = 0.1; #epsilon
 
 const SNAP_FRAME_COUNT:int = 1;
 const COMBINING_FRAME_COUNT:int = 6; #9; #1;
@@ -115,27 +116,46 @@ enum InputType {
 }
 
 #animation-related stuff
-enum AnimatorId {
-	SLIDE, #uniform speed
-	SHIFT, #accelerates to cover shift dist in same time as a slide
-	DWING, #temp shrink upon split
-	DUANG, #temp expand upon merge
-	FADE_IN,
-	FADE_OUT,
+enum ConversionAnimatorType {
+	SCALE, #dwing, duang
+	FADE, #in, out
 }
 
-#z_index
+enum ConversionAnimatorId {
+	DWING = (ConversionAnimatorType.SCALE << 1), #temp shrink upon split
+	DUANG = (ConversionAnimatorType.SCALE << 1) + 1, #temp expand upon merge
+	FADE_IN = (ConversionAnimatorType.FADE << 1),
+	FADE_OUT = (ConversionAnimatorType.FADE << 1) + 1,
+}
+
+enum TransitId {
+	SPLIT,
+	MERGE,
+	SLIDE, # uniform speed
+	SHIFT, # accelerates to cover shift dist in same time as a slide
+}
+
+# z_index
 enum ZId {
 	BACKGROUND = -10,
 	HIDDEN_LABEL = -9,
 	SAVE_OR_GOAL = -2,
-	MOVING = -1, #tiles merging into another (stationary) tile; for simplicity, all sliding/shifting tiles are grouped here
-	DEFAULT = 0, #walls, stationary tiles
+	MOVING = -1, # tiles merging into another (stationary) tile; for simplicity, all sliding/shifting tiles are grouped here
+	DEFAULT = 0, # walls, stationary tiles
 	SPLITTING_NEW = 1,
 	SPLITTING_OLD = 2,
 	COMBINING_NEW = 3,
 	COMBINING_OLD = 4,
 	LEVEL_NAME = 10,
+}
+
+# layer, (mask)
+enum CollisionId {
+	DEFAULT = 1, # walls, non-converting tiles, squid (tiles, squid)
+	SPLITTING, # splitting tiles, (non-splitted tiles, squid)
+	COMBINING, # combining tiles, (non-merging tiles, squid)
+	MEMBRANE, # membrane, (non-player tiles, squid)
+	SAVE_OR_GOAL, # savepoint/goal, (hostile tiles, squid)
 }
 
 const TILE_SHEET_HFRAMES = 31;
@@ -158,6 +178,7 @@ const DWING_FADE_SPEED:float = 0.07;
 const SHIFT_RAY_LENGTH:float = RESOLUTION.x;
 const SHIFT_TIME:float = 6; #in frames
 const SHIFT_LERP_WEIGHT:float = 0.6;
+const SHIFT_SPEED_MIN:float = TILE_SLIDE_SPEED;
 var SHIFT_LERP_WEIGHT_TOTAL:float = 0;
 var SHIFT_DISTANCE_TO_MAX_SPEED:float;
 
@@ -226,18 +247,10 @@ const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID];
 enum LayerId {
 	BACK,
 	TILE,
-	COLLISION,
-}
-
-enum CollisionId {
-	STABLE, #unanimated, ready for action
-	HORIZONTAL,
-	VERTICAL,
-	SOLID, #scaling animation
 }
 
 enum AlternativeId {
-	EMPTY = -1,
+	EMPTY = -1, #no tile at cell
 	STABLE,
 	ANIMATING,
 }
@@ -336,33 +349,18 @@ var max_shift_dists:Dictionary = {
 const PHYSICS_ENABLER_BASE_SIZE:Vector2 = Vector2(144, 144); #px, px; at tile_push_limit = 0
 
 
-func _ready():
-	#TODO remove these
-	level_scores.resize(LEVEL_COUNT);
-	level_scores.fill(0);
-	level_last_savepoint_ids.resize(LEVEL_COUNT);
-	level_last_savepoint_ids.fill(-1);
-	level_initial_savepoint_ids.resize(LEVEL_COUNT);
-	level_initial_player_powers.resize(LEVEL_COUNT);
-	level_initial_player_ssigns.resize(LEVEL_COUNT);
-	
-	#calculate shift parameter
-	for frame in range(1, SHIFT_TIME+1):
-		var term_sign = 1;
-		for term in range(1, frame+1):
-			SHIFT_LERP_WEIGHT_TOTAL += term_sign * combinations_dp(frame, term) * pow(SHIFT_LERP_WEIGHT, term);
-			term_sign *= -1;
-	SHIFT_DISTANCE_TO_MAX_SPEED = 60 / SHIFT_LERP_WEIGHT_TOTAL;
-	
-#	#init physics enabler size
-#	set_tile_push_limit(abilities["tile_push_limit"]);
-#
-#	#scale shapecasts (bc inspector can't handle precise floats)
-#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
-#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
-#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
-#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;
+func world_to_pos_t(pos:Vector2) -> Vector2i:
+	return (pos / TILE_WIDTH).floor();
 
+func pos_t_to_world(pos_t:Vector2i) -> Vector2:
+	return (Vector2(pos_t) + Vector2(0.5, 0.5)) * TILE_WIDTH;
+
+func world_to_xt(x:float) -> int:
+	return floori(x / TILE_WIDTH);
+
+func xt_to_world(x:int) -> float:
+	return (x + 0.5) * TILE_WIDTH;
+	
 func same_sign_inclusive(a, b) -> bool:
 	if a == 0:
 		return true;
@@ -417,18 +415,6 @@ func combinations_dp(n, k) -> int:
 	combinations[n][k] = ans;
 	return ans;
 
-func world_to_pos_t(pos:Vector2) -> Vector2i:
-	return (pos / TILE_WIDTH).floor();
-
-func pos_t_to_world(pos_t:Vector2i) -> Vector2:
-	return (Vector2(pos_t) + Vector2(0.5, 0.5)) * TILE_WIDTH;
-
-func world_to_xt(x:float) -> int:
-	return floori(x / TILE_WIDTH);
-
-func xt_to_world(x:int) -> float:
-	return (x + 0.5) * TILE_WIDTH;
-
 #doesn't do ZERO->EMPTY optimization
 func tile_val_to_id(power:int, ssign:int) -> int:
 	return (power + 1) * ssign + TileId.ZERO;
@@ -444,11 +430,8 @@ func is_approx_equal(a:float, b:float, tolerance:float) -> bool:
 		return true;
 	return false;
 
-func dir_to_collision_id(dir:Vector2i) -> int:
-	return 2 * abs(dir.y) + dir.x;
-
-func collision_id_to_vec(collision_id:int) -> Vector2i:
-	return Vector2i(collision_id & 0b01, collision_id & 0b10);
+func get_animator_type(animator_id:int) -> int:
+	return animator_id >> 1;
 
 #func set_tile_push_limit(_tile_push_limit):
 #	abilities["tile_push_limit"] = _tile_push_limit;
@@ -456,3 +439,32 @@ func collision_id_to_vec(collision_id:int) -> Vector2i:
 #	#change physicsEnabler size
 #	var size:Vector2 = PHYSICS_ENABLER_BASE_SIZE + abilities["tile_push_limit"] * 2 * GV.TILE_WIDTH * Vector2.ONE;
 #	PHYSICS_ENABLER_SHAPE.set_size(size);
+
+
+func _ready():
+	#TODO remove these
+	level_scores.resize(LEVEL_COUNT);
+	level_scores.fill(0);
+	level_last_savepoint_ids.resize(LEVEL_COUNT);
+	level_last_savepoint_ids.fill(-1);
+	level_initial_savepoint_ids.resize(LEVEL_COUNT);
+	level_initial_player_powers.resize(LEVEL_COUNT);
+	level_initial_player_ssigns.resize(LEVEL_COUNT);
+	
+	#calculate shift parameter
+	for frame in range(1, SHIFT_TIME+1):
+		var term_sign = 1;
+		for term in range(1, frame+1):
+			SHIFT_LERP_WEIGHT_TOTAL += term_sign * combinations_dp(frame, term) * pow(SHIFT_LERP_WEIGHT, term);
+			term_sign *= -1;
+	SHIFT_DISTANCE_TO_MAX_SPEED = 60 / SHIFT_LERP_WEIGHT_TOTAL;
+	print("shift ratio: ", SHIFT_DISTANCE_TO_MAX_SPEED);
+	
+#	#init physics enabler size
+#	set_tile_push_limit(abilities["tile_push_limit"]);
+#
+#	#scale shapecasts (bc inspector can't handle precise floats)
+#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
+#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
+#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
+#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;

@@ -32,7 +32,7 @@ func inPhysicsProcess(_delta):
 		if collider.is_in_group("baddie"):
 			actor.die();
 		
-		elif collider is ScoreTile:
+		elif collider is TileForFSM:
 			#find slide direction
 			var slide_dir:Vector2 = collision.get_normal() * (-1);
 			if absf(slide_dir.x) >= absf(slide_dir.y):
