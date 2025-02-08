@@ -214,6 +214,7 @@ enum TypeId { #3 bits
 	HOSTILE,
 	VOID,
 	REGULAR,
+	SQUID,
 }
 
 enum BackId { #8 bits
@@ -243,7 +244,7 @@ enum EntityId {
 const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
 const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
 const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
-const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID];
+const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
 
 enum LayerId {
 	BACK,
@@ -304,6 +305,7 @@ var tile_push_limits:Dictionary = {
 	TypeId.HOSTILE : 1,
 	TypeId.VOID : 1,
 	TypeId.REGULAR : 0,
+	TypeId.SQUID : 0,
 };
 
 var merge_priorities:Dictionary = {
@@ -313,6 +315,7 @@ var merge_priorities:Dictionary = {
 	TypeId.HOSTILE : 2,
 	TypeId.INVINCIBLE : 3,
 	TypeId.VOID : 4,
+	TypeId.SQUID : 5,
 }
 
 #each entity is pushable by entities with equal or greater priority
@@ -354,6 +357,7 @@ var max_shift_dists:Dictionary = {
 	TypeId.HOSTILE : 0,
 	TypeId.VOID : 8,
 	TypeId.REGULAR : 0,
+	TypeId.SQUID : 8,
 }
 
 #const PHYSICS_ENABLER_SHAPE:RectangleShape2D = preload("res://Objects/PhysicsEnablerShape.tres");
