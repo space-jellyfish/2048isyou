@@ -11,12 +11,14 @@ var world:World;
 var is_splitted:bool;
 var is_merging:bool;
 var type_id:int;
+var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if tile not moving
 
 
-func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap):
+func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap, pusher_entity_id:int):
 	self.world = world;
 	self.is_splitted = is_splitted;
 	self.is_merging = is_merging;
+	self.pusher_entity_id = pusher_entity_id;
 	position = GV.pos_t_to_world(pos_t);
 	atlas_coords = new_atlas_coords;
 	self.back_tile = back_tile;

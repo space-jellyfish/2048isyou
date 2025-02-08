@@ -230,6 +230,7 @@ enum BackId { #8 bits
 }
 
 enum EntityId {
+	NONE,
 	PLAYER,
 	INVINCIBLE,
 	HOSTILE,
@@ -325,15 +326,25 @@ var push_priorities:Dictionary = {
 	EntityId.SQUID : 6,
 }
 
-#for tiebreaking if 2+ entities have premoves queued
-var premove_priorities:Dictionary = {
-	EntityId.STP_SPAWNING : 0,
-	EntityId.PLAYER : 1,
-	EntityId.HOSTILE : 2,
-	EntityId.INVINCIBLE : 3,
-	EntityId.VOID : 4,
-	EntityId.STP_SPAWNED : 5,
-	EntityId.SQUID : 6,
+# (slide collision) arbitration modes
+# use MIDPOINT to prevent higher priority entities from bullying lower priority entities by camping a cell
+enum SlideArbitrationMode {
+	MIDPOINT, # lower remaining_dist continues, higher move_priority continues if remaining_dist equal, both bounce if move_priority equal
+	ENTITY, # higher move_priority continues, lower remaining_dist continues if move_priority equal, both bounce if remaining_dist equal 
+}
+
+# enemies have higher move_priority so player cannot use premoving to cross enemy-protected cells
+# for tiebreaking if 2+ entities have premoves queued
+# or if two slides collide at midpoint
+# id of entity that initiated action is used, not EntityId of moving tile
+var move_priorities:Dictionary = {
+	EntityId.SQUID : 0, #tile-originated slides have higher priority
+	EntityId.STP_SPAWNING : 1,
+	EntityId.PLAYER : 2,
+	EntityId.HOSTILE : 3,
+	EntityId.INVINCIBLE : 4,
+	EntityId.VOID : 5,
+	EntityId.STP_SPAWNED : 6,
 	#snake continuity at 90deg turns?
 }
 
