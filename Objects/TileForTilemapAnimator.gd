@@ -3,6 +3,7 @@ class_name TileForTilemapAnimator
 signal finished;
 var tile:TileForTilemap; #should be init in ChildClass._init()
 var reversed:bool = false; #if shift reversed (bouncing), snap to nearest cell
+var collision:KinematicCollision2D;
 
 
 #func _init(tile:TileForTilemap):

@@ -1071,3 +1071,25 @@ var is_reverse_queued:bool = false;
 							if collider_mover.reverser and collider_mover.reverser is TileForTilemap and collider_mover.reverser.move_animator and collider_mover.reverser.move_animator is TileForTilemapSlideAnimator:
 								collider_mover.reverser.bounce();
 '''
+
+'''
+func queue_reverse():
+	if not is_reverse_queued:
+		is_reverse_queued = true;
+		call_deferred("perform_reverse");
+	if tile.back_tile:
+		tile.back_tile.move_animator.queue_reverse();
+
+func perform_reverse():
+	reversed = not reversed;
+	dir *= -1;
+	remaining_dist = GV.TILE_WIDTH - remaining_dist;
+	is_reverse_queued = false;
+'''
+
+'''
+# assume position (via move_and_collide()) and remaining_dist are updated
+# use collision.get_position() to handle different collider types
+func is_collision_before_snap(collision:KinematicCollision2D) -> bool:
+	return remaining_dist + 0.5 * GV.TILE_WIDTH - (collision.get_position() - tile.position).length() > GV.SNAP_TOLERANCE;
+'''

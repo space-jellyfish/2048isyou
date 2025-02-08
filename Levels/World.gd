@@ -71,7 +71,7 @@ func _ready():
 				set_atlas_coords(GV.LayerId.TILE, pos_t, tile_atlas_coords, 0);
 
 func _physics_process(delta:float):
-	var transit_tiles:Array[TileForTilemap] = $TransitTiles.get_children();
+	var transit_tiles:Array = $TransitTiles.get_children();
 	
 	#call all move_animator.move()
 	for tile in transit_tiles:
@@ -82,12 +82,17 @@ func _physics_process(delta:float):
 	for tile in transit_tiles:
 		if tile.move_animator:
 			tile.move_animator.step();
+	
+	#clear all shift_animator.is_pressed_by_slide
+	for tile in transit_tiles:
+		if tile.move_animator is TileForTilemapShiftAnimator:
+			tile.move_animator.is_pressed_by_slide.clear();
 
-func get_pooled_tile(transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap) -> TileForTilemap:
+func get_pooled_tile(transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap, pusher_entity_id:int) -> TileForTilemap:
 	if not tile_pool.is_empty():
-		var tile:TileForTilemap = tile_pool.pop_back()._init(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
+		var tile:TileForTilemap = tile_pool.pop_back()._init(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile, pusher_entity_id);
 		return tile;
-	var tile:TileForTilemap = TileForTilemap.new(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
+	var tile:TileForTilemap = TileForTilemap.new(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile, pusher_entity_id);
 	return tile;
 
 func return_pooled_tile(tile:TileForTilemap):
@@ -401,9 +406,9 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	assert(atlas_y != -1 && atlas_x != -1);
 	return Vector2i(atlas_x, atlas_y);
 
-func initiate_slide(pos_t:Vector2i, dir:Vector2i, push_count:int, is_splitted:bool):
+func initiate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, push_count:int, is_splitted:bool):
 	#start audio and animation
-	animate_slide(pos_t, dir, push_count, is_splitted);
+	animate_slide(pusher_entity_id, pos_t, dir, push_count, is_splitted, );
 	
 	var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
 	if get_stable_tile_id(merge_pos_t):
@@ -449,18 +454,19 @@ func set_player_pos_t(pos_t:Vector2i):
 func is_stable(pos_t:Vector2i):
 	return get_alternative_id(pos_t) == GV.AlternativeId.STABLE;
 
-func try_slide(pos_t:Vector2i, dir:Vector2i, action_finished:Signal, is_splitted:bool=false) -> bool:
+#pusher_entity_id required since SQUID/STP cannot be gotten from type_id
+func try_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, is_splitted:bool=false) -> bool:
 	if not is_stable(pos_t): # affected by another entity
 		return false;
 	
 	var push_count:int = get_slide_push_count(pos_t, dir);
 	if push_count != -1:
 		# set alternative_id, start audio/animation
-		initiate_slide(pos_t, dir, push_count, is_splitted);
+		initiate_slide(pusher_entity_id, pos_t, dir, push_count, is_splitted);
 		return true;
 	return false;
 
-func try_split(pos_t:Vector2i, dir:Vector2i, action_finished:Signal) -> bool:
+func try_split(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
 	if not is_stable(pos_t):
 		return false;
 	
@@ -471,7 +477,7 @@ func try_split(pos_t:Vector2i, dir:Vector2i, action_finished:Signal) -> bool:
 	
 	#halve tile, try_slide, then (re)set tile at pos_t
 	set_atlas_coords(GV.LayerId.TILE, pos_t, splitted_coords);
-	if try_slide(pos_t, dir, action_finished, true):
+	if try_slide(pusher_entity_id, pos_t, dir, true):
 		#reset src coords (alternative)
 		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords, 1);
 		return true;
@@ -481,7 +487,7 @@ func try_split(pos_t:Vector2i, dir:Vector2i, action_finished:Signal) -> bool:
 		return false;
 
 #update player_pos_t
-func try_shift(pos_t:Vector2i, dir:Vector2i, action_finished:Signal) -> bool:
+func try_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
 	if not is_stable(pos_t):
 		return false;
 	
@@ -504,7 +510,7 @@ func consume_premove():
 	
 	#try it
 	var action_func:Callable = Callable(self, "try_" + action);
-	if action_func.call(player_pos_t, dir): # returns true if action was initiated
+	if action_func.call(GV.EntityId.PLAYER, player_pos_t, dir): # returns true if action was initiated
 		# animation should be started from action_func since hostiles don't call consume_premove()
 		# same for sound effects
 		# same for $Cells update
@@ -520,7 +526,7 @@ func consume_premove():
 # tile with TransitId.MERGE is created but doesn't start animating yet
 # sliding (governor) tiles are added before splitting/merging (governed) tiles,
 # so by tree order, position/remaining_dist is updated before SpriteAnimator.step()
-func animate_slide(pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool):
+func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool):
 	#add sliding tiles
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -538,24 +544,26 @@ func animate_slide(pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitte
 		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
 		if curr_splitted:
 			curr_atlas_coords = get_splitted_tile_atlas_coords(curr_atlas_coords, true);
-		var curr_tile:TileForTilemap = get_pooled_tile(GV.TransitId.SLIDE, pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null);
-		add_child(curr_tile);
+		var curr_tile:TileForTilemap = get_pooled_tile(GV.TransitId.SLIDE, pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null, pusher_entity_id);
 		
 		#update back_tile
 		back_tile = curr_tile;
 	
-	#init front_tiles
+	#init front_tiles and add slide tiles to tree
+	#add frontmost tiles first so chain moves in sync every frame
 	var curr_tile:TileForTilemap = back_tile;
+	$TransitTiles.add_child(curr_tile);
 	while curr_tile.back_tile != null:
 		curr_tile.back_tile.front_tile = curr_tile;
 		curr_tile = curr_tile.back_tile;
+		$TransitTiles.add_child(curr_tile);
 
 	#add splitting tile
 	if is_splitted:
 		var src_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
 		var new_atlas_coords:Vector2i = get_splitted_tile_atlas_coords(src_atlas_coords, false);
-		var splitting_tile:TileForTilemap = get_pooled_tile(GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, src_atlas_coords, new_atlas_coords, null, false, false, curr_tile); #cannot substitute with sprites bc collision shape needed
-		add_child(splitting_tile);
+		var splitting_tile:TileForTilemap = get_pooled_tile(GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, src_atlas_coords, new_atlas_coords, null, false, false, curr_tile, GV.EntityId.NONE); #cannot substitute with sprites bc collision shape needed
+		$TransitTiles.add_child(splitting_tile);
 	
 	#add merging tile (without starting the animation)
 	if is_merging:
@@ -565,8 +573,8 @@ func animate_slide(pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitte
 		
 		#add transit_tile
 		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
-		var merging_tile:TileForTilemap = get_pooled_tile(GV.TransitId.MERGE, merge_pos_t, Vector2i.ZERO, 0, old_atlas_coords, new_atlas_coords, null, false, false, back_tile);
-		add_child(merging_tile);
+		var merging_tile:TileForTilemap = get_pooled_tile(GV.TransitId.MERGE, merge_pos_t, Vector2i.ZERO, 0, old_atlas_coords, new_atlas_coords, null, false, false, back_tile, GV.EntityId.NONE);
+		$TransitTiles.add_child(merging_tile);
 
 func animate_shift(pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#set alternative_id
@@ -574,8 +582,8 @@ func animate_shift(pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	
 	#add transit_tile
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
-	var tile:TileForTilemap = get_pooled_tile(GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null);
-	add_child(tile);
+	var tile:TileForTilemap = get_pooled_tile(GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null, GV.EntityId.NONE);
+	$TransitTiles.add_child(tile);
 
 #called when merge animation starts
 func animate_merge(pos_t:Vector2i, slide_animator:TileForTilemapSlideAnimator):
