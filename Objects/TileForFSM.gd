@@ -141,7 +141,7 @@ func initialize():
 	#set initial state
 	var initial_state = "tile";
 	if color == GV.ColorId.GRAY:
-		initial_state = "idle" if GV.player_snap else "slide";
+		initial_state = "idle" if GV.snap_mode else "slide";
 	$FSM.setState($FSM.states[initial_state]);
 	
 func _input(event):

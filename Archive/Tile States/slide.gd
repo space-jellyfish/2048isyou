@@ -49,6 +49,6 @@ func inPhysicsProcess(_delta):
 				game.current_level.current_snapshot.add_tile(actor);
 
 func changeParentState():
-	if GV.player_snap:
+	if GV.snap_mode:
 		return states.snap;
 	return null;

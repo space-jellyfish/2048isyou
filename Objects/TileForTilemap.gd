@@ -4,7 +4,7 @@ extends AnimatableBody2D;
 var atlas_coords:Vector2i;
 var curr_sprite:TileForTilemapSprite;
 var prev_sprite:TileForTilemapSprite;
-var move_animator:TileForTilemapAnimator;
+var move_controller:TileForTilemapController;
 var front_tile:TileForTilemap; #in direction of initial action
 var back_tile:TileForTilemap; #in direction of initial action
 var world:World;
@@ -12,6 +12,8 @@ var is_splitted:bool;
 var is_merging:bool;
 var type_id:int;
 var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if tile not moving
+
+var is_aligned:bool = true;
 
 
 func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap, pusher_entity_id:int):
@@ -24,14 +26,14 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 	self.back_tile = back_tile;
 	type_id = get_type_id(new_atlas_coords);
 	
-	# set move_animator, sprites, and collision layers
+	# set move_controller, sprites, and collision layers
 	match transit_id:
 		GV.TransitId.SLIDE:
-			move_animator = TileForTilemapSlideAnimator.new(self, pos_t, dir);
+			move_controller = TileForTilemapSlideController.new(self, pos_t, dir);
 			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SHIFT:
-			move_animator = TileForTilemapShiftAnimator.new(self, pos_t, dir, target_dist_t);
+			move_controller = TileForTilemapShiftController.new(self, pos_t, dir, target_dist_t);
 			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SPLIT:
@@ -44,7 +46,7 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 			set_collision_layer_value(GV.CollisionId.COMBINING, true);
 	
 	# set collision masks if tile moves
-	if move_animator:
+	if move_controller:
 		set_collision_mask_value(GV.CollisionId.DEFAULT, true);
 		if not is_splitted:
 			set_collision_mask_value(GV.CollisionId.SPLITTING, true);

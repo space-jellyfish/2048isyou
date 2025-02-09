@@ -29,7 +29,7 @@ func handleInput(event):
 func changeParentState():
 	if frame_count == GV.COMBINING_FRAME_COUNT:
 		if actor.color == GV.ColorId.GRAY:
-			if GV.player_snap:
+			if GV.snap_mode:
 				return states.snap;
 			return states.slide;
 		return states.tile;

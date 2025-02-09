@@ -8,9 +8,6 @@
 [node name="Level 15" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_6ptrr")
-resolution_t = null
-min_pos = null
-max_pos = null
 player_pos_t = Vector2i(1, 1)
 
 [node name="LevelName" type="Label" parent="."]

@@ -28,7 +28,7 @@ func _ready():
 	add_level(GV.current_level_index);
 	
 	#init mode label
-	change_move_mode(GV.player_snap);
+	change_move_mode(GV.snap_mode);
 
 	#init dropdown button
 	for search_id in GV.SASearchId.SEARCH_END:
@@ -51,13 +51,13 @@ var game_paused : bool = false:
 
 func _input(event):
 	if event.is_action_pressed("change_move_mode") and GV.abilities["move_mode"]:
-		change_move_mode(not GV.player_snap);
+		change_move_mode(not GV.snap_mode);
 		
 		#update player(s) state
 		for player in current_level.players:
 			if player.get_state() not in ["merging1", "merging2", "combining", "splitting"]:
 				var next_state;
-				if GV.player_snap:
+				if GV.snap_mode:
 					next_state = "idle";
 					#update player pos_t
 					player.pos_t = GV.world_to_pos_t(player.position);
@@ -195,7 +195,7 @@ func _on_animation_player_animation_finished(anim_name):
 			
 
 func change_move_mode(snap):
-	GV.player_snap = snap;
+	GV.snap_mode = snap;
 	
 	#update label
 	var s:String = "Mode: ";

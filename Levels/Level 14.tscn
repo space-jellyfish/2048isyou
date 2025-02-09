@@ -8,10 +8,6 @@
 [node name="Level 14" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_40yuo")
-resolution_t = null
-min_pos = null
-max_pos = null
-player_pos_t = null
 
 [node name="LevelName" type="Label" parent="."]
 modulate = Color(1, 1, 1, 0)
