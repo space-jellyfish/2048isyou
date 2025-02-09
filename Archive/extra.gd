@@ -1126,4 +1126,50 @@ const SHIFT_PRIORITY_DURATION:int = 2; #in frames
 					collider_mover.front_slide_priority_frames = GV.SHIFT_PRIORITY_DURATION;
 				elif collider_mover.dir == -dir:
 					collider_mover.back_slide_priority_frames = GV.SHIFT_PRIORITY_DURATION;
+
+# used by sliding tiles to determine whether to bounce or not
+# slides approaching from ~ side should bounce if priority_frames non-zero
+# decremented each frame
+var front_slide_priority_frames:int = 0;
+var back_slide_priority_frames:int = 0;
+
+	#update priority_frames
+	if front_slide_priority_frames > 0:
+		front_slide_priority_frames -= 1;
+	if back_slide_priority_frames > 0:
+		back_slide_priority_frames -= 1;
+		
+#update priority_frames (decrement if nonzero and set if collider has move_priority over slide or colliding_shift.priority_frames)
+	if collision:
+		var collider:Node2D = collision.get_collider();
+		if collider is TileForTilemap:
+			var collider_mover:TileForTilemapController = collider.move_controller;
+			if collider_mover:
+				if collider_mover is TileForTilemapSlideController:
+					front_slide_priority_frames = GV.SHIFT_PRIORITY_DURATION;
+				elif collider_mover is TileForTilemapShiftController:
+					
+		else:
+			front_slide_priority_frames = GV.SHIFT_PRIORITY_DURATION;
+
+func swap_priority_frames():
+	var temp:int = front_slide_priority_frames;
+	front_slide_priority_frames = back_slide_priority_frames;
+	back_slide_priority_frames = temp;
+'''
+
+'''
+func _physics_process(delta:float):
+	var transit_tiles:Array = $TransitTiles.get_children();
+	
+	#call all move_controller.move()
+	#move slides before shifts if using step_dist-based bounce logic? NAH, slide-before-shift order is detrimental to move priority if slide is tailing a shift
+	for tile in transit_tiles:
+		if tile.move_controller:
+			tile.move_controller.move(delta);
+			
+	#call all move_controller.step()
+	for tile in transit_tiles:
+		if tile.move_controller:
+			tile.move_controller.step();
 '''
