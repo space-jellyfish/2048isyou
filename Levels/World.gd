@@ -3,6 +3,7 @@
 #coords indicates atlas_coords from tileset
 #empty atlas_coords indicates cell is empty
 #val indicates Vector2i(pow, sign)
+# save tile if it's not grid-aligned
 class_name World
 extends Node2D
 
@@ -73,20 +74,16 @@ func _ready():
 func _physics_process(delta:float):
 	var transit_tiles:Array = $TransitTiles.get_children();
 	
-	#call all move_animator.move()
+	#call all move_controller.move()
+	#move slides before shifts if using step_dist-based bounce logic? NAH, slide-before-shift order is detrimental to move priority if slide is tailing a shift
 	for tile in transit_tiles:
-		if tile.move_animator:
-			tile.move_animator.move(delta);
-	
-	#call all move_animator.step()
+		if tile.move_controller:
+			tile.move_controller.move(delta);
+			
+	#call all move_controller.step()
 	for tile in transit_tiles:
-		if tile.move_animator:
-			tile.move_animator.step();
-	
-	#clear all shift_animator.is_pressed_by_slide
-	for tile in transit_tiles:
-		if tile.move_animator is TileForTilemapShiftAnimator:
-			tile.move_animator.is_pressed_by_slide.clear();
+		if tile.move_controller:
+			tile.move_controller.step();
 
 func get_pooled_tile(transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap, pusher_entity_id:int) -> TileForTilemap:
 	if not tile_pool.is_empty():
@@ -99,7 +96,7 @@ func return_pooled_tile(tile:TileForTilemap):
 	assert(not tile.is_inside_tree());
 	assert(tile.prev_sprite == null);
 	assert(tile.curr_sprite == null);
-	assert(tile.move_animator == null);
+	assert(tile.move_controller == null);
 	assert(tile.back_tile == null);
 	assert(tile.front_tile == null);
 	
@@ -586,7 +583,7 @@ func animate_shift(pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	$TransitTiles.add_child(tile);
 
 #called when merge animation starts
-func animate_merge(pos_t:Vector2i, slide_animator:TileForTilemapSlideAnimator):
+func animate_merge(pos_t:Vector2i, slide_animator:TileForTilemapSlideController):
 	pass;
 
 # update tile_id at src_pos_t iff alternative_id is 1 (splitted or back_tile hasn't finalized yet)

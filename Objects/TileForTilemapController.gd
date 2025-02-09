@@ -1,4 +1,4 @@
-class_name TileForTilemapAnimator
+class_name TileForTilemapController
 
 signal finished;
 var tile:TileForTilemap; #should be init in ChildClass._init()

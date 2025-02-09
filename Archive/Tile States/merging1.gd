@@ -23,7 +23,7 @@ func enter():
 	actor.velocity = actor.slide_dir * slide_speed;
 	
 	#disable collision when merging
-	actor.set_layers(false, GV.player_snap);
+	actor.set_layers(false, GV.snap_mode);
 	if actor.color == GV.ColorId.GRAY:
 		actor.set_masks(false);
 	

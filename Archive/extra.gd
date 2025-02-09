@@ -807,8 +807,8 @@ func animate_action(action:String, pos_t:Vector2i, dir:Vector2i, target_dist:int
 '''
 		#check for head-on slide-slide
 		var from_pos_t:Vector2i = pos_t + (push_count + 2) * dir;
-		var animator:TileForTilemapAnimator = transit_tiles.get(from_pos_t);
-		if animator is TileForTilemapSlideAnimator and animator.dir == -dir:
+		var animator:TileForTilemapController = transit_tiles.get(from_pos_t);
+		if animator is TileForTilemapSlideController and animator.dir == -dir:
 			#TODO start bounce animation
 			#TODO if split, reverse parent splitting animation
 			
@@ -909,7 +909,7 @@ func finalize_slide(pos_t:Vector2i, dir:Vector2i, push_count:int, is_splitted:bo
 		is_player_alive = false;
 '''
 
-''' from TileForTilemapSlideAnimator.step()
+''' from TileForTilemapSlideController.step()
 #collision_id at target_pos_t was set by current slide, not useful to check
 '''
 
@@ -1052,9 +1052,9 @@ func finalize_split(pos_t:Vector2i):
 
 '''
 					if collider_mover.dir == dir:
-						if collider_mover is TileForTilemapShiftAnimator and collider_mover.is_reverse_queued:
+						if collider_mover is TileForTilemapShiftController and collider_mover.is_reverse_queued:
 							bounce();
-						if collider_mover is TileForTilemapSlideAnimator 
+						if collider_mover is TileForTilemapSlideController 
 					elif collider.mover.dir == -dir: 
 						
 					else: #perpendicular
@@ -1063,12 +1063,12 @@ func finalize_split(pos_t:Vector2i):
 
 '''
 # stores collider_mover that caused queued_reverse if is_reverse_queued and collider has one, else null
-var reverser_mover:TileForTilemapAnimator; #if SlideAnimator, assume it didn't bounce
+var reverser_mover:TileForTilemapController; #if SlideAnimator, assume it didn't bounce
 var is_reverse_queued:bool = false;
 
 					elif collider_mover.dir == dir:
-						if collider_mover is TileForTilemapShiftAnimator:
-							if collider_mover.reverser and collider_mover.reverser is TileForTilemap and collider_mover.reverser.move_animator and collider_mover.reverser.move_animator is TileForTilemapSlideAnimator:
+						if collider_mover is TileForTilemapShiftController:
+							if collider_mover.reverser and collider_mover.reverser is TileForTilemap and collider_mover.reverser.move_controller and collider_mover.reverser.move_controller is TileForTilemapSlideController:
 								collider_mover.reverser.bounce();
 '''
 
@@ -1078,7 +1078,7 @@ func queue_reverse():
 		is_reverse_queued = true;
 		call_deferred("perform_reverse");
 	if tile.back_tile:
-		tile.back_tile.move_animator.queue_reverse();
+		tile.back_tile.move_controller.queue_reverse();
 
 func perform_reverse():
 	reversed = not reversed;
@@ -1092,4 +1092,38 @@ func perform_reverse():
 # use collision.get_position() to handle different collider types
 func is_collision_before_snap(collision:KinematicCollision2D) -> bool:
 	return remaining_dist + 0.5 * GV.TILE_WIDTH - (collision.get_position() - tile.position).length() > GV.SNAP_TOLERANCE;
+'''
+
+'''
+const PLAYER_COLLIDER_SCALE:float = 0.98;
+const PLAYER_SNAP_RANGE:float = TILE_WIDTH * (1 - PLAYER_COLLIDER_SCALE);
+'''
+
+'''
+var move_priorities:Dictionary = {
+	TransitId.SLIDE : 1,
+	TransitId.SHIFT : 0,
+	TransitId.SPLIT : -1,
+	TransitId.MERGE : -1,
+}
+'''
+
+'''
+# [dir from obstruction to self, frames_left]
+# obstruction should have equal or greater priority than slide (slide/squid_club or perpendicular non-aligned tile)
+var is_pressed:Dictionary;
+'''
+
+'''
+const SHIFT_PRIORITY_DURATION:int = 2; #in frames
+
+	if collision:
+		var collider:Node2D = collision.get_collider();
+		if collider is TileForTilemap:
+			var collider_mover:TileForTilemapController = collider.move_controller;
+			if collider_mover is TileForTilemapShiftController:
+				if collider_mover.dir == dir:
+					collider_mover.front_slide_priority_frames = GV.SHIFT_PRIORITY_DURATION;
+				elif collider_mover.dir == -dir:
+					collider_mover.back_slide_priority_frames = GV.SHIFT_PRIORITY_DURATION;
 '''

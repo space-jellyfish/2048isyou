@@ -84,15 +84,13 @@ const TRACKING_CAM_SLACK_RATIO:float = 0.15; #0.25; #ratio applied to slack (tra
 const TRACKING_CAM_TRANSITION_TIME:float = 1.28;
 const PLAYER_SPAWN_INVINCIBILITY_TIME:float = 0.25;
 
-const PLAYER_COLLIDER_SCALE:float = 0.98;
-const PLAYER_SNAP_RANGE:float = TILE_WIDTH * (1 - PLAYER_COLLIDER_SCALE);
+const SNAP_TOLERANCE:float = 0.1; #epsilon
 const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;
 #const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
 const TILE_SLIDE_SPEED:float = 288; #320
 const COMBINING_MERGE_RATIO:float = 1/2.7;
-const SNAP_TOLERANCE:float = 0.1; #epsilon
 
 const SNAP_FRAME_COUNT:int = 1;
 const COMBINING_FRAME_COUNT:int = 6; #9; #1;
@@ -111,8 +109,9 @@ const UNDO_REPEAT_DELAY_FMIN:int = 14;
 const PREMOVE_STREAK_END_DELAY = 6; #must >= MOVE_REPEAT_DELAY_F0 - slide frame count
 
 enum InputType {
-	MOVE=0,
-	UNDO
+	MOVE,
+	UNDO,
+	MODE, #toggle move mode
 }
 
 #animation-related stuff
@@ -182,7 +181,7 @@ const SHIFT_SPEED_MIN:float = TILE_SLIDE_SPEED;
 var SHIFT_LERP_WEIGHT_TOTAL:float = 0;
 var SHIFT_DISTANCE_TO_MAX_SPEED:float;
 
-var player_snap:bool = true; #move mode
+var snap_mode:bool = true; #move mode
 
 const directions = {
 	"left" : Vector2i(-1, 0),
@@ -336,11 +335,10 @@ enum SlideArbitrationMode {
 	ENTITY, # higher move_priority continues, lower remaining_dist continues if move_priority equal, both bounce if remaining_dist equal 
 }
 
-# enemies have higher move_priority so player cannot use premoving to cross enemy-protected cells
-# for tiebreaking if 2+ entities have premoves queued
-# or if two slides collide at midpoint
-# id of entity that initiated action is used, not EntityId of moving tile
-var move_priorities:Dictionary = {
+# enemies have higher tiebreak_priority so player cannot use premoving to cross enemy-protected cells
+# for tiebreaking if 2+ entities have premoves queued or if two slides collide at midpoint
+# id of entity that initiated move is used, not EntityId of moving tile
+var tiebreak_priorities:Dictionary = {
 	EntityId.SQUID : 0, #tile-originated slides have higher priority
 	EntityId.STP_SPAWNING : 1,
 	EntityId.PLAYER : 2,

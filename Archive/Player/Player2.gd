@@ -8,7 +8,7 @@ var slide_dir:Vector2 = Vector2.ZERO;
 
 
 func _ready():
-	if GV.player_snap:
+	if GV.snap_mode:
 		change_state("snap_idle");
 	else:
 		change_state("slide");

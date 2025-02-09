@@ -47,7 +47,7 @@ func enter():
 	
 	#turn off latter layers (5-32) when sliding to ignore obstructing baddie
 	#disable collision with player if in snap mode so player can follow through with slide
-	actor.set_layers(false, GV.player_snap);
+	actor.set_layers(false, GV.snap_mode);
 	
 	#play sound
 	if not actor.snap_slid and not actor.splitted:
