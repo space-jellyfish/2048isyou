@@ -71,20 +71,6 @@ func _ready():
 			for pos_t in $Cells.get_used_cells_by_id(GV.LayerId.TILE, GV.LayerId.TILE, tile_atlas_coords, 1):
 				set_atlas_coords(GV.LayerId.TILE, pos_t, tile_atlas_coords, 0);
 
-func _physics_process(delta:float):
-	var transit_tiles:Array = $TransitTiles.get_children();
-	
-	#call all move_controller.move()
-	#move slides before shifts if using step_dist-based bounce logic? NAH, slide-before-shift order is detrimental to move priority if slide is tailing a shift
-	for tile in transit_tiles:
-		if tile.move_controller:
-			tile.move_controller.move(delta);
-			
-	#call all move_controller.step()
-	for tile in transit_tiles:
-		if tile.move_controller:
-			tile.move_controller.step();
-
 func get_pooled_tile(transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap, pusher_entity_id:int) -> TileForTilemap:
 	if not tile_pool.is_empty():
 		var tile:TileForTilemap = tile_pool.pop_back()._init(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile, pusher_entity_id);
