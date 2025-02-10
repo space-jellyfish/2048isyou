@@ -230,6 +230,12 @@ enum BackId { #8 bits
 	BOARD_FRAME,
 }
 
+const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
+const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
+const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
+const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
+
+#sliding tiles should not push roaming stuff
 enum EntityId {
 	NONE,
 	PLAYER,
@@ -238,13 +244,9 @@ enum EntityId {
 	VOID,
 	STP_SPAWNING,
 	STP_SPAWNED,
-	SQUID,
+	SQUID_BODY,
+	SQUID_CLUB,
 }
-
-const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
-const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
-const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
-const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
 
 enum LayerId {
 	BACK,
@@ -264,6 +266,91 @@ enum ColorId {
 	BLACK = 31,
 	GRAY = 32,
 };
+
+#player tile_push_limit does not change when roaming
+var tile_push_limits:Dictionary = {
+	EntityId.NONE : 0,
+	EntityId.PLAYER : 1,
+	EntityId.INVINCIBLE : 1,
+	EntityId.HOSTILE : 1,
+	EntityId.VOID : 3,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 2,
+	EntityId.SQUID_BODY : 0,
+	EntityId.SQUID_CLUB : 6,
+};
+
+var merge_priorities:Dictionary = {
+	-1 : -1,
+	TypeId.REGULAR : 0,
+	TypeId.PLAYER : 1,
+	TypeId.HOSTILE : 2,
+	TypeId.INVINCIBLE : 3,
+	TypeId.VOID : 4,
+	TypeId.SQUID : 5,
+}
+
+#push is possible if pusher push_weight >= pushed slide_weight
+#regular does not have a slide_weight; to disallow pushing of regular tiles, set tile_push_limit to 0
+#slide_weights should be unique, since they are also used for tiebreaking if two slides collide at midpoint
+var slide_weights:Dictionary = {
+	EntityId.NONE : INT64_MAX,
+	EntityId.STP_SPAWNING : INT64_MAX,
+	EntityId.STP_SPAWNED : INT64_MAX,
+	EntityId.SQUID_CLUB : INT64_MAX,
+	EntityId.VOID : 0,
+	EntityId.SQUID_BODY : 1,
+	EntityId.HOSTILE : 2,
+	EntityId.INVINCIBLE : 3,
+	EntityId.PLAYER : 4,
+}
+
+#-1 if entity cannot push anything
+var push_weights:Dictionary = {
+	EntityId.NONE : -1,
+	EntityId.PLAYER : 3,
+	EntityId.INVINCIBLE : 2,
+	EntityId.HOSTILE : 2,
+	EntityId.VOID : 3,
+	EntityId.STP_SPAWNING : -1,
+	EntityId.STP_SPAWNED : 3,
+	EntityId.SQUID_BODY : -1,
+	EntityId.SQUID_CLUB : 4,
+}
+
+# (slide collision) arbitration modes
+# use MIDPOINT to prevent higher priority entities from bullying lower priority entities by camping a cell
+enum SlideArbitrationMode {
+	MIDPOINT, # lower remaining_dist continues, higher move_priority continues if remaining_dist equal, both bounce if move_priority equal
+	ENTITY, # higher move_priority continues, lower remaining_dist continues if move_priority equal, both bounce if remaining_dist equal 
+}
+
+# enemies have higher priority so player cannot use premoving to cross enemy-protected cells
+# for tiebreaking if 2+ entities have premoves queued (represents 'reaction time' of entity)
+# id of entity that initiated move is used, not EntityId of moving tile
+# roaming entities' priority should be lower than tile-originated slides
+# so they should check all? pushed tiles for premoves before adding premove
+var premove_priorities:Dictionary = {
+	EntityId.NONE : -1,
+	EntityId.PLAYER : 2,
+	EntityId.INVINCIBLE : 4,
+	EntityId.HOSTILE : 3,
+	EntityId.VOID : 5,
+	EntityId.STP_SPAWNING : 1,
+	EntityId.STP_SPAWNED : 6,
+	EntityId.SQUID_BODY : 0,
+	EntityId.SQUID_CLUB : -1,
+	#snake continuity at 90deg turns?
+}
+
+var max_shift_dists:Dictionary = {
+	TypeId.PLAYER : 4,
+	TypeId.INVINCIBLE : 4,
+	TypeId.HOSTILE : 0,
+	TypeId.VOID : 8,
+	TypeId.REGULAR : 0,
+	TypeId.SQUID : 8,
+}
 
 enum SASearchId {
 	DIJKSTRA,
@@ -298,66 +385,6 @@ enum SASearchId {
 	#IDA/EPEA, QUANT, FMT/RRT
 	SEARCH_END,
 };
-
-var tile_push_limits:Dictionary = {
-	TypeId.PLAYER : 2,
-	TypeId.INVINCIBLE : 1,
-	TypeId.HOSTILE : 1,
-	TypeId.VOID : 1,
-	TypeId.REGULAR : 0,
-	TypeId.SQUID : 0,
-};
-
-var merge_priorities:Dictionary = {
-	-1 : -1,
-	TypeId.REGULAR : 0,
-	TypeId.PLAYER : 1,
-	TypeId.HOSTILE : 2,
-	TypeId.INVINCIBLE : 3,
-	TypeId.VOID : 4,
-	TypeId.SQUID : 5,
-}
-
-#each entity is pushable by entities with equal or greater priority
-var push_priorities:Dictionary = {
-	EntityId.STP_SPAWNING : 0,
-	EntityId.VOID : 1,
-	EntityId.HOSTILE : 2,
-	EntityId.INVINCIBLE : 3,
-	EntityId.STP_SPAWNED : 4,
-	EntityId.PLAYER : 5,
-	EntityId.SQUID : 6,
-}
-
-# (slide collision) arbitration modes
-# use MIDPOINT to prevent higher priority entities from bullying lower priority entities by camping a cell
-enum SlideArbitrationMode {
-	MIDPOINT, # lower remaining_dist continues, higher move_priority continues if remaining_dist equal, both bounce if move_priority equal
-	ENTITY, # higher move_priority continues, lower remaining_dist continues if move_priority equal, both bounce if remaining_dist equal 
-}
-
-# enemies have higher tiebreak_priority so player cannot use premoving to cross enemy-protected cells
-# for tiebreaking if 2+ entities have premoves queued or if two slides collide at midpoint
-# id of entity that initiated move is used, not EntityId of moving tile
-var tiebreak_priorities:Dictionary = {
-	EntityId.SQUID : 0, #tile-originated slides have higher priority
-	EntityId.STP_SPAWNING : 1,
-	EntityId.PLAYER : 2,
-	EntityId.HOSTILE : 3,
-	EntityId.INVINCIBLE : 4,
-	EntityId.VOID : 5,
-	EntityId.STP_SPAWNED : 6,
-	#snake continuity at 90deg turns?
-}
-
-var max_shift_dists:Dictionary = {
-	TypeId.PLAYER : 4,
-	TypeId.INVINCIBLE : 4,
-	TypeId.HOSTILE : 0,
-	TypeId.VOID : 8,
-	TypeId.REGULAR : 0,
-	TypeId.SQUID : 8,
-}
 
 #const PHYSICS_ENABLER_SHAPE:RectangleShape2D = preload("res://Objects/PhysicsEnablerShape.tres");
 const PHYSICS_ENABLER_BASE_SIZE:Vector2 = Vector2(144, 144); #px, px; at tile_push_limit = 0

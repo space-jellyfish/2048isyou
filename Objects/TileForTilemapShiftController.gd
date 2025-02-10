@@ -1,6 +1,5 @@
-#remember to clear it at the end of each frame
 #when shifting, tile should decelerate upon bounce and accelerate otherwise
-#upon bounce, snap to nearest cell (even if not reversed)
+#upon bounce, snap to nearest cell, even if heading in original shift dir (not reversed)
 class_name TileForTilemapShiftController
 extends TileForTilemapController;
 
@@ -17,7 +16,6 @@ func _init(tile:TileForTilemap, pos_t:Vector2i, dir:Vector2i, target_dist_t:int)
 	remaining_dist = GV.TILE_WIDTH * target_dist_t;
 	max_speed = target_dist_t * GV.TILE_WIDTH * GV.SHIFT_DISTANCE_TO_MAX_SPEED;
 
-#update position, remaining_dist
 #update velocity (decelerate if bounce else accelerate)
 func step(delta:float):
 	#update position
