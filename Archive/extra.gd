@@ -1173,3 +1173,15 @@ func _physics_process(delta:float):
 		if tile.move_controller:
 			tile.move_controller.step();
 '''
+
+'''
+#player tile_push_limit does not change when roaming
+var tile_push_limits:Dictionary = {
+	TypeId.PLAYER : 2,
+	TypeId.INVINCIBLE : 1,
+	TypeId.HOSTILE : 1,
+	TypeId.VOID : 1,
+	TypeId.REGULAR : 0,
+	TypeId.SQUID : 0,
+};
+'''
