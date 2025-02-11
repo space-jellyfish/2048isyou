@@ -235,17 +235,17 @@ const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
 const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
 const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
 
-#sliding tiles should not push roaming stuff
+# NOTE TypeId should be usable as EntityId without conversion
 enum EntityId {
-	NONE,
-	PLAYER,
+	PLAYER, #for simplicity, player priorities/push_weight/tpl are the same when roaming
 	INVINCIBLE,
 	HOSTILE,
 	VOID,
-	STP_SPAWNING,
-	STP_SPAWNED,
+	NONE, #TypeId.REGULAR
 	SQUID_BODY,
 	SQUID_CLUB,
+	STP_SPAWNING,
+	STP_SPAWNED,
 }
 
 enum LayerId {
@@ -269,15 +269,15 @@ enum ColorId {
 
 #player tile_push_limit does not change when roaming
 var tile_push_limits:Dictionary = {
-	EntityId.NONE : 0,
 	EntityId.PLAYER : 1,
 	EntityId.INVINCIBLE : 1,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 3,
-	EntityId.STP_SPAWNING : 0,
-	EntityId.STP_SPAWNED : 2,
+	EntityId.NONE : 0,
 	EntityId.SQUID_BODY : 0,
 	EntityId.SQUID_CLUB : 6,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 2,
 };
 
 var merge_priorities:Dictionary = {
@@ -291,31 +291,29 @@ var merge_priorities:Dictionary = {
 }
 
 #push is possible if pusher push_weight >= pushed slide_weight
-#regular does not have a slide_weight; to disallow pushing of regular tiles, set tile_push_limit to 0
-#slide_weights should be unique, since they are also used for tiebreaking if two slides collide at midpoint
 var slide_weights:Dictionary = {
-	EntityId.NONE : INT64_MAX,
+	EntityId.PLAYER : 3, #INT64_MAX when roaming, but doesn't matter since only SQUID_CLUB can push player
+	EntityId.INVINCIBLE : 2,
+	EntityId.HOSTILE : 1,
+	EntityId.VOID : 0,
+	EntityId.NONE : 0,
+	EntityId.SQUID_BODY : 0,
+	EntityId.SQUID_CLUB : INT64_MAX,
 	EntityId.STP_SPAWNING : INT64_MAX,
 	EntityId.STP_SPAWNED : INT64_MAX,
-	EntityId.SQUID_CLUB : INT64_MAX,
-	EntityId.VOID : 0,
-	EntityId.SQUID_BODY : 1,
-	EntityId.HOSTILE : 2,
-	EntityId.INVINCIBLE : 3,
-	EntityId.PLAYER : 4,
 }
 
 #-1 if entity cannot push anything
 var push_weights:Dictionary = {
+	EntityId.PLAYER : 2,
+	EntityId.INVINCIBLE : 1,
+	EntityId.HOSTILE : 1,
+	EntityId.VOID : 2,
 	EntityId.NONE : -1,
-	EntityId.PLAYER : 3,
-	EntityId.INVINCIBLE : 2,
-	EntityId.HOSTILE : 2,
-	EntityId.VOID : 3,
-	EntityId.STP_SPAWNING : -1,
-	EntityId.STP_SPAWNED : 3,
 	EntityId.SQUID_BODY : -1,
-	EntityId.SQUID_CLUB : 4,
+	EntityId.SQUID_CLUB : 3,
+	EntityId.STP_SPAWNING : -1,
+	EntityId.STP_SPAWNED : 2,
 }
 
 # (slide collision) arbitration modes
@@ -325,21 +323,33 @@ enum SlideArbitrationMode {
 	ENTITY, # higher move_priority continues, lower remaining_dist continues if move_priority equal, both bounce if remaining_dist equal 
 }
 
-# enemies have higher priority so player cannot use premoving to cross enemy-protected cells
-# for tiebreaking if 2+ entities have premoves queued (represents 'reaction time' of entity)
+# for tiebreaking when two slides collide at midpoint
 # id of entity that initiated move is used, not EntityId of moving tile
-# roaming entities' priority should be lower than tile-originated slides
-# so they should check all? pushed tiles for premoves before adding premove
-var premove_priorities:Dictionary = {
-	EntityId.NONE : -1,
-	EntityId.PLAYER : 2,
+var slide_priorities:Dictionary = {
+	EntityId.PLAYER : 7,
 	EntityId.INVINCIBLE : 4,
 	EntityId.HOSTILE : 3,
 	EntityId.VOID : 5,
-	EntityId.STP_SPAWNING : 1,
+	EntityId.NONE : -1,
+	EntityId.SQUID_BODY : 2,
+	EntityId.SQUID_CLUB : 1,
+	EntityId.STP_SPAWNING : 0,
 	EntityId.STP_SPAWNED : 6,
-	EntityId.SQUID_BODY : 0,
-	EntityId.SQUID_CLUB : -1,
+}
+
+# for tiebreaking if 2+ entities have premoves queued (represents 'reaction time' of entity)
+# enemies have higher priority so player cannot use premoving to cross enemy-protected cells
+# roaming entities should use the premove system instead of initiating moves in the middle of physics frame
+var premove_priorities:Dictionary = {
+	EntityId.PLAYER : 3,
+	EntityId.INVINCIBLE : 5,
+	EntityId.HOSTILE : 4,
+	EntityId.VOID : 6,
+	EntityId.NONE : -1,
+	EntityId.SQUID_BODY : 2,
+	EntityId.SQUID_CLUB : 1,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 7,
 	#snake continuity at 90deg turns?
 }
 

@@ -416,14 +416,14 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
 	return distance;
 
 #update player_pos_t, is_player_alive (NAH), player_shift_dir, player_shift_remaining_t
-func initiate_shift(pos_t:Vector2i, dir:Vector2i, distance:int):
+func initiate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, distance:int):
 	#var dest_pos_t:Vector2i = pos_t + distance * dir;
 	#var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
 	#set_atlas_coords(GV.LayerId.TILE, dest_pos_t, src_coords);
 	#set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
 	
 	#update tile_id, alternative_id, and player stats during animation
-	animate_shift(pos_t, dir, distance);
+	animate_shift(pusher_entity_id, pos_t, dir, distance);
 	
 	#start audio
 	game.get_node("Audio/Shift").play();
@@ -437,7 +437,6 @@ func set_player_pos_t(pos_t:Vector2i):
 func is_stable(pos_t:Vector2i):
 	return get_alternative_id(pos_t) == GV.AlternativeId.STABLE;
 
-#pusher_entity_id required since SQUID/STP cannot be gotten from type_id
 func try_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, is_splitted:bool=false) -> bool:
 	if not is_stable(pos_t): # affected by another entity
 		return false;
@@ -476,7 +475,7 @@ func try_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
 	
 	var target_distance:int = get_shift_target_dist(pos_t, dir);
 	if target_distance:
-		initiate_shift(pos_t, dir, target_distance);
+		initiate_shift(pusher_entity_id, pos_t, dir, target_distance);
 		return true;
 	return false;
 
@@ -559,13 +558,13 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var merging_tile:TileForTilemap = get_pooled_tile(GV.TransitId.MERGE, merge_pos_t, Vector2i.ZERO, 0, old_atlas_coords, new_atlas_coords, null, false, false, back_tile, GV.EntityId.NONE);
 		$TransitTiles.add_child(merging_tile);
 
-func animate_shift(pos_t:Vector2i, dir:Vector2i, target_dist:int):
+func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#set alternative_id
 	set_atlas_coords(GV.LayerId.TILE, pos_t, get_atlas_coords(GV.LayerId.TILE, pos_t), 1);
 	
 	#add transit_tile
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
-	var tile:TileForTilemap = get_pooled_tile(GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null, GV.EntityId.NONE);
+	var tile:TileForTilemap = get_pooled_tile(GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null, pusher_entity_id);
 	$TransitTiles.add_child(tile);
 
 #called when merge animation starts
