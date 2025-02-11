@@ -131,6 +131,6 @@ func should_bounce(collider:TileForTilemap):
 	
 	if remaining_dist > collider_mover.remaining_dist:
 		return true;
-	elif remaining_dist == collider_mover.remaining_dist and GV.tiebreak_priorities[tile.pusher_entity_id] <= GV.tiebreak_priorities[collider.pusher_entity_id]:
+	elif remaining_dist == collider_mover.remaining_dist and GV.slide_priorities[tile.pusher_entity_id] <= GV.slide_priorities[collider.pusher_entity_id]:
 		return true;
 	return false;
