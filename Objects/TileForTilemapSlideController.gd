@@ -43,13 +43,13 @@ func step(delta:float):
 	var new_remaining_dist:float = remaining_dist - true_step_dist;
 	call_deferred("set_remaining_dist", new_remaining_dist);
 	
-	#bounce, finalize_move (if applicable)
+	#bounce, finalize slide (if applicable)
 	#bounce if true_step_dist ~< target_step_dist? NAH, older slide should continue
 	#bounce if ^ for 2+ frames in a row? NAH, allows two well-timed shifts to bounce a slide
 	if new_remaining_dist <= GV.SNAP_TOLERANCE:
 		#update TileMap (emit signal or call world.update_tilemap(); don't update tilemap directly)
 		if not reversed:
-			tile.world.finalize_move(src_pos_t, dir, tile.atlas_coords, tile.is_splitted, tile.is_merging);
+			tile.world.finalize_slide(src_pos_t, dir, tile.atlas_coords, tile.is_splitted, tile.is_merging);
 		return false;
 		
 	elif collision:

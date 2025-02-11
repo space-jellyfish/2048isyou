@@ -12,9 +12,11 @@ signal premove_added;
 @export var resolution_t:Vector2i = GV.RESOLUTION_T;
 @export var min_pos:Vector2 = Vector2.ZERO;
 @export var max_pos:Vector2 = GV.RESOLUTION;
-@export var player_pos_t:Vector2i = Vector2i.ZERO;
 @onready var game:Node2D = $"/root/Game";
 @onready var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.png");
+
+@export var player_pos_t:Vector2i = Vector2i.ZERO;
+var player_tile:TileForTilemap; #for when player isn't aligned
 
 #for enemy intel
 var is_player_alive:bool = true;
@@ -574,7 +576,8 @@ func animate_merge(pos_t:Vector2i, slide_animator:TileForTilemapSlideController)
 # update tile_id at src_pos_t iff alternative_id is 1 (splitted or back_tile hasn't finalized yet)
 # atlas_coord required because tile_id at src_pos_t might've been modified by back_tile
 # is_merging required because if TileId.ZERO at target_pos_t, either push or pop possible
-func finalize_move(src_pos_t:Vector2i, dir:Vector2i, tile_atlas_coords:Vector2i, is_splitted:bool, is_merging:bool):
+# slide does not update Tilemap immediately bc success is not guaranteed (might bounce off squid club)
+func finalize_slide(src_pos_t:Vector2i, dir:Vector2i, tile_atlas_coords:Vector2i, is_splitted:bool, is_merging:bool):
 	#set atlas_coords at target_pos_t
 	var target_pos_t:Vector2i = src_pos_t + dir;
 	if is_merging:
