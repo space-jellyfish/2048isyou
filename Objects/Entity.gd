@@ -9,17 +9,21 @@
 #manages premoves for an entity instance
 #clear premoves if entity dies or last premove failed
 #roaming entities can try new premoves before the old ones finish
-class_name EntityPremoveController
+class_name Entity
 
 var world:World;
-var entity_id:int; #of self, the entity that initiated the premove
+var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
+var entity_id:int;
+var pos_t:Vector2i;
 var premoves:Array[Premove];
 var is_busy:bool = false; #true if premoves are unable to be consumed
 
 
-func _init(world:World, entity_id:int):
+func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 	self.world = world;
+	self.body = body;
 	self.entity_id = entity_id;
+	self.pos_t = pos_t;
 
 func has_premove():
 	return not premoves.is_empty();
@@ -51,11 +55,11 @@ func try_curr_frame_premoves():
 func try_premove(premove:Premove):
 	var initiated:bool = false;
 	if premove.action_id == GV.ActionId.SLIDE:
-		initiated = world.try_slide(entity_id, premove.tile_pos_t, premove.dir);
+		initiated = world.try_slide(entity_id, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SPLIT:
-		initiated = world.try_split(entity_id, premove.tile_pos_t, premove.dir);
+		initiated = world.try_split(entity_id, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SHIFT:
-		initiated = world.try_shift(entity_id, premove.tile_pos_t, premove.dir);
+		initiated = world.try_shift(entity_id, premove.tile_entity, premove.dir);
 	
 	if initiated:
 		# animation should be started from action_func since hostiles don't call consume_premove()
@@ -74,3 +78,6 @@ func try_premove(premove:Premove):
 				world.get_node("Pathfinder").set_player_last_dir(premove.dir);
 	else:
 		clear_premoves();
+
+func is_tile() -> bool:
+	return not body or body is TileForTilemap;

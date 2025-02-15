@@ -12,7 +12,7 @@ extends Node2D
 
 #for enemy intel
 @export var player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
-var player_premove_controller:EntityPremoveController;
+var player:Entity;
 var is_player_alive:bool = true;
 
 var tile_noise = FastNoiseLite.new();
@@ -24,8 +24,8 @@ var loaded_pos_t_max:Vector2i; #inclusive
 var resolution:Vector2;
 var half_resolution:Vector2;
 
-var entities:Dictionary; #[EntityId, Array[EntityPremoveController]]
-var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[EntityPremoveController, DONT_CARE]]
+var entities:Dictionary; #[EntityId, Array[Entity]]
+var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[Entity, DONT_CARE]]
 var premove_callback_upcoming:bool = false;
 
 #for input repeat delay
@@ -48,14 +48,14 @@ func _ready():
 	for entity_id in GV.EntityId.values():
 		entities[entity_id] = Array();
 	
-	player_premove_controller = EntityPremoveController.new(self, GV.EntityId.PLAYER);
-	entities[GV.EntityId.PLAYER].push_back(player_premove_controller);
+	player = Entity.new(self, null, GV.EntityId.PLAYER, player_pos_t);
+	entities[GV.EntityId.PLAYER].push_back(player);
 	
 	#init entities_with_curr_frame_premoves
 	for entity_id in GV.EntityId.values():
 		entities_with_curr_frame_premoves[entity_id] = Dictionary();
 
-func add_curr_frame_premove_entity(entity:EntityPremoveController):
+func add_curr_frame_premove_entity(entity:Entity):
 	#add to entities_with_curr_frame_premoves
 	entities_with_curr_frame_premoves[entity.entity_id][entity] = true;
 	
@@ -238,8 +238,8 @@ func get_event_dir(event:InputEventKey) -> Vector2i:
 func update_last_input_premove(event:InputEventKey, action_id:int):
 	var dir:Vector2i = get_event_dir(event);
 	if dir != Vector2i.ZERO:
-		var premove = Premove.new(player_pos_t, dir, action_id);
-		player_premove_controller.add_premove(premove);
+		var premove = Premove.new(player, dir, action_id);
+		player.add_premove(premove);
 
 func _input(event):
 	if event is InputEventKey and event.pressed:
@@ -385,7 +385,7 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
 		distance += 1;
 		next_pos_t += dir;
 	return distance;
-
+	
 func set_player_pos_t(pos_t:Vector2i):
 	if pos_t != player_pos_t:
 		$Pathfinder.rrd_clear_iad();
@@ -394,17 +394,21 @@ func set_player_pos_t(pos_t:Vector2i):
 
 # returns true if slide is initiated
 # if is_splitted, assume atlas_coord at pos_t is already splitted with keep_type = true
-func try_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, is_splitted:bool=false, unsplit_atlas_coords=Vector2i.ZERO) -> bool:
-	if not is_tile(pos_t): # moving due to another entity
+func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitted:bool=false, unsplit_atlas_coords=Vector2i.ZERO) -> bool:
+	if tile_entity.body:
+		assert(tile_entity.body is TileForTilemap);
+		tile_entity.body.move_controller = TileForTilemapSlideController.new(tile_entity.body, dir);
+		return true;
+	if not is_tile(tile_entity.pos_t): # moving due to another entity
 		return false;
 	
-	var push_count:int = get_slide_push_count(pos_t, dir);
+	var push_count:int = get_slide_push_count(tile_entity.pos_t, dir);
 	if push_count != -1:
 		# start animation
-		animate_slide(pusher_entity_id, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
+		animate_slide(pusher_entity_id, tile_entity.pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
 		
 		# start audio
-		var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
+		var merge_pos_t:Vector2i = tile_entity.pos_t + (push_count + 1) * dir;
 		if get_tile_id(merge_pos_t):
 			game.get_node("Audio/Combine").play();
 		if is_splitted:
@@ -415,12 +419,16 @@ func try_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, is_splitted:b
 		return true;
 	return false;
 
-func try_split(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
-	if not is_tile(pos_t):
+func try_split(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
+	if tile_entity.body:
+		assert(tile_entity.body is TileForTilemap);
+		game.show_message(GV.MessageId.SPLIT_NA);
+		return false;
+	if not is_tile(tile_entity.pos_t):
 		return false;
 	
 	#check if split possible
-	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
+	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t);
 	var splitted_coords:Vector2i = get_splitted_tile_atlas_coords(src_coords);
 	if splitted_coords == -Vector2i.ONE:
 		return false;
@@ -429,21 +437,26 @@ func try_split(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
 	# once split animation finishes (without worrying about the slide bouncing)
 	# set splitted coord for try_slide().get_slide_push_count() (and try_slide() does not have to calculate it again)
 	# try_slide() will add parent_atlas_coords at src_pos_t if it initiates
-	set_atlas_coords(GV.LayerId.TILE, pos_t, splitted_coords);
-	var initiated:bool = try_slide(pusher_entity_id, pos_t, dir, true, src_coords);
+	set_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t, splitted_coords);
+	var initiated:bool = try_slide(pusher_entity_id, tile_entity, dir, true, src_coords);
 	if not initiated:
-		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords); #reset src coords
+		#reset src coords
+		set_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t, src_coords);
 	return initiated;
 
 #update player_pos_t
-func try_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
-	if not is_tile(pos_t):
+func try_shift(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
+	if tile_entity.body:
+		assert(tile_entity.body is TileForTilemap);
+		game.show_message(GV.MessageId.SHIFT_NA);
+		return false;
+	if not is_tile(tile_entity.pos_t):
 		return false;
 	
-	var target_distance:int = get_shift_target_dist(pos_t, dir);
+	var target_distance:int = get_shift_target_dist(tile_entity.pos_t, dir);
 	if target_distance:
 		#update tile_id and player stats during animation
-		animate_shift(pusher_entity_id, pos_t, dir, target_distance);
+		animate_shift(pusher_entity_id, tile_entity.pos_t, dir, target_distance);
 		
 		#start audio
 		game.get_node("Audio/Shift").play();

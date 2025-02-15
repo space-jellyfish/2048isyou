@@ -8,6 +8,9 @@ var remaining_dist:float;
 
 
 func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
+	#assume tile is aligned
+	assert(not fmod(tile.position.x, GV.TILE_WIDTH) and not fmod(tile.position.y, GV.TILE_WIDTH));
+	
 	self.tile = tile;
 	self.dir = dir;
 	remaining_dist = GV.TILE_WIDTH * target_dist_t;

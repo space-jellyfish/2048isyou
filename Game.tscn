@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://cy3daaugnn180"]
+[gd_scene load_steps=14 format=3 uid="uid://cy3daaugnn180"]
 
 [ext_resource type="Script" path="res://Game.gd" id="1_s0cd0"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_jtwee"]
@@ -60,6 +60,14 @@ _data = {
 "fade_out_black": SubResource("Animation_mj6ai")
 }
 
+[sub_resource type="Animation" id="Animation_qlp8u"]
+resource_name = "fade_out_with_delay"
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_w264g"]
+_data = {
+"fade_out_with_delay": SubResource("Animation_qlp8u")
+}
+
 [node name="Game" type="Node2D"]
 process_mode = 3
 script = ExtResource("1_s0cd0")
@@ -78,6 +86,11 @@ libraries = {
 }
 
 [node name="GUI" type="CanvasLayer" parent="."]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="GUI"]
+libraries = {
+"": SubResource("AnimationLibrary_w264g")
+}
 
 [node name="HBoxContainer" type="HBoxContainer" parent="GUI"]
 layout_direction = 3

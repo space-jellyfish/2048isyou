@@ -2,6 +2,7 @@ extends Node2D
 
 @onready var GV:Node = $"/root/GV";
 
+@onready var main_theme:Theme = load("res://Themes/main_theme.tres");
 @onready var fader:AnimationPlayer = $"Overlay/AnimationPlayer";
 @onready var right_sidebar:VBoxContainer = $"GUI/HBoxContainer/RightSideBar";
 @onready var mode_label:Label = right_sidebar.get_node("MoveMode");
@@ -17,6 +18,7 @@ var current_level_name:Label;
 var levels = [];
 var level_saves = [];
 var next_level_index:int;
+var messages_shown:Array[bool];
 
 
 func _ready():
@@ -33,6 +35,10 @@ func _ready():
 	#init dropdown button
 	for search_id in GV.SASearchId.SEARCH_END:
 		sa_search_id_selector.add_item(GV.SASearchId.keys()[search_id]);
+	
+	#init messages_shown
+	messages_shown.resize(GV.MessageId.size());
+	messages_shown.fill(false);
 	
 	get_viewport().set_as_audio_listener_2d(true);
 
@@ -226,3 +232,29 @@ func save_level(savepoint_id):
 	level_saves[GV.current_level_index] = packed_level;
 	if savepoint_id != -1:
 		GV.current_savepoint_saves.push_back(packed_level);
+
+func show_message(message_id:int):
+	#check if message is already shown
+	if messages_shown[message_id]:
+		return;
+	
+	#add error msg
+	var label:Label = Label.new();
+	label.theme = main_theme;
+	label.text = GV.messages[message_id];
+	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+	right_sidebar.add_child(label);
+	
+	#play fade-out animation and free label
+	var tween = Tween.new();
+	tween.set_ease(Tween.EASE_IN);
+	tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
+	tween.tween_property(label, "modulate:a", 0, GV.ERROR_MESSAGE_FADE_TIME).set_trans(Tween.TRANS_EXPO);
+	tween.finished.connect(_on_error_label_faded, label, message_id);
+	
+	#update messages_shown
+	messages_shown[message_id] = true;
+
+func _on_error_label_faded(label:Label, message_id:int):
+	label.queue_free();
+	messages_shown[message_id] = false;
