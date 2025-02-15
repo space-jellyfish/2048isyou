@@ -73,6 +73,7 @@ var level_initial_savepoint_ids:Array[int] = []; #id of goal where player first 
 var level_initial_player_powers:Array[int] = [];
 var level_initial_player_ssigns:Array[int] = [];
 
+const ERROR_MESSAGE_FADE_TIME:float = 2;
 const FADER_SPEED_SCALE_MAJOR:float = 1;
 const FADER_SPEED_SCALE_MINOR:float = 1.2;
 const LEVEL_NAME_FADE_IN_TIME:float = 1.6;
@@ -397,8 +398,21 @@ enum SASearchId {
 	SEARCH_END,
 };
 
-#const PHYSICS_ENABLER_SHAPE:RectangleShape2D = preload("res://Objects/PhysicsEnablerShape.tres");
-const PHYSICS_ENABLER_BASE_SIZE:Vector2 = Vector2(144, 144); #px, px; at tile_push_limit = 0
+enum MessageId {
+	SLIDE_MODE_NA,
+	SNAP_MODE_NA,
+	SPLIT_NA,
+	SLIDE_NA,
+	SHIFT_NA,
+}
+
+var messages:Dictionary = {
+	MessageId.SLIDE_MODE_NA : "Slide mode is not available.",
+	MessageId.SNAP_MODE_NA : "Snap mode is not available.",
+	MessageId.SPLIT_NA : "Splitting is not available.",
+	MessageId.SLIDE_NA : "Sliding is not available.",
+	MessageId.SHIFT_NA : "Shifting is not available.",
+}
 
 
 func world_to_pos_t(pos:Vector2) -> Vector2i:

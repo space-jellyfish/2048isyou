@@ -1,13 +1,14 @@
-#initiated by entity
-#affects tile
+# initiated by entity
+# affects one or more tiles (need not be aligned)
 class_name Premove
 
-var tile_pos_t:Vector2i;
+var tile_entity:Entity;
 var dir:Vector2i;
 var action_id:int;
 
 
-func _init(tile_pos_t:Vector2i, dir:Vector2i, action_id:int):
-	self.tile_pos_t = tile_pos_t;
+func _init(tile_entity:Entity, dir:Vector2i, action_id:int):
+	assert(tile_entity.is_tile());
+	self.tile_entity = tile_entity;
 	self.dir = dir;
 	self.action_id = action_id;
