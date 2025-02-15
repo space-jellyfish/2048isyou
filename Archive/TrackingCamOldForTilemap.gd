@@ -1,5 +1,5 @@
-extends TrackingCam
-class_name TrackingCamWorld
+extends TrackingCamOld
+class_name TrackingCamOldForTilemap
 
 
 func _ready():

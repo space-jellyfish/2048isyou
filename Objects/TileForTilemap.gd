@@ -13,7 +13,7 @@ var is_merging:bool;
 var type_id:int;
 var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if tile not moving
 
-var is_aligned:bool = true;
+#var is_aligned:bool = true;
 
 
 func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap, pusher_entity_id:int):
@@ -27,13 +27,16 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 	type_id = get_type_id(new_atlas_coords);
 	
 	# set move_controller, sprites, and collision layers
+	if type_id == GV.TypeId.PLAYER:
+		set_collision_layer_value(GV.CollisionId.TRACKING_CAM, true);
+	
 	match transit_id:
 		GV.TransitId.SLIDE:
-			move_controller = TileForTilemapSlideController.new(self, pos_t, dir);
+			move_controller = TileForTilemapSlideController.new(self, dir);
 			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SHIFT:
-			move_controller = TileForTilemapShiftController.new(self, pos_t, dir, target_dist_t);
+			move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
 			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SPLIT:
@@ -61,6 +64,11 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 	for sprite in [prev_sprite, curr_sprite]:
 		if sprite:
 			add_child(sprite);
+
+func _physics_process(delta: float) -> void:
+	if move_controller and not move_controller.step(delta):
+		move_controller.queue_free();
+		move_controller = null;
 
 func get_type_id(atlas_coords:Vector2i):
 	assert(atlas_coords.y != -1);

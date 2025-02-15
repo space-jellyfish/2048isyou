@@ -680,7 +680,7 @@ func is_yaligned():
 
 #use range = GV.PLAYER_SNAP_RANGE to fix collider offset
 func snap_range(offset_range:float):
-#	var pos_t:Vector2i = GV.world_to_pos_t(position);
+	var pos_t:Vector2i = GV.world_to_pos_t(position);
 	var offset:Vector2 = position - GV.pos_t_to_world(pos_t);
 	if offset.x and absf(offset.x) <= offset_range:
 		position.x -= offset.x;

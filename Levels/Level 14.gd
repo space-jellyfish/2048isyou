@@ -40,10 +40,6 @@ func _ready():
 	#print($Cells.get_cell_atlas_coords(0, Vector2i.ZERO))
 	#print($Cells.get_cell_atlas_coords(0, Vector2i(1, 0)))
 
-func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
-	var local_pos:Vector2 = $TrackingCam.position - GV.RESOLUTION/2 + viewport_pos;
-	return $Cells.local_to_map(local_pos);
-
 func _input(event):
 	super._input(event);
 	

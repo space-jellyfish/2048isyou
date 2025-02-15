@@ -31,10 +31,6 @@ func _physics_process(delta:float) -> void:
 			if not animator.step(delta):
 				animator.queue_free();
 				animators.erase(key);
-	
-	if animators.is_empty():
-		#send signal to remove self from world.animat
-		queue_free();
 
 func add_animator(conversion_anim_id:int):
 	var anim_type:int = GV.get_animator_type(conversion_anim_id);

@@ -34,10 +34,7 @@ func _ready():
 	for search_id in GV.SASearchId.SEARCH_END:
 		sa_search_id_selector.add_item(GV.SASearchId.keys()[search_id]);
 	
-	#generate hash numbers
-	#$Pathfinder.generate_hash_numbers(GV.RESOLUTION_T);
-	
-	#testing
+	get_viewport().set_as_audio_listener_2d(true);
 
 signal toggle_game_paused(is_paused : bool)
 

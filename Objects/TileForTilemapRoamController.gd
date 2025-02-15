@@ -3,7 +3,6 @@ class_name TileForTilemapRoamController
 extends TileForTilemapController;
 
 
-
 func step(delta:float):
 	#friction
 	tile.velocity *= 1 - GV.PLAYER_MU;
@@ -35,7 +34,7 @@ func step(delta:float):
 			slide_dir = slide_dir.normalized();
 			
 			#slide if slide_dir and player_dir agree
+			# this means player can guide itself to alignment if it cuts a tile really thin on the corner
 			if (slide_dir.x && slide_dir.x == dir.x) or (slide_dir.y && slide_dir.y == dir.y):
-				actor.tile_push_count = 0;
-				collider.pusher = actor;
-				collider.slide(Vector2i(slide_dir));
+				# add premove using self.premove_priority
+				tile.world.add_premove()
