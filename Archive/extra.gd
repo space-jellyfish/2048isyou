@@ -1185,3 +1185,144 @@ var tile_push_limits:Dictionary = {
 	TypeId.SQUID : 0,
 };
 '''
+
+'''
+enum AlternativeId {
+	EMPTY = -1, #no tile at cell
+	STABLE,
+	ANIMATING,
+}
+
+func get_alternative_id(pos_t:Vector2i):
+	return $Cells.get_cell_alternative_tile(GV.LayerId.TILE, pos_t);
+
+func is_stable(pos_t:Vector2i):
+	return get_alternative_id(pos_t) == GV.AlternativeId.STABLE;
+
+#return EMPTY if unstable
+func get_stable_tile_id(pos_t:Vector2i):
+	if is_stable(pos_t):
+		return get_tile_id(pos_t);
+	return GV.TileId.EMPTY;
+
+func get_stable_tile_atlas_coords(pos_t:Vector2i):
+	if is_stable(pos_t):
+		return get_atlas_coords(GV.LayerId.TILE, pos_t);
+	return -Vector2i.ONE;
+
+# update tile_id at src_pos_t iff alternative_id is 1 (splitted or back_tile hasn't finalized yet)
+# atlas_coord required because tile_id at src_pos_t might've been modified by back_tile
+# is_merging required because if TileId.ZERO at target_pos_t, either push or pop possible
+# slide does not update Tilemap immediately bc success is not guaranteed (might bounce off squid club)
+func finalize_slide(src_pos_t:Vector2i, dir:Vector2i, tile_atlas_coords:Vector2i, is_splitted:bool, is_merging:bool):
+	#set atlas_coords at target_pos_t
+	var target_pos_t:Vector2i = src_pos_t + dir;
+	if is_merging:
+		var target_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, target_pos_t);
+		assert(is_ids_mergeable(tile_atlas_coords.x + 1, target_atlas_coords.x + 1));
+		var result_atlas_coords:Vector2i = get_merged_atlas_coords(tile_atlas_coords, target_atlas_coords);
+		set_atlas_coords(GV.LayerId.TILE, target_pos_t, result_atlas_coords, 1); #alternative_id resets when merge animation finishes
+	else:
+		set_atlas_coords(GV.LayerId.TILE, target_pos_t, tile_atlas_coords, 0);
+	
+	#update atlas_coords at src_pos_t
+	if is_splitted:
+		var parent_coords:Vector2i = Vector2i(tile_atlas_coords.x, GV.TypeId.REGULAR);
+		set_atlas_coords(GV.LayerId.TILE, src_pos_t, parent_coords, 1);
+	elif get_alternative_id(src_pos_t) == 1:
+		set_atlas_coords(GV.LayerId.TILE, src_pos_t, -Vector2i.ONE, 0);
+
+	if new_remaining_dist <= GV.SNAP_TOLERANCE:
+		#update TileMap (emit signal or call world.update_tilemap(); don't update tilemap directly)
+		if not reversed:
+			tile.world.finalize_slide(src_pos_t, dir, tile.atlas_coords, tile.is_splitted, tile.is_merging);
+		return false;
+
+# there is no need to snap tile.position to grid since alternative_id will be reset
+'''
+
+''' from try_split()
+# halve tile, try_slide, then (re)set tile at pos_t
+'''
+
+'''
+#var premove_dirs:Array[Vector2i];
+#var premoves:Array[String]; #slide, shift, split
+var last_input_premove:Vector3i;
+
+func get_event_modifier(event) -> String:
+	for modifier in ["split", "shift"]:
+		if event.is_action_pressed(modifier):
+			return modifier;
+	for modifier in ["split", "shift"]:
+		if event.is_action_released(modifier):
+			return "slide";
+	return "";
+
+func get_event_move(event) -> String:
+	for move in GV.directions.keys():
+		if event.is_action_pressed(move):
+			return move;
+	return "";
+
+func _input(event):	
+	var modifier:String = get_event_modifier(event);
+	if modifier:
+		last_input_action = modifier;
+		#if modifier != "slide" and Input.is_action_pressed(last_input_move):
+			#add_premove(last_input_modifier, GV.directions[last_input_move]);
+		return;
+	
+	var move:String = get_event_move(event);
+	if move:
+		last_input_move = move;
+		add_premove(last_input_modifier, GV.directions[last_input_move]);
+
+func add_premove(entity_id:int, premove:Vector3i):
+	premoves[entity_id].push_back(premove);
+	premove_added.emit();
+
+#signals
+premove_added.connect(_on_premove_added);
+
+func _on_animator_finished(successful:bool):
+	#for consistency, update tilemap and player stats from animator
+	
+	#update premoves
+	if not successful: #bounced
+		#clear premoves
+		pass;
+	elif premoves:
+		consume_premove();
+
+func _physics_process(delta:float):
+
+	for entity_id in GV.entity_ids_decreasing_premove_priority:
+		for entity in entities[entity_id]:
+			entity.try_curr_frame_premoves();
+'''
+
+'''
+var player_shift_dir:Vector2i = Vector2i.ZERO;
+var player_shift_remaining_t:int = 0;
+'''
+
+'''
+#from GV
+const RESOLUTION_T:Vector2i = Vector2i(RESOLUTION/TILE_WIDTH);
+const SHIFT_RAY_LENGTH:float = RESOLUTION.x;
+
+#from World
+@export var resolution_t:Vector2i = GV.RESOLUTION_T;
+@export var min_pos:Vector2 = Vector2.ZERO;
+@export var max_pos:Vector2 = GV.RESOLUTION;
+
+func _enter_tree():
+	#set resolution (before tracking cam _ready())
+	resolution = Vector2(resolution_t * GV.TILE_WIDTH);
+	half_resolution = resolution / 2;
+
+	#set position bounds (before tracking cam _ready())
+	min_pos = GV.TILE_WIDTH * Vector2(GV.INT64_MIN, GV.INT64_MIN);
+	max_pos = GV.TILE_WIDTH * Vector2(GV.INT64_MAX, GV.INT64_MAX);
+'''

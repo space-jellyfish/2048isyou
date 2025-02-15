@@ -20,13 +20,6 @@ func _ready():
 	
 	#connect sa_search_id_selector
 	game.sa_search_id_selector.item_selected.connect(_on_option_button_item_selected);
-	
-	#test that alternative_id is invisible
-	#$Cells.set_cell(GV.LayerId.TILE, Vector2i(6,8), GV.LayerId.TILE, Vector2i(17,0), 1)
-
-func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
-	var local_pos:Vector2 = $TrackingCam.position - GV.RESOLUTION/2 + viewport_pos;
-	return $Cells.local_to_map(local_pos);
 
 func _unhandled_input(event):
 	if event is InputEventMouseButton and event.is_pressed():

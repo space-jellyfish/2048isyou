@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://jh8c6b88rywy"]
+
+[ext_resource type="Script" path="res://Camera/TrackingCam.gd" id="1_tn13t"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_14c1m"]
+radius = 200.0
+height = 800.0
+
+[node name="TrackingCam" type="Camera2D"]
+script = ExtResource("1_tn13t")
+
+[node name="Area2D" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 32
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+rotation = 1.5708
+shape = SubResource("CapsuleShape2D_14c1m")
+
+[connection signal="body_exited" from="Area2D" to="." method="_on_area_2d_body_exited"]

@@ -6,8 +6,6 @@
 # calls to reverse() should be deferred since step() depends on dir of collider
 # recursion should occur in perform_reverse() so back tiles don't get duplicate reverse() calls
 
-# there is no need to snap tile.position to grid since alternative_id will be reset
-
 # step() was previously split into two separate functions (move(delta) and step()) to find
 # opposing slides' avg collision position (for tiebreaking) and ShiftAnimator.is_pushed_by_slide
 # since both vars are deprecated, move()/step() were recombined
@@ -21,18 +19,17 @@ extends TileForTilemapController;
 # 	self collided against squid feeder club => second deferred reverse()
 #var is_queued_for_reverse:bool = false;
 var remaining_dist:float;
-var src_pos_t:Vector2i;
 var dir:Vector2i;
 
 
-func _init(tile:TileForTilemap, pos_t:Vector2i, dir:Vector2i):
+func _init(tile:TileForTilemap, dir:Vector2i):
 	self.tile = tile;
-	src_pos_t = pos_t;
 	self.dir = dir;
-	remaining_dist = GV.TILE_WIDTH - fposmod(Vector2(dir).dot(tile.position), GV.TILE_WIDTH);
+	remaining_dist = GV.TILE_WIDTH - fposmod(Vector2(dir).dot(tile.position - Vector2(GV.TILE_WIDTH, GV.TILE_WIDTH) / 2), GV.TILE_WIDTH);
 
 #returns false if movement has finished
 func step(delta:float):
+	print("remaining_dist: ", remaining_dist);
 	#update position
 	var prev_position:Vector2 = tile.position;
 	var target_step_dist:float = min(GV.TILE_SLIDE_SPEED * delta, remaining_dist);
@@ -47,9 +44,15 @@ func step(delta:float):
 	#bounce if true_step_dist ~< target_step_dist? NAH, older slide should continue
 	#bounce if ^ for 2+ frames in a row? NAH, allows two well-timed shifts to bounce a slide
 	if new_remaining_dist <= GV.SNAP_TOLERANCE:
-		#update TileMap (emit signal or call world.update_tilemap(); don't update tilemap directly)
-		if not reversed:
-			tile.world.finalize_slide(src_pos_t, dir, tile.atlas_coords, tile.is_splitted, tile.is_merging);
+		print("SLIDE ENDED")
+		# update TileMap if other direction (perpendicular to dir) is also aligned
+		# (emit signal or call world.update_tilemap(); don't update tilemap directly)
+		var pos_t:Vector2i = GV.world_to_pos_t(tile.position);
+		var offset:Vector2 = tile.position - GV.pos_t_to_world(pos_t); #this is the vector from nearest grid center (not intersection) to tile position
+		if (dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \
+			(dir.y and abs(offset.x) <= GV.SNAP_TOLERANCE):
+			tile.world.set_atlas_coords(GV.LayerId.TILE, pos_t, tile.atlas_coords);
+				
 		return false;
 		
 	elif collision:
@@ -119,6 +122,7 @@ func reverse():
 		tile.back_tile.move_controller.reverse();
 
 func set_remaining_dist(dist:float):
+	print("remaining dist updated");
 	remaining_dist = dist;
 
 # assume collider is an opposing slide

@@ -7,21 +7,13 @@
 class_name World
 extends Node2D
 
-signal premove_added;
-
-@export var resolution_t:Vector2i = GV.RESOLUTION_T;
-@export var min_pos:Vector2 = Vector2.ZERO;
-@export var max_pos:Vector2 = GV.RESOLUTION;
 @onready var game:Node2D = $"/root/Game";
 @onready var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.png");
 
-@export var player_pos_t:Vector2i = Vector2i.ZERO;
-var player_tile:TileForTilemap; #for when player isn't aligned
-
 #for enemy intel
+@export var player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
+var player_premove_controller:EntityPremoveController;
 var is_player_alive:bool = true;
-var player_shift_dir:Vector2i = Vector2i.ZERO;
-var player_shift_remaining_t:int = 0;
 
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
@@ -32,47 +24,65 @@ var loaded_pos_t_max:Vector2i; #inclusive
 var resolution:Vector2;
 var half_resolution:Vector2;
 
-var premove_dirs:Array[Vector2i] = [];
-var premoves:Array[String] = []; #slide, split, shift
+var entities:Dictionary; #[EntityId, Array[EntityPremoveController]]
+var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[EntityPremoveController, DONT_CARE]]
+var premove_callback_upcoming:bool = false;
 
 #for input repeat delay
 var atimer:AccelTimer = AccelTimer.new();
-var last_input_type:int; #see GV.InputType
-var last_input_modifier:String = "slide";
-var last_input_move:String = "left";
 
 #for animation and collision shapes
 #Vector3i(last_saved_pos_t.x, last_saved_pos_t.y, ZId) -> TileForTilemap
 #last_saved_pos_t is pos_t stored in TileMap that is reverted to if game crashes (or force quit)
 var tile_pool:Array[TileForTilemap];
 
-
-func _enter_tree():
-	#set resolution (before tracking cam _ready())
-	resolution = Vector2(resolution_t * GV.TILE_WIDTH);
-	half_resolution = resolution / 2;
-
-	#set position bounds (before tracking cam _ready())
-	min_pos = GV.TILE_WIDTH * Vector2(GV.INT64_MIN, GV.INT64_MIN);
-	max_pos = GV.TILE_WIDTH * Vector2(GV.INT64_MAX, GV.INT64_MAX);
 	
 func _ready():
-	#signals
-	premove_added.connect(_on_premove_added);
-	
 	set_level_name();
 	
 	if not GV.current_level_from_save: #first time entering lv
 		#print("set initial SVID to ", GV.savepoint_id);
 		GV.level_initial_savepoint_ids[GV.current_level_index] = GV.savepoint_id;
 	
-	#clear alternative_ids
-	for tile_atlas_x in range(GV.TILE_SHEET_HFRAMES):
-		for tile_atlas_y in range(GV.TILE_SHEET_VFRAMES):
-			var tile_atlas_coords:Vector2i = Vector2i(tile_atlas_x, tile_atlas_y);
-			for pos_t in $Cells.get_used_cells_by_id(GV.LayerId.TILE, GV.LayerId.TILE, tile_atlas_coords, 1):
-				set_atlas_coords(GV.LayerId.TILE, pos_t, tile_atlas_coords, 0);
+	#init entities
+	for entity_id in GV.EntityId.values():
+		entities[entity_id] = Array();
+	
+	player_premove_controller = EntityPremoveController.new(self, GV.EntityId.PLAYER);
+	entities[GV.EntityId.PLAYER].push_back(player_premove_controller);
+	
+	#init entities_with_curr_frame_premoves
+	for entity_id in GV.EntityId.values():
+		entities_with_curr_frame_premoves[entity_id] = Dictionary();
 
+func add_curr_frame_premove_entity(entity:EntityPremoveController):
+	#add to entities_with_curr_frame_premoves
+	entities_with_curr_frame_premoves[entity.entity_id][entity] = true;
+	
+	#callback
+	if not premove_callback_upcoming:
+		call_deferred("try_curr_frame_premoves");
+		premove_callback_upcoming = true;
+
+# call deferred so that premove priority is respected
+func try_curr_frame_premoves():
+	for entity_id in GV.entity_ids_decreasing_premove_priority:
+		var typed_entities:Dictionary = entities_with_curr_frame_premoves[entity_id];
+		
+		for entity in typed_entities.keys():
+			entity.try_curr_frame_premoves();
+			
+			# always remove entity after trying premove
+			# if it fails, premoves will be cleared
+			# if it succeeds, entity will be busy
+			typed_entities.erase(entity);
+				
+	premove_callback_upcoming = false;
+
+func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
+	var local_pos:Vector2 = $TrackingCam.position - GV.VIEWPORT_RESOLUTION/2 + viewport_pos;
+	return get_node("Cells").local_to_map(local_pos);
+	
 func get_pooled_tile(transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap, pusher_entity_id:int) -> TileForTilemap:
 	if not tile_pool.is_empty():
 		var tile:TileForTilemap = tile_pool.pop_back()._init(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile, pusher_entity_id);
@@ -182,7 +192,7 @@ func generate_cell(pos_t:Vector2i):
 		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.BORDER_SQUARE, 0));
 		return;
 	if pos_t == player_pos_t:
-		set_atlas_coords(GV.LayerId.TILE, player_pos_t, Vector2i(GV.TileId.ZERO - 1, GV.TypeId.PLAYER));
+		set_atlas_coords(GV.LayerId.TILE, pos_t, Vector2i(GV.TileId.ZERO - 1, GV.TypeId.PLAYER));
 		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
 		#set_atlas_coords(GV.LayerId.BACK, player_pos_t, Vector2i(GV.BackId.MEMBRANE, 0));
 		return;
@@ -214,69 +224,40 @@ func generate_cell(pos_t:Vector2i):
 	set_atlas_coords(GV.LayerId.TILE, pos_t, Vector2i(tile_id-1, type));
 	set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
 
-func get_event_modifier(event) -> String:
-	for modifier in ["split", "shift"]:
-		if event.is_action_pressed(modifier):
-			return modifier;
-	for modifier in ["split", "shift"]:
-		if event.is_action_released(modifier):
-			return "slide";
-	return "";
+func get_event_dir(event:InputEventKey) -> Vector2i:
+	if event.keycode in [KEY_W, KEY_UP]:
+		return GV.directions["up"];
+	if event.keycode in [KEY_S, KEY_DOWN]:
+		return GV.directions["down"];
+	if event.keycode in [KEY_A, KEY_LEFT]:
+		return GV.directions["left"];
+	if event.keycode in [KEY_D, KEY_RIGHT]:
+		return GV.directions["right"];
+	return Vector2i.ZERO;
 
-func get_event_move(event) -> String:
-	for move in ["left", "right", "up", "down"]:
-		if event.is_action_pressed(move):
-			return move;
-	return "";
-
-func is_last_move_held() -> bool:
-	return Input.is_action_pressed(last_input_move);
+func update_last_input_premove(event:InputEventKey, action_id:int):
+	var dir:Vector2i = get_event_dir(event);
+	if dir != Vector2i.ZERO:
+		var premove = Premove.new(player_pos_t, dir, action_id);
+		player_premove_controller.add_premove(premove);
 
 func _input(event):
-	var modifier:String = get_event_modifier(event);
-	if modifier:
-		last_input_modifier = modifier;
-		if modifier != "slide" and is_last_move_held():
-			add_premove_from_last_input();
-		return;
-	
-	var move:String = get_event_move(event);
-	if move:
-		last_input_move = move;
-		last_input_type = GV.InputType.MOVE;
-		add_premove_from_last_input();
-		
-func add_premove_from_last_input():
-	premove_dirs.push_back(GV.directions[last_input_move]);
-	premoves.push_back(last_input_modifier);
-	premove_added.emit();
-
-func _on_premove_added():
-	if is_stable(player_pos_t):
-		consume_premove();
+	if event is InputEventKey and event.pressed:
+		if event.is_command_or_control_pressed():
+			update_last_input_premove(event, GV.ActionId.SPLIT);
+		elif event.shift_pressed:
+			update_last_input_premove(event, GV.ActionId.SHIFT);
+		else:
+			update_last_input_premove(event, GV.ActionId.SLIDE);
 
 func get_atlas_coords(layer_id:int, pos_t:Vector2i) -> Vector2i:
 	return $Cells.get_cell_atlas_coords(layer_id, pos_t);
 
-func set_atlas_coords(layer_id:int, pos_t:Vector2i, coords:Vector2i, alternative_id:int = 0):
-	$Cells.set_cell(layer_id, pos_t, layer_id, coords, alternative_id);
-
-func get_alternative_id(pos_t:Vector2i):
-	return $Cells.get_cell_alternative_tile(GV.LayerId.TILE, pos_t);
+func set_atlas_coords(layer_id:int, pos_t:Vector2i, coords:Vector2i):
+	$Cells.set_cell(layer_id, pos_t, layer_id, coords);
 
 func get_tile_id(pos_t:Vector2i):
 	return get_atlas_coords(GV.LayerId.TILE, pos_t).x + 1;
-
-#return EMPTY if unstable
-func get_stable_tile_id(pos_t:Vector2i):
-	if is_stable(pos_t):
-		return get_tile_id(pos_t);
-	return GV.TileId.EMPTY;
-
-func get_stable_tile_atlas_coords(pos_t:Vector2i):
-	if is_stable(pos_t):
-		return get_atlas_coords(GV.LayerId.TILE, pos_t);
-	return -Vector2i.ONE;
 
 func get_type_id(pos_t:Vector2i):
 	var tile_atlas_y:int = get_atlas_coords(GV.LayerId.TILE, pos_t).y;
@@ -349,7 +330,7 @@ func get_slide_push_count(src_pos_t:Vector2i, dir:Vector2i):
 		
 		#push/merge logic
 		var prev_tile_id:int = curr_tile_id;
-		curr_tile_id = get_stable_tile_id(curr_pos_t);
+		curr_tile_id = get_tile_id(curr_pos_t);
 		
 		if is_ids_mergeable(prev_tile_id, curr_tile_id):
 			if nearest_merge_push_count == -1:
@@ -391,18 +372,6 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	assert(atlas_y != -1 && atlas_x != -1);
 	return Vector2i(atlas_x, atlas_y);
 
-func initiate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, push_count:int, is_splitted:bool):
-	#start audio and animation
-	animate_slide(pusher_entity_id, pos_t, dir, push_count, is_splitted, );
-	
-	var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
-	if get_stable_tile_id(merge_pos_t):
-		game.get_node("Audio/Combine").play();
-	if is_splitted:
-		game.get_node("Audio/Split").play();
-	else:
-		game.get_node("Audio/Slide").play();
-
 #used for shift speed calculation
 #assume src_pos_t stable
 func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
@@ -417,100 +386,76 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
 		next_pos_t += dir;
 	return distance;
 
-#update player_pos_t, is_player_alive (NAH), player_shift_dir, player_shift_remaining_t
-func initiate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, distance:int):
-	#var dest_pos_t:Vector2i = pos_t + distance * dir;
-	#var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
-	#set_atlas_coords(GV.LayerId.TILE, dest_pos_t, src_coords);
-	#set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
-	
-	#update tile_id, alternative_id, and player stats during animation
-	animate_shift(pusher_entity_id, pos_t, dir, distance);
-	
-	#start audio
-	game.get_node("Audio/Shift").play();
-
 func set_player_pos_t(pos_t:Vector2i):
 	if pos_t != player_pos_t:
 		$Pathfinder.rrd_clear_iad();
 	player_pos_t = pos_t;
 	$Pathfinder.set_player_pos(pos_t);
 
-func is_stable(pos_t:Vector2i):
-	return get_alternative_id(pos_t) == GV.AlternativeId.STABLE;
-
-func try_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, is_splitted:bool=false) -> bool:
-	if not is_stable(pos_t): # affected by another entity
+# returns true if slide is initiated
+# if is_splitted, assume atlas_coord at pos_t is already splitted with keep_type = true
+func try_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, is_splitted:bool=false, unsplit_atlas_coords=Vector2i.ZERO) -> bool:
+	if not is_tile(pos_t): # moving due to another entity
 		return false;
 	
 	var push_count:int = get_slide_push_count(pos_t, dir);
 	if push_count != -1:
-		# set alternative_id, start audio/animation
-		initiate_slide(pusher_entity_id, pos_t, dir, push_count, is_splitted);
+		# start animation
+		animate_slide(pusher_entity_id, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
+		
+		# start audio
+		var merge_pos_t:Vector2i = pos_t + (push_count + 1) * dir;
+		if get_tile_id(merge_pos_t):
+			game.get_node("Audio/Combine").play();
+		if is_splitted:
+			game.get_node("Audio/Split").play();
+		else:
+			game.get_node("Audio/Slide").play();
+			
 		return true;
 	return false;
 
 func try_split(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
-	if not is_stable(pos_t):
+	if not is_tile(pos_t):
 		return false;
 	
+	#check if split possible
 	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
 	var splitted_coords:Vector2i = get_splitted_tile_atlas_coords(src_coords);
 	if splitted_coords == -Vector2i.ONE:
 		return false;
 	
-	#halve tile, try_slide, then (re)set tile at pos_t
+	# Slide finishes before split animation, so splitting tile can safely switch from TileForTilemap to Tilemap
+	# once split animation finishes (without worrying about the slide bouncing)
+	# set splitted coord for try_slide().get_slide_push_count() (and try_slide() does not have to calculate it again)
+	# try_slide() will add parent_atlas_coords at src_pos_t if it initiates
 	set_atlas_coords(GV.LayerId.TILE, pos_t, splitted_coords);
-	if try_slide(pusher_entity_id, pos_t, dir, true):
-		#reset src coords (alternative)
-		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords, 1);
-		return true;
-	else:
-		#reset src coords (base)
-		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords);
-		return false;
+	var initiated:bool = try_slide(pusher_entity_id, pos_t, dir, true, src_coords);
+	if not initiated:
+		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords); #reset src coords
+	return initiated;
 
 #update player_pos_t
 func try_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i) -> bool:
-	if not is_stable(pos_t):
+	if not is_tile(pos_t):
 		return false;
 	
 	var target_distance:int = get_shift_target_dist(pos_t, dir);
 	if target_distance:
-		initiate_shift(pusher_entity_id, pos_t, dir, target_distance);
+		#update tile_id and player stats during animation
+		animate_shift(pusher_entity_id, pos_t, dir, target_distance);
+		
+		#start audio
+		game.get_node("Audio/Shift").play();
+		
 		return true;
 	return false;
 
-func consume_premove():
-	#check that player is alive
-	if not is_player_alive:
-		premoves.clear();
-		premove_dirs.clear();
-		return;
-	
-	#get first premove
-	var action:String = premoves.pop_front();
-	var dir:Vector2i = premove_dirs.pop_front();
-	
-	#try it
-	var action_func:Callable = Callable(self, "try_" + action);
-	if action_func.call(GV.EntityId.PLAYER, player_pos_t, dir): # returns true if action was initiated
-		# animation should be started from action_func since hostiles don't call consume_premove()
-		# same for sound effects
-		# same for $Cells update
-
-		# update player-position-related stats from action_func since player can be pushed (bc push priority adjustable from game settings)
-		# these include player_pos_t, is_player_alive
-		
-		# update player_last_dir; this is used by enemies to predict player movement, so only player-initiated actions count
-		$Pathfinder.set_player_last_dir(dir);
-
-# hide tiles (by setting alternative_id) and initialize transit_tiles
-# set alternative_id at target_pos_t (if it has a tile) to reserve (prevent other slides from merging into) it
+# erase cells and initialize transit_tiles
 # tile with TransitId.MERGE is created but doesn't start animating yet
 # sliding (governor) tiles are added before splitting/merging (governed) tiles,
 # so by tree order, position/remaining_dist is updated before SpriteAnimator.step()
-func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool):
+func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
 	#add sliding tiles
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -518,10 +463,10 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	var is_merging:bool = is_tile(merge_pos_t);
 	
 	for dist_to_src in range(tile_push_count + 1):
-		#set alternative_id
+		#get atlas_coord and erase from tilemap
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
 		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t);
-		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, curr_atlas_coords, 1);
+		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, -Vector2i.ONE);
 		
 		#add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
@@ -544,16 +489,15 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 
 	#add splitting tile
 	if is_splitted:
-		var src_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
-		var new_atlas_coords:Vector2i = get_splitted_tile_atlas_coords(src_atlas_coords, false);
-		var splitting_tile:TileForTilemap = get_pooled_tile(GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, src_atlas_coords, new_atlas_coords, null, false, false, curr_tile, GV.EntityId.NONE); #cannot substitute with sprites bc collision shape needed
+		var split_atlas_coords:Vector2i = Vector2i(curr_tile.atlas_coords.x, GV.TypeId.REGULAR);
+		var splitting_tile:TileForTilemap = get_pooled_tile(GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, unsplit_atlas_coords, split_atlas_coords, null, false, false, curr_tile, GV.EntityId.NONE); #cannot substitute with sprites bc collision shape needed
 		$TransitTiles.add_child(splitting_tile);
 	
 	#add merging tile (without starting the animation)
 	if is_merging:
-		#set alternative_id
+		#get atlas_coords and erase from tilemap
 		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t);
-		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, old_atlas_coords, 1);
+		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, -Vector2i.ONE);
 		
 		#add transit_tile
 		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
@@ -561,46 +505,14 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		$TransitTiles.add_child(merging_tile);
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
-	#set alternative_id
-	set_atlas_coords(GV.LayerId.TILE, pos_t, get_atlas_coords(GV.LayerId.TILE, pos_t), 1);
+	#get atlas_coords and erase from tilemap
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
+	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
 	
 	#add transit_tile
-	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
 	var tile:TileForTilemap = get_pooled_tile(GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null, pusher_entity_id);
 	$TransitTiles.add_child(tile);
 
 #called when merge animation starts
 func animate_merge(pos_t:Vector2i, slide_animator:TileForTilemapSlideController):
 	pass;
-
-# update tile_id at src_pos_t iff alternative_id is 1 (splitted or back_tile hasn't finalized yet)
-# atlas_coord required because tile_id at src_pos_t might've been modified by back_tile
-# is_merging required because if TileId.ZERO at target_pos_t, either push or pop possible
-# slide does not update Tilemap immediately bc success is not guaranteed (might bounce off squid club)
-func finalize_slide(src_pos_t:Vector2i, dir:Vector2i, tile_atlas_coords:Vector2i, is_splitted:bool, is_merging:bool):
-	#set atlas_coords at target_pos_t
-	var target_pos_t:Vector2i = src_pos_t + dir;
-	if is_merging:
-		var target_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, target_pos_t);
-		assert(is_ids_mergeable(tile_atlas_coords.x + 1, target_atlas_coords.x + 1));
-		var result_atlas_coords:Vector2i = get_merged_atlas_coords(tile_atlas_coords, target_atlas_coords);
-		set_atlas_coords(GV.LayerId.TILE, target_pos_t, result_atlas_coords, 1); #alternative_id resets when merge animation finishes
-	else:
-		set_atlas_coords(GV.LayerId.TILE, target_pos_t, tile_atlas_coords, 0);
-	
-	#update atlas_coords at src_pos_t
-	if is_splitted:
-		var parent_coords:Vector2i = Vector2i(tile_atlas_coords.x, GV.TypeId.REGULAR);
-		set_atlas_coords(GV.LayerId.TILE, src_pos_t, parent_coords, 1);
-	elif get_alternative_id(src_pos_t) == 1:
-		set_atlas_coords(GV.LayerId.TILE, src_pos_t, -Vector2i.ONE, 0);
-
-func _on_animator_finished(successful:bool):
-	#for consistency, update tilemap and player stats from animator
-	
-	#update premoves
-	if not successful: #bounced
-		premoves.clear();
-		premove_dirs.clear();
-	elif premoves:
-		consume_premove();

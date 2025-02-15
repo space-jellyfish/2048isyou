@@ -1,5 +1,5 @@
-extends TrackingCam
-class_name TrackingCamLevel
+extends TrackingCamOld
+class_name TrackingCamOldForLevel
 
 
 func _ready():

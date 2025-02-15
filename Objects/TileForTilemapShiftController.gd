@@ -3,16 +3,12 @@ class_name TileForTilemapShiftController
 extends TileForTilemapController;
 
 var max_speed:float;
-var src_pos_t:Vector2i;
-var curr_pos_t:Vector2i;
 var dir:Vector2i;
 var remaining_dist:float;
 
 
-func _init(tile:TileForTilemap, pos_t:Vector2i, dir:Vector2i, target_dist_t:int):
+func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
 	self.tile = tile;
-	src_pos_t = pos_t;
-	curr_pos_t = pos_t;
 	self.dir = dir;
 	remaining_dist = GV.TILE_WIDTH * target_dist_t;
 	max_speed = target_dist_t * GV.TILE_WIDTH * GV.SHIFT_DISTANCE_TO_MAX_SPEED;
@@ -27,11 +23,19 @@ func step(delta:float):
 	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	remaining_dist -= true_step_dist;
 	
-	#bounce (with deceleration), update curr_pos_t and tilemap if tile exited last cell
+	#bounce (with deceleration), update tilemap if shift finished
 	if remaining_dist <= GV.SNAP_TOLERANCE:
-		tile.world.set_atlas_coords(GV.LayerId.TILE, )
-	else:
+		var pos_t:Vector2i = GV.world_to_pos_t(tile.position);
+		var offset:Vector2 = tile.position - GV.pos_t_to_world(pos_t); #this is the vector from nearest grid center (not intersection) to tile position
+		if (dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \
+			(dir.y and abs(offset.x) <= GV.SNAP_TOLERANCE):
+			tile.world.set_atlas_coords(GV.LayerId.TILE, pos_t, tile.atlas_coords);
+		return false;
 		
+	elif collision:
+		reverse();
+	
+	return true;
 
 #returns true if bounce succeeds (not blocked by sliding tile)
 #after reverse, snap to nearest cell, even if heading in original shift dir (not reversed)

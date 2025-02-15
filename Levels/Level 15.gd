@@ -21,10 +21,6 @@ func _ready():
 	#connect sa_search_id_selector
 	game.sa_search_id_selector.item_selected.connect(_on_option_button_item_selected);
 
-func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
-	var local_pos:Vector2 = $TrackingCam.position - GV.RESOLUTION/2 + viewport_pos;
-	return $Cells.local_to_map(local_pos);
-
 func _unhandled_input(event):
 	if event is InputEventMouseButton and event.is_pressed():
 		if event.button_index == MOUSE_BUTTON_LEFT:
