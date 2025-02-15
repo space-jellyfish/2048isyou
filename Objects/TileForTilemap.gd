@@ -1,5 +1,5 @@
 class_name TileForTilemap
-extends AnimatableBody2D;
+extends CharacterBody2D;
 
 var atlas_coords:Vector2i;
 var curr_sprite:TileForTilemapSprite;
@@ -66,9 +66,19 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 			add_child(sprite);
 
 func _physics_process(delta: float) -> void:
-	if move_controller and not move_controller.step(delta):
-		move_controller.queue_free();
-		move_controller = null;
+	if move_controller:
+		#update position
+		var prev_position:Vector2 = position;
+		velocity = move_controller.get_velocity(delta);
+		var collision:KinematicCollision2D = move_and_collide(velocity * delta);
+		
+		#find true_step_dist
+		var true_step_dist:float = Vector2(move_controller.dir).dot(position - prev_position);
+		
+		#step
+		if not move_controller.step(collision, true_step_dist):
+			move_controller.queue_free();
+			move_controller = null;
 
 func get_type_id(atlas_coords:Vector2i):
 	assert(atlas_coords.y != -1);

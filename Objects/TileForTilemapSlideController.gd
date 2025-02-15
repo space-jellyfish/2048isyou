@@ -27,16 +27,13 @@ func _init(tile:TileForTilemap, dir:Vector2i):
 	self.dir = dir;
 	remaining_dist = GV.TILE_WIDTH - fposmod(Vector2(dir).dot(tile.position - Vector2(GV.TILE_WIDTH, GV.TILE_WIDTH) / 2), GV.TILE_WIDTH);
 
+func get_velocity(delta:float) -> Vector2:
+	var target_speed:float = min(GV.TILE_SLIDE_SPEED, remaining_dist / delta);
+	return target_speed * dir;
+
 #returns false if movement has finished
-func step(delta:float):
-	print("remaining_dist: ", remaining_dist);
-	#update position
-	var prev_position:Vector2 = tile.position;
-	var target_step_dist:float = min(GV.TILE_SLIDE_SPEED * delta, remaining_dist);
-	var collision:KinematicCollision2D = tile.move_and_collide(target_step_dist * dir);
-	
+func step(collision:KinematicCollision2D, true_step_dist:float) -> bool:
 	#update remaining_dist
-	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	var new_remaining_dist:float = remaining_dist - true_step_dist;
 	call_deferred("set_remaining_dist", new_remaining_dist);
 	

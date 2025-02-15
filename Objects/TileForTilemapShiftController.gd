@@ -16,14 +16,11 @@ func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
 	remaining_dist = GV.TILE_WIDTH * target_dist_t;
 	max_speed = target_dist_t * GV.TILE_WIDTH * GV.SHIFT_DISTANCE_TO_MAX_SPEED;
 
-func step(delta:float):
-	#update position
-	var prev_position:Vector2 = tile.position;
-	tile.velocity = tile.velocity.lerp(max_speed * dir, GV.SHIFT_LERP_WEIGHT);
-	var collision:KinematicCollision2D = tile.move_and_collide(tile.velocity * delta);
-	
+func get_velocity(delta:float) -> Vector2:
+	return tile.velocity.lerp(max_speed * dir, GV.SHIFT_LERP_WEIGHT);
+
+func step(collision:KinematicCollision2D, true_step_dist:float) -> bool:
 	#update remaining_dist
-	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	remaining_dist -= true_step_dist;
 	
 	#bounce (with deceleration), update tilemap if shift finished

@@ -3,7 +3,7 @@ class_name TileForTilemapRoamController
 extends TileForTilemapController;
 
 
-func step(delta:float):
+func step(collision:KinematicCollision2D, true_step_dist:float) -> bool:
 	#friction
 	tile.velocity *= 1 - GV.PLAYER_MU;
 
