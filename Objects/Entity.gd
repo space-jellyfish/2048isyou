@@ -32,7 +32,8 @@ func add_premove(premove:Premove):
 	premoves.push_back(premove);
 	
 	#if premove added or last move finished
-	world.add_curr_frame_premove_entity(self);
+	if not is_busy:
+		world.add_curr_frame_premove_entity(self);
 
 func clear_premoves():
 	premoves.clear();
@@ -71,7 +72,7 @@ func try_premove(premove:Premove):
 		
 		# update player_last_dir; this is used by enemies to predict player movement, so only player-initiated actions count
 		if not is_roaming():
-			is_busy = true;
+			set_is_busy(true);
 		
 		match entity_id:
 			GV.EntityId.PLAYER:
@@ -89,3 +90,9 @@ func set_pos_t(pos_t:Vector2i):
 		world.get_node("Pathfinder").set_player_pos(pos_t);
 	
 	self.pos_t = pos_t;
+
+func set_is_busy(is_busy:bool):
+	self.is_busy = is_busy;
+	if not is_busy and premoves:
+		world.add_curr_frame_premove_entity(self);
+		

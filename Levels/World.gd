@@ -477,6 +477,7 @@ func set_entity_body(entity_id:int, body:Node2D, pos_t:Vector2i):
 	if entity_id == GV.EntityId.NONE:
 		return;
 	
+	assert(entities[entity_id].has(pos_t));
 	var entity:Entity = entities[entity_id][pos_t];
 	#update properties
 	entity.body = body;
@@ -488,13 +489,21 @@ func set_entity_pos_t(entity_id:int, body:Node2D, pos_t:Vector2i):
 	if entity_id == GV.EntityId.NONE:
 		return;
 	
+	assert(entities[entity_id].has(body));
 	var entity:Entity = entities[entity_id][body];
 	#update properties
 	entity.body = null;
-	entity.pos_t = pos_t;
+	entity.set_pos_t(pos_t);
 	#update key
 	entities[entity_id].erase(body);
 	entities[entity_id][pos_t] = entity;
+
+func set_tile_not_busy(tile:TileForTilemap):
+	if tile.type_id == GV.EntityId.NONE:
+		return;
+	
+	var entity:Entity = entities[tile.type_id][tile];
+	entity.set_is_busy(false);
 
 # erase cells and initialize transit_tiles
 # tile with TransitId.MERGE is created but doesn't start animating yet
@@ -502,7 +511,6 @@ func set_entity_pos_t(entity_id:int, body:Node2D, pos_t:Vector2i):
 # so by tree order, position/remaining_dist is updated before SpriteAnimator.step()
 # update affected entities
 func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
-	print("tpc: ", tile_push_count);
 	#add sliding tiles
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -510,7 +518,6 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	var is_merging:bool = is_tile(merge_pos_t);
 	
 	for dist_to_src in range(tile_push_count + 1):
-		print("dts: ", dist_to_src);
 		#get atlas_coord and erase from tilemap
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
 		var curr_type_id:int = get_type_id(curr_pos_t);
@@ -563,13 +570,13 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#get atlas_coords and erase from tilemap
+	var type_id:int = get_type_id(pos_t);
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
 	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
 	
 	#add transit_tile
 	var tile:TileForTilemap = get_pooled_tile(GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null, pusher_entity_id);
 	$TransitTiles.add_child(tile);
-
-#called when merge animation starts
-func animate_merge(pos_t:Vector2i, slide_animator:TileForTilemapSlideController):
-	pass;
+	
+	#update entity
+	set_entity_body(type_id, tile, pos_t);

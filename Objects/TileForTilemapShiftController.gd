@@ -9,7 +9,8 @@ var remaining_dist:float;
 
 func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
 	#assume tile is aligned
-	assert(not fmod(tile.position.x, GV.TILE_WIDTH) and not fmod(tile.position.y, GV.TILE_WIDTH));
+	assert(fposmod(tile.position.x, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
+	assert(fposmod(tile.position.y, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
 	
 	self.tile = tile;
 	self.dir = dir;
@@ -28,6 +29,8 @@ func step(delta:float):
 	
 	#bounce (with deceleration), update tilemap if shift finished
 	if remaining_dist <= GV.SNAP_TOLERANCE:
+		tile.world.set_tile_not_busy(tile);
+		
 		var pos_t:Vector2i = GV.world_to_pos_t(tile.position);
 		var offset:Vector2 = tile.position - GV.pos_t_to_world(pos_t); #this is the vector from nearest grid center (not intersection) to tile position
 		if (dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \

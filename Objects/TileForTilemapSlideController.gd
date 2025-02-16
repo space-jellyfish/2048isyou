@@ -43,9 +43,10 @@ func step(delta:float):
 	#bounce if true_step_dist ~< target_step_dist? NAH, older slide should continue
 	#bounce if ^ for 2+ frames in a row? NAH, allows two well-timed shifts to bounce a slide
 	if new_remaining_dist <= GV.SNAP_TOLERANCE:
-		print("SLIDE ENDED")
 		# update TileMap if other direction (perpendicular to dir) is also aligned
 		# (emit signal or call world.update_tilemap(); don't update tilemap directly)
+		tile.world.set_tile_not_busy(tile);
+		
 		var pos_t:Vector2i = GV.world_to_pos_t(tile.position);
 		var offset:Vector2 = tile.position - GV.pos_t_to_world(pos_t); #this is the vector from nearest grid center (not intersection) to tile position
 		if (dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \
