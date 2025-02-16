@@ -68,6 +68,7 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 func _physics_process(delta: float) -> void:
 	if move_controller and not move_controller.step(delta):
 		world.return_pooled_tile(self);
+		print("tile returned to pool");
 
 func get_type_id(atlas_coords:Vector2i):
 	assert(atlas_coords.y != -1);
