@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://Levels/Level 14.gd" id="1_40yuo"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_yeoy2"]
-[ext_resource type="PackedScene" uid="uid://jh8c6b88rywy" path="res://Camera/TrackingCam.tscn" id="4_6gyhg"]
+[ext_resource type="PackedScene" uid="uid://cxvw7i8bgukix" path="res://Camera/TrackingCam.tscn" id="4_6gyhg"]
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="4_34x2b"]
 
 [node name="Level 14" type="Node2D"]

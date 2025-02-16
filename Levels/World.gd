@@ -10,11 +10,6 @@ extends Node2D
 @onready var game:Node2D = $"/root/Game";
 @onready var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.png");
 
-#for enemy intel
-@export var player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
-var player:Entity;
-var is_player_alive:bool = true;
-
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
 
@@ -24,9 +19,14 @@ var loaded_pos_t_max:Vector2i; #inclusive
 var resolution:Vector2;
 var half_resolution:Vector2;
 
-var entities:Dictionary; #[EntityId, Array[Entity]]
+var entities:Dictionary; #Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
 var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[Entity, DONT_CARE]]
 var premove_callback_upcoming:bool = false;
+
+#for enemy intel
+@export var initial_player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
+var player:Entity; #alias for entities[GV.EntityId.PLAYER].get_values()[0]
+var is_player_alive:bool = true;
 
 #for input repeat delay
 var atimer:AccelTimer = AccelTimer.new();
@@ -46,10 +46,10 @@ func _ready():
 	
 	#init entities
 	for entity_id in GV.EntityId.values():
-		entities[entity_id] = Array();
+		entities[entity_id] = Dictionary();
 	
-	player = Entity.new(self, null, GV.EntityId.PLAYER, player_pos_t);
-	entities[GV.EntityId.PLAYER].push_back(player);
+	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t);
+	entities[GV.EntityId.PLAYER][initial_player_pos_t] = player;
 	
 	#init entities_with_curr_frame_premoves
 	for entity_id in GV.EntityId.values():
@@ -88,16 +88,28 @@ func get_pooled_tile(transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t
 		var tile:TileForTilemap = tile_pool.pop_back()._init(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile, pusher_entity_id);
 		return tile;
 	var tile:TileForTilemap = TileForTilemap.new(self, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile, pusher_entity_id);
+	assert(tile != null);
 	return tile;
 
 func return_pooled_tile(tile:TileForTilemap):
-	assert(not tile.is_inside_tree());
-	assert(tile.prev_sprite == null);
-	assert(tile.curr_sprite == null);
-	assert(tile.move_controller == null);
-	assert(tile.back_tile == null);
-	assert(tile.front_tile == null);
-	
+	#assert(not tile.is_inside_tree());
+	#assert(tile.prev_sprite == null);
+	#assert(tile.curr_sprite == null);
+	#assert(tile.move_controller == null);
+	#assert(tile.back_tile == null);
+	#assert(tile.front_tile == null);
+
+	$TransitTiles.remove_child(tile);
+	if tile.curr_sprite:
+		tile.curr_sprite.queue_free();
+		tile.curr_sprite = null;
+	if tile.prev_sprite:
+		tile.prev_sprite.queue_free();
+		tile.prev_sprite = null;
+	tile.move_controller = null;
+	tile.back_tile = null;
+	tile.front_tile = null;
+		
 	for collision_id in [GV.CollisionId.DEFAULT, GV.CollisionId.SPLITTING, GV.CollisionId.COMBINING]:
 		tile.set_collision_layer_value(collision_id, false);
 	
@@ -191,7 +203,7 @@ func generate_cell(pos_t:Vector2i):
 	if is_world_border(pos_t):
 		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.BORDER_SQUARE, 0));
 		return;
-	if pos_t == player_pos_t:
+	if pos_t == initial_player_pos_t:
 		set_atlas_coords(GV.LayerId.TILE, pos_t, Vector2i(GV.TileId.ZERO - 1, GV.TypeId.PLAYER));
 		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
 		#set_atlas_coords(GV.LayerId.BACK, player_pos_t, Vector2i(GV.BackId.MEMBRANE, 0));
@@ -385,12 +397,6 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
 		distance += 1;
 		next_pos_t += dir;
 	return distance;
-	
-func set_player_pos_t(pos_t:Vector2i):
-	if pos_t != player_pos_t:
-		$Pathfinder.rrd_clear_iad();
-	player_pos_t = pos_t;
-	$Pathfinder.set_player_pos(pos_t);
 
 # returns true if slide is initiated
 # if is_splitted, assume atlas_coord at pos_t is already splitted with keep_type = true
@@ -464,11 +470,36 @@ func try_shift(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
 		return true;
 	return false;
 
+func set_entity_body(entity_id:int, body:Node2D, pos_t:Vector2i):
+	if entity_id == GV.EntityId.NONE:
+		return;
+	
+	var entity:Entity = entities[entity_id][pos_t];
+	#update properties
+	entity.body = body;
+	#update key
+	entities[entity_id].erase(pos_t);
+	entities[entity_id][body] = entity;
+	
+func set_entity_pos_t(entity_id:int, body:Node2D, pos_t:Vector2i):
+	if entity_id == GV.EntityId.NONE:
+		return;
+	
+	var entity:Entity = entities[entity_id][body];
+	#update properties
+	entity.body = null;
+	entity.pos_t = pos_t;
+	#update key
+	entities[entity_id].erase(body);
+	entities[entity_id][pos_t] = entity;
+
 # erase cells and initialize transit_tiles
 # tile with TransitId.MERGE is created but doesn't start animating yet
 # sliding (governor) tiles are added before splitting/merging (governed) tiles,
 # so by tree order, position/remaining_dist is updated before SpriteAnimator.step()
+# update affected entities
 func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
+	print("tpc: ", tile_push_count);
 	#add sliding tiles
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -476,8 +507,10 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	var is_merging:bool = is_tile(merge_pos_t);
 	
 	for dist_to_src in range(tile_push_count + 1):
+		print("dts: ", dist_to_src);
 		#get atlas_coord and erase from tilemap
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
+		var curr_type_id:int = get_type_id(curr_pos_t);
 		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t);
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, -Vector2i.ONE);
 		
@@ -487,6 +520,9 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		if curr_splitted:
 			curr_atlas_coords = get_splitted_tile_atlas_coords(curr_atlas_coords, true);
 		var curr_tile:TileForTilemap = get_pooled_tile(GV.TransitId.SLIDE, pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null, pusher_entity_id);
+		
+		#update entity
+		set_entity_body(curr_type_id, curr_tile, curr_pos_t);
 		
 		#update back_tile
 		back_tile = curr_tile;
@@ -509,6 +545,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	#add merging tile (without starting the animation)
 	if is_merging:
 		#get atlas_coords and erase from tilemap
+		var old_type_id:int = get_type_id(merge_pos_t);
 		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t);
 		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, -Vector2i.ONE);
 		
@@ -516,6 +553,9 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
 		var merging_tile:TileForTilemap = get_pooled_tile(GV.TransitId.MERGE, merge_pos_t, Vector2i.ZERO, 0, old_atlas_coords, new_atlas_coords, null, false, false, back_tile, GV.EntityId.NONE);
 		$TransitTiles.add_child(merging_tile);
+		
+		#update entity
+		set_entity_body(old_type_id, merging_tile, merge_pos_t);
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#get atlas_coords and erase from tilemap

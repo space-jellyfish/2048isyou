@@ -1,15 +1,15 @@
-[gd_scene load_steps=6 format=3 uid="uid://dmi0wxdbq57th"]
+[gd_scene load_steps=6 format=3 uid="uid://ci4dewoany2tv"]
 
 [ext_resource type="Script" path="res://Levels/Level 16.gd" id="1_0046r"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_nrldh"]
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="4_ddlr5"]
 [ext_resource type="Texture2D" uid="uid://cdovid55dbxns" path="res://Sprites/Sheets/tile_sheet.png" id="5_80ya5"]
-[ext_resource type="PackedScene" uid="uid://jh8c6b88rywy" path="res://Camera/TrackingCam.tscn" id="5_lwgoj"]
+[ext_resource type="PackedScene" uid="uid://cxvw7i8bgukix" path="res://Camera/TrackingCam.tscn" id="5_lwgoj"]
 
 [node name="lv" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_0046r")
-player_pos_t = Vector2i(6, 8)
+initial_player_pos_t = Vector2i(6, 8)
 metadata/_edit_lock_ = true
 
 [node name="LevelName" type="Label" parent="."]

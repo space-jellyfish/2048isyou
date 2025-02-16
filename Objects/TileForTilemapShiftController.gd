@@ -33,6 +33,7 @@ func step(delta:float):
 		if (dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \
 			(dir.y and abs(offset.x) <= GV.SNAP_TOLERANCE):
 			tile.world.set_atlas_coords(GV.LayerId.TILE, pos_t, tile.atlas_coords);
+			tile.world.set_entity_pos_t(tile.type_id, tile, pos_t);
 		return false;
 		
 	elif collision:
@@ -43,7 +44,7 @@ func step(delta:float):
 #returns true if bounce succeeds (not blocked by sliding tile)
 #after reverse, snap to nearest cell, even if heading in original shift dir (not reversed)
 func reverse():
-	reversed = not reversed;
 	dir *= -1;
 	tile.velocity *= -1;
 	remaining_dist = GV.TILE_WIDTH - fposmod(remaining_dist, GV.TILE_WIDTH);
+	reversed = not reversed;
