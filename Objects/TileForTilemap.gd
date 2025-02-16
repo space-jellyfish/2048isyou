@@ -25,6 +25,7 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 	atlas_coords = new_atlas_coords;
 	self.back_tile = back_tile;
 	type_id = get_type_id(new_atlas_coords);
+	velocity = Vector2.ZERO;
 	
 	# set move_controller, sprites, and collision layers
 	if type_id == GV.TypeId.PLAYER:

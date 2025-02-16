@@ -29,9 +29,13 @@ func step(delta:float):
 	
 	#bounce (with deceleration), update tilemap if shift finished
 	if remaining_dist <= GV.SNAP_TOLERANCE:
+		print("SHIFT ENDED")
 		tile.world.set_tile_not_busy(tile);
 		
 		var pos_t:Vector2i = GV.world_to_pos_t(tile.position);
+		print("pos: ", tile.position);
+		print("pos_t: ", pos_t);
+		print("ac: ", tile.atlas_coords);
 		var offset:Vector2 = tile.position - GV.pos_t_to_world(pos_t); #this is the vector from nearest grid center (not intersection) to tile position
 		if (dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \
 			(dir.y and abs(offset.x) <= GV.SNAP_TOLERANCE):
@@ -47,6 +51,7 @@ func step(delta:float):
 #returns true if bounce succeeds (not blocked by sliding tile)
 #after reverse, snap to nearest cell, even if heading in original shift dir (not reversed)
 func reverse():
+	print("SHIFT BOUNCED");
 	dir *= -1;
 	tile.velocity *= -1;
 	remaining_dist = GV.TILE_WIDTH - fposmod(remaining_dist, GV.TILE_WIDTH);
