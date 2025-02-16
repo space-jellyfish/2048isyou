@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://jh8c6b88rywy"]
+[gd_scene load_steps=3 format=3 uid="uid://cxvw7i8bgukix"]
 
 [ext_resource type="Script" path="res://Camera/TrackingCam.gd" id="1_tn13t"]
 

@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://Levels/Level 15.gd" id="1_6ptrr"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_yg03w"]
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="4_mydjp"]
-[ext_resource type="PackedScene" uid="uid://jh8c6b88rywy" path="res://Camera/TrackingCam.tscn" id="4_s2taw"]
+[ext_resource type="PackedScene" uid="uid://cxvw7i8bgukix" path="res://Camera/TrackingCam.tscn" id="4_s2taw"]
 
 [node name="Level 15" type="Node2D"]
 process_mode = 1

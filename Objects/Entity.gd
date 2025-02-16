@@ -62,7 +62,7 @@ func try_premove(premove:Premove):
 		initiated = world.try_shift(entity_id, premove.tile_entity, premove.dir);
 	
 	if initiated:
-		# animation should be started from action_func since hostiles don't call consume_premove()
+		# animation should be started from action_func
 		# same for sound effects
 		# same for $Cells update
 
@@ -81,3 +81,11 @@ func try_premove(premove:Premove):
 
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
+
+func set_pos_t(pos_t:Vector2i):
+	if entity_id == GV.EntityId.PLAYER:
+		if self.pos_t != pos_t:
+			world.get_node("Pathfinder").rrd_clear_iad();
+		world.get_node("Pathfinder").set_player_pos(pos_t);
+	
+	self.pos_t = pos_t;

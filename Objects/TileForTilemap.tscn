@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://eqcksjfqaw1q"]
+[gd_scene load_steps=2 format=3 uid="uid://b5vw0ff0dfmkv"]
 
 [ext_resource type="Script" path="res://Objects/TileForTilemap.gd" id="1_w0hdh"]
 
-[node name="Tile" type="AnimatableBody2D"]
+[node name="Tile" type="CharacterBody2D"]
 script = ExtResource("1_w0hdh")
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]

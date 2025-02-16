@@ -7,7 +7,7 @@ class_name TrackingCam
 
 func _ready() -> void:
 	#set initial position
-	position = GV.pos_t_to_world(world.player_pos_t);
+	position = GV.pos_t_to_world(world.initial_player_pos_t);
 	
 	#set initial zoom
 	var zoom_ratio:float = GV.VIEWPORT_RESOLUTION.x / GV.CAMERA_RESOLUTION.x;

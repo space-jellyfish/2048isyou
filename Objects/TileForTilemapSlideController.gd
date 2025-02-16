@@ -29,7 +29,6 @@ func _init(tile:TileForTilemap, dir:Vector2i):
 
 #returns false if movement has finished
 func step(delta:float):
-	print("remaining_dist: ", remaining_dist);
 	#update position
 	var prev_position:Vector2 = tile.position;
 	var target_step_dist:float = min(GV.TILE_SLIDE_SPEED * delta, remaining_dist);
@@ -52,7 +51,7 @@ func step(delta:float):
 		if (dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \
 			(dir.y and abs(offset.x) <= GV.SNAP_TOLERANCE):
 			tile.world.set_atlas_coords(GV.LayerId.TILE, pos_t, tile.atlas_coords);
-				
+			tile.world.set_entity_pos_t(tile.type_id, tile, pos_t);
 		return false;
 		
 	elif collision:
@@ -114,15 +113,19 @@ func detach_from_front_chain():
 		tile.front_tile = null;
 
 func reverse():
-	reversed = not reversed;
 	dir *= -1;
 	remaining_dist = GV.TILE_WIDTH - remaining_dist;
 	
-	if tile.back_tile:
-		tile.back_tile.move_controller.reverse();
+	if not reversed:
+		if tile.back_tile:
+			tile.back_tile.move_controller.reverse();
+	else:
+		if tile.front_tile:
+			tile.front_tile.move_controller.reverse();
+	
+	reversed = not reversed;
 
 func set_remaining_dist(dist:float):
-	print("remaining dist updated");
 	remaining_dist = dist;
 
 # assume collider is an opposing slide
