@@ -5,10 +5,9 @@ extends Sprite2D
 signal freed;
 var tile:TileForTilemap;
 var animators:Dictionary; #animator_type -> animator
-var animators_paused:bool;
 
 
-func _init(tile:TileForTilemap, tile_sheet:CompressedTexture2D, tile_atlas_coords:Vector2i, z_index:int, conversion_anim_ids:Array[int], animators_paused:bool, governor_tile:TileForTilemap):
+func _init(tile:TileForTilemap, tile_sheet:CompressedTexture2D, tile_atlas_coords:Vector2i, z_index:int, conversion_anim_ids:Array[int], governor_tile:TileForTilemap):
 	self.tile = tile;
 	self.z_index = z_index;
 	
@@ -21,16 +20,14 @@ func _init(tile:TileForTilemap, tile_sheet:CompressedTexture2D, tile_atlas_coord
 	#add animators
 	for anim_id in conversion_anim_ids:
 		add_animator(anim_id, governor_tile);
-	self.animators_paused = animators_paused;
 
 func _physics_process(delta:float) -> void:
-	if not animators_paused:
-		for key in animators.keys():
-			var animator:TileForTilemapSpriteAnimator = animators[key];
-			
-			if not animator.step(delta):
-				animator.queue_free();
-				animators.erase(key);
+	for key in animators.keys():
+		var animator:TileForTilemapSpriteAnimator = animators[key];
+		
+		if not animator.step(delta):
+			animator.queue_free();
+			animators.erase(key);
 
 func add_animator(conversion_anim_id:int, governor_tile:TileForTilemap):
 	var anim_type:int = GV.get_animator_type(conversion_anim_id);
