@@ -28,10 +28,10 @@ func step(delta:float):
 	sprite.scale = GV.DUANG_FACTOR * sin(angle_rad) * Vector2.ONE;
 	
 	if angle_rad == GV.DUANG_END_ANGLE and not is_reversed:
-		return true;
+		return false;
 	if angle_rad == GV.DUANG_START_ANGLE and is_reversed:
-		return true;
-	return false;
+		return false;
+	return true;
 
 func _on_governor_tile_reversed():
 	reverse();
