@@ -43,6 +43,6 @@ func handleInput(event):
 		actor.add_premove();
 	
 func changeParentState():
-	if slide_distance >= GV.COMBINING_MERGE_RATIO * GV.TILE_WIDTH:
+	if slide_distance >= GV.DUANG_SEPARATION_RATIO * GV.TILE_WIDTH:
 		return states.merging2;
 	return null;

@@ -49,7 +49,7 @@ func _ready():
 		entities[entity_id] = Dictionary();
 	
 	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t);
-	entities[GV.EntityId.PLAYER][initial_player_pos_t] = player;
+	add_entity(GV.EntityId.PLAYER, initial_player_pos_t, player);
 	
 	#init entities_with_curr_frame_premoves
 	for entity_id in GV.EntityId.values():
@@ -278,6 +278,10 @@ func get_type_id(pos_t:Vector2i):
 	var tile_atlas_y:int = get_atlas_coords(GV.LayerId.TILE, pos_t).y;
 	return GV.TypeId.REGULAR if tile_atlas_y == -1 else tile_atlas_y;
 
+func atlas_coords_to_type_id(atlas_coords:Vector2i):
+	assert(atlas_coords.y != -1);
+	return atlas_coords.y;
+
 func get_back_id(pos_t:Vector2i):
 	return maxi(get_atlas_coords(GV.LayerId.BACK, pos_t).x, 0);
 
@@ -413,9 +417,6 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 	
 	var push_count:int = get_slide_push_count(tile_entity.pos_t, dir);
 	if push_count != -1:
-		# start animation
-		animate_slide(pusher_entity_id, tile_entity.pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
-		
 		# start audio
 		var merge_pos_t:Vector2i = tile_entity.pos_t + (push_count + 1) * dir;
 		if get_tile_id(merge_pos_t):
@@ -424,6 +425,9 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 			game.get_node("Audio/Split").play();
 		else:
 			game.get_node("Audio/Slide").play();
+
+		# start animation
+		animate_slide(pusher_entity_id, tile_entity.pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
 			
 		return true;
 	return false;
@@ -464,46 +468,23 @@ func try_shift(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
 	
 	var target_distance:int = get_shift_target_dist(tile_entity.pos_t, dir);
 	if target_distance:
-		#update tile_id and player stats during animation
-		animate_shift(pusher_entity_id, tile_entity.pos_t, dir, target_distance);
-		
 		#start audio
 		game.get_node("Audio/Shift").play();
+		
+		#update tile_id and player stats during animation
+		animate_shift(pusher_entity_id, tile_entity.pos_t, dir, target_distance);
 		
 		return true;
 	return false;
 
-func set_entity_body(entity_id:int, body:Node2D, pos_t:Vector2i):
-	if entity_id == GV.EntityId.NONE:
-		return;
-	
-	assert(entities[entity_id].has(pos_t));
-	var entity:Entity = entities[entity_id][pos_t];
-	#update properties
-	entity.body = body;
-	#update key
-	entities[entity_id].erase(pos_t);
-	entities[entity_id][body] = entity;
-	
-func set_entity_pos_t(entity_id:int, body:Node2D, pos_t:Vector2i):
-	if entity_id == GV.EntityId.NONE:
-		return;
-	
-	assert(entities[entity_id].has(body));
-	var entity:Entity = entities[entity_id][body];
-	#update properties
-	entity.body = null;
-	entity.set_pos_t(pos_t);
-	#update key
-	entities[entity_id].erase(body);
-	entities[entity_id][pos_t] = entity;
+func get_entity(entity_id:int, key:Variant):
+	return entities[entity_id].get(key);
 
-func set_tile_not_busy(tile:TileForTilemap):
-	if tile.type_id == GV.EntityId.NONE:
-		return;
-	
-	var entity:Entity = entities[tile.type_id][tile];
-	entity.set_is_busy(false);
+func remove_entity(entity_id:int, key:Variant):
+	entities[entity_id].erase(key);
+
+func add_entity(entity_id:int, key:Variant, entity:Entity):
+	entities[entity_id][key] = entity;
 
 # erase cells and initialize transit_tiles
 # tile with TransitId.MERGE is created but doesn't start animating yet
@@ -520,8 +501,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	for dist_to_src in range(tile_push_count + 1):
 		#get atlas_coord and erase from tilemap
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
-		var curr_type_id:int = get_type_id(curr_pos_t);
 		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t);
+		var curr_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, -Vector2i.ONE);
 		
 		#add transit tile
@@ -533,7 +514,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		assert(curr_tile != null);
 		
 		#update entity
-		set_entity_body(curr_type_id, curr_tile, curr_pos_t);
+		if curr_type_id != GV.EntityId.NONE:
+			get_entity(curr_type_id, curr_pos_t).set_body(curr_tile);
 		
 		#update back_tile
 		back_tile = curr_tile;
@@ -556,8 +538,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	#add merging tile (without starting the animation)
 	if is_merging:
 		#get atlas_coords and erase from tilemap
-		var old_type_id:int = get_type_id(merge_pos_t);
 		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t);
+		var old_type_id:int = atlas_coords_to_type_id(old_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, -Vector2i.ONE);
 		
 		#add transit_tile
@@ -566,12 +548,13 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		$TransitTiles.add_child(merging_tile);
 		
 		#update entity
-		set_entity_body(old_type_id, merging_tile, merge_pos_t);
+		if old_type_id != GV.EntityId.NONE:
+			get_entity(old_type_id, merge_pos_t).set_body(merging_tile);
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#get atlas_coords and erase from tilemap
-	var type_id:int = get_type_id(pos_t);
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
+	var type_id:int = atlas_coords_to_type_id(atlas_coords);
 	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
 	
 	#add transit_tile
@@ -579,4 +562,5 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	$TransitTiles.add_child(tile);
 	
 	#update entity
-	set_entity_body(type_id, tile, pos_t);
+	if type_id != GV.EntityId.NONE:
+		get_entity(type_id, pos_t).set_body(tile);

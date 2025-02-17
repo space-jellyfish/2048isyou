@@ -1009,7 +1009,7 @@ func step(sprite:TileForTilemap, delta:float) -> bool:
 	
 	return remaining_dist;
 	
-	#TODO upon COMBINING_MERGE_RATIO, add merge animators if merge_pos_t has tile
+	#TODO upon DUANG_SEPARATION_RATIO, add merge animators if merge_pos_t has tile
 '''
 
 
@@ -1334,4 +1334,60 @@ const PHYSICS_ENABLER_BASE_SIZE:Vector2 = Vector2(144, 144); #px, px; at tile_pu
 
 ''' shift.target_dist_t stuff?
 
+'''
+
+'''
+self.governor_tile = governor_tile; # if null/queued_for_deletion() => slide finished => finish sprite animations immediately
+
+	#if governor distance greater than threshold, set scale to 1
+	#otherwise calculate scale with sin()
+	#separation should be opposite sign for DWING
+	var separation:float = Vector2(sprite.governor_tile.move_controller.dir).dot(sprite.tile.position - sprite.governor_tile.position);
+	if separation >= GV.DUANG_TRIGGER_SEPARATION:
+		sprite.scale = Vector2.ONE;
+	else:
+		var angle_rad:float = 
+	pass;
+'''
+
+'''
+func get_tile_entity_by_body(tile:TileForTilemap):
+	assert(entities[tile.old_type_id].has(tile));
+	return entities[tile.old_type_id][tile];
+	
+func get_tile_entity_by_pos_t(type_id:int, pos_t:Vector2i):
+	assert(entities[type_id].has(pos_t));
+	return entities[type_id][pos_t];
+'''
+
+'''
+func set_tile_entity_body(tile:TileForTilemap, pos_t:Vector2i):
+	if tile.type_id == GV.EntityId.NONE:
+		return;
+	
+	var entity:Entity = get_tile_entity_by_pos_t(tile.type_id, pos_t);
+	#update properties
+	entity.body = tile;
+	#update key
+	entities[tile.type_id].erase(pos_t);
+	entities[tile.type_id][tile] = entity;
+	
+func set_tile_entity_pos_t(tile:TileForTilemap, pos_t:Vector2i):
+	if tile.type_id == GV.EntityId.NONE:
+		return;
+	
+	var entity:Entity = get_tile_entity_by_body(tile);
+	#update properties
+	entity.body = null;
+	entity.set_pos_t(pos_t);
+	#update key
+	entities[tile.type_id].erase(tile);
+	entities[tile.type_id][pos_t] = entity;
+
+func set_tile_entity_not_busy(tile:TileForTilemap):
+	if tile.type_id == GV.EntityId.NONE:
+		return;
+	
+	var entity:Entity = get_tile_entity_by_body(tile);
+	entity.set_is_busy(false);
 '''

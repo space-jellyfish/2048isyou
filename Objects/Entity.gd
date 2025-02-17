@@ -83,13 +83,34 @@ func try_premove(premove:Premove):
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
 
+func set_body(body:Node2D):
+	if self.body == body:
+		return;
+	
+	#update dictionary key
+	if self.body:
+		change_key(self.body, body if body else pos_t);
+	elif body:
+		change_key(pos_t, body);
+	
+	self.body = body;
+
 func set_pos_t(pos_t:Vector2i):
+	#update dictionary key
+	change_key(body if body else self.pos_t, pos_t);
+
+	#update Pathfinder.player_pos_t
 	if entity_id == GV.EntityId.PLAYER:
 		if self.pos_t != pos_t:
 			world.get_node("Pathfinder").rrd_clear_iad();
 		world.get_node("Pathfinder").set_player_pos(pos_t);
 	
 	self.pos_t = pos_t;
+	self.body = null;
+
+func change_key(old_key:Variant, new_key:Variant):
+	world.remove_entity(entity_id, old_key);
+	world.add_entity(entity_id, new_key, self);
 
 func set_is_busy(is_busy:bool):
 	self.is_busy = is_busy;

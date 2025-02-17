@@ -10,7 +10,8 @@ var back_tile:TileForTilemap; #in direction of initial action
 var world:World;
 var is_splitted:bool;
 var is_merging:bool;
-var type_id:int;
+var old_type_id:int;
+var new_type_id:int;
 var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if tile not moving
 
 #var is_aligned:bool = true;
@@ -24,29 +25,30 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 	position = GV.pos_t_to_world(pos_t);
 	atlas_coords = new_atlas_coords;
 	self.back_tile = back_tile;
-	type_id = get_type_id(new_atlas_coords);
+	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
+	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
 	
 	# set move_controller, sprites, and collision layers
-	if type_id == GV.TypeId.PLAYER:
+	if old_type_id == GV.TypeId.PLAYER:
 		set_collision_layer_value(GV.CollisionId.TRACKING_CAM, true);
 	
 	match transit_id:
 		GV.TransitId.SLIDE:
 			move_controller = TileForTilemapSlideController.new(self, dir);
-			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SHIFT:
 			move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
-			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], true, null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SPLIT:
-			prev_sprite = TileForTilemapSprite.new(tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, [GV.ConversionAnimatorId.FADE_OUT, GV.ConversionAnimatorId.DWING], false, governor_tile);
-			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, [GV.ConversionAnimatorId.FADE_IN, GV.ConversionAnimatorId.DWING], false, governor_tile);
+			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, [GV.ConversionAnimatorId.FADE_OUT, GV.ConversionAnimatorId.DWING], false, governor_tile);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, [GV.ConversionAnimatorId.FADE_IN, GV.ConversionAnimatorId.DWING], false, governor_tile);
 			set_collision_layer_value(GV.CollisionId.SPLITTING, true);
 		GV.TransitId.MERGE:
-			prev_sprite = TileForTilemapSprite.new(tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, [GV.ConversionAnimatorId.FADE_OUT, GV.ConversionAnimatorId.DUANG], true, governor_tile);
-			curr_sprite = TileForTilemapSprite.new(tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, [GV.ConversionAnimatorId.FADE_IN, GV.ConversionAnimatorId.DUANG], true, governor_tile);
+			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, [GV.ConversionAnimatorId.FADE_OUT, GV.ConversionAnimatorId.DUANG], true, governor_tile);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, [GV.ConversionAnimatorId.FADE_IN, GV.ConversionAnimatorId.DUANG], true, governor_tile);
 			set_collision_layer_value(GV.CollisionId.COMBINING, true);
 	
 	# set collision masks if tile moves
@@ -56,9 +58,9 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 			set_collision_mask_value(GV.CollisionId.SPLITTING, true);
 		if not is_merging:
 			set_collision_mask_value(GV.CollisionId.COMBINING, true);
-		if type_id != GV.TypeId.PLAYER:
+		if old_type_id != GV.TypeId.PLAYER:
 			set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
-		if type_id in GV.T_ENEMY:
+		if old_type_id in GV.T_ENEMY:
 			set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
 	
 	# add sprites
@@ -69,7 +71,3 @@ func _init(world:World, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dis
 func _physics_process(delta: float) -> void:
 	if move_controller and not move_controller.step(delta):
 		world.return_pooled_tile(self);
-
-func get_type_id(atlas_coords:Vector2i):
-	assert(atlas_coords.y != -1);
-	return atlas_coords.y;
