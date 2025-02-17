@@ -92,7 +92,6 @@ const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;
 #const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
 const TILE_SLIDE_SPEED:float = 288; #320
-const COMBINING_MERGE_RATIO:float = 1/2.7;
 
 const SNAP_FRAME_COUNT:int = 1;
 const COMBINING_FRAME_COUNT:int = 6; #9; #1;
@@ -169,6 +168,8 @@ enum CollisionId {
 const TILE_SHEET_HFRAMES = 31;
 const TILE_SHEET_VFRAMES = 6;
 
+const DUANG_TRIGGER_RATIO:float = 1/2.7;
+const DUANG_TRIGGER_SEPARATION:float = (1 - DUANG_TRIGGER_RATIO) * TILE_WIDTH;
 const DUANG_START_MODULATE:float = 0; #0.2;
 const DUANG_START_ANGLE:float = 1;
 const DUANG_FACTOR:float = 1/sin(DUANG_START_ANGLE);
@@ -480,6 +481,9 @@ func combinations_dp(n, k) -> int:
 	var ans = 1 if (k == 0 or k == n) else (combinations_dp(n-1, k) + combinations_dp(n-1, k-1));
 	combinations[n][k] = ans;
 	return ans;
+
+func sin_approx(angle_rad:float):
+	pass;
 
 #doesn't do ZERO->EMPTY optimization
 func tile_val_to_id(power:int, ssign:int) -> int:

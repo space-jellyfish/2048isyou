@@ -19,7 +19,7 @@ func set_zoom_custom(zoom:Vector2):
 
 func _on_area_2d_body_exited(body: Node2D) -> void:
 	if body.is_inside_tree(): #not snapped to tilemap
-		assert(body is TileForTilemap and body.type_id == GV.TypeId.PLAYER);
+		assert(body is TileForTilemap and body.old_type_id == GV.TypeId.PLAYER);
 		
 		#start pan
 		var player_offset:Vector2 = body.position - position;

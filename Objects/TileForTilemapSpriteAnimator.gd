@@ -2,11 +2,13 @@
 class_name TileForTilemapSpriteAnimator
 
 signal finished;
-var sprite:Sprite2D;
-var reversed:bool = false;
+var sprite:TileForTilemapSprite;
+var anim_dir:int = 1;
+var is_reversed:bool = false;
+var is_governor_tile_finished:bool = false;
 
 
-func _init(sprite:Sprite2D):
+func _init(sprite:TileForTilemapSprite, governor_tile:TileForTilemap):
 	self.sprite = sprite;
 
 #called by TileForTilemapSprite every physics frame to progress the animation
@@ -16,4 +18,5 @@ func step(delta:float) -> bool:
 #reverses animation direction (start and end keyframes get swapped)
 #does not change current animation parameter(s)
 func reverse():
-	reversed = not reversed;
+	anim_dir *= -1;
+	is_reversed = not is_reversed;
