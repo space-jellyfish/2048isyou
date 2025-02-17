@@ -83,21 +83,32 @@ func try_premove(premove:Premove):
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
 
-func set_body(body:Node2D):
-	if self.body == body:
+func set_entity_id_and_body(entity_id:int, body:Node2D):
+	#check if no action required
+	if self.entity_id == entity_id and self.body == body:
 		return;
 	
-	#update dictionary key
-	if self.body:
-		change_key(self.body, body if body else pos_t);
-	elif body:
-		change_key(pos_t, body);
+	#find parameters for change_keys() function
+	var old_key:Variant = self.body if self.body else pos_t;
+	var new_key:Variant = body if body else pos_t;
 	
+	#update dictionary keys
+	change_keys(self.entity_id, entity_id, old_key, new_key);
+	
+	#update properties
+	self.entity_id = entity_id;
 	self.body = body;
 
-func set_pos_t(pos_t:Vector2i):
-	#update dictionary key
-	change_key(body if body else self.pos_t, pos_t);
+func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
+	#check if no action required
+	if self.entity_id == entity_id and self.pos_t == pos_t and not body:
+		return;
+	
+	#find parameters for change_keys() function
+	var old_key:Variant = body if body else self.pos_t;
+	
+	#update dictionary keys
+	change_keys(self.entity_id, entity_id, old_key, pos_t);
 
 	#update Pathfinder.player_pos_t
 	if entity_id == GV.EntityId.PLAYER:
@@ -105,12 +116,14 @@ func set_pos_t(pos_t:Vector2i):
 			world.get_node("Pathfinder").rrd_clear_iad();
 		world.get_node("Pathfinder").set_player_pos(pos_t);
 	
+	#update properties
+	self.entity_id = entity_id;
 	self.pos_t = pos_t;
 	self.body = null;
 
-func change_key(old_key:Variant, new_key:Variant):
-	world.remove_entity(entity_id, old_key);
-	world.add_entity(entity_id, new_key, self);
+func change_keys(old_entity_id:int, new_entity_id:int, old_key:Variant, new_key:Variant):
+	world.remove_entity(old_entity_id, old_key);
+	world.add_entity(new_entity_id, new_key, self);
 
 func set_is_busy(is_busy:bool):
 	self.is_busy = is_busy;
