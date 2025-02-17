@@ -1,17 +1,13 @@
 class_name TileForTilemapSprite
 extends Sprite2D
 
-
-signal freed;
 var tile:TileForTilemap;
 var animators:Dictionary; #animator_type -> animator
-var governor_tile:TileForTilemap;
 
 
 func _init(tile:TileForTilemap, tile_sheet:CompressedTexture2D, tile_atlas_coords:Vector2i, z_index:int, conversion_anim_ids:Array[int], governor_tile:TileForTilemap):
 	self.tile = tile;
 	self.z_index = z_index;
-	self.governor_tile = governor_tile;
 	for anim_id in conversion_anim_ids:
 		add_animator(anim_id, governor_tile);
 
@@ -27,6 +23,9 @@ func _physics_process(delta:float) -> void:
 		
 		if not animator.step(delta):
 			animators.erase(key);
+			
+			if tile.are_sprite_animators_finished():
+				tile.finalize_transit(true, tile.src_pos_t);
 
 func add_animator(conversion_anim_id:int, governor_tile:TileForTilemap):
 	var anim_type:int = GV.get_animator_type(conversion_anim_id);
