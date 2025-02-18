@@ -92,15 +92,12 @@ func finalize_transit(is_aligned:bool, pos_t:Vector2i):
 		tile_entity.set_is_busy(false);
 	
 	if is_aligned:
-		print("finalize is aligned, old_type_id: ", old_type_id);
 		#update tilemap, entity.pos_t, and tile pool
 		world.set_atlas_coords(GV.LayerId.TILE, pos_t, atlas_coords);
 		if tile_entity:
 			if merger_tile:
-				print("finalize to merger type_id: ", new_type_id);
 				tile_entity.set_entity_id_and_body(merger_tile.old_type_id, merger_tile);
 			else:
-				print("finalize at ", pos_t);
 				tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
 	
 		world.return_pooled_tile(self);
