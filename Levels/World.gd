@@ -276,12 +276,11 @@ func get_tile_id(pos_t:Vector2i):
 	return get_atlas_coords(GV.LayerId.TILE, pos_t).x + 1;
 
 func get_type_id(pos_t:Vector2i):
-	var tile_atlas_y:int = get_atlas_coords(GV.LayerId.TILE, pos_t).y;
-	return GV.TypeId.REGULAR if tile_atlas_y == -1 else tile_atlas_y;
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
+	return atlas_coords_to_type_id(atlas_coords);
 
 func atlas_coords_to_type_id(atlas_coords:Vector2i):
-	assert(atlas_coords.y != -1);
-	return atlas_coords.y;
+	return GV.TypeId.REGULAR if atlas_coords.y == -1 else atlas_coords.y;
 
 func get_back_id(pos_t:Vector2i):
 	return maxi(get_atlas_coords(GV.LayerId.BACK, pos_t).x, 0);
@@ -509,8 +508,6 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		#add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
 		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
-		if curr_splitted:
-			curr_atlas_coords = get_splitted_tile_atlas_coords(curr_atlas_coords, true);
 		var curr_tile:TileForTilemap = get_pooled_tile(pusher_entity_id, GV.TransitId.SLIDE, pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null);
 		assert(curr_tile != null);
 		

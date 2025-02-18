@@ -2,6 +2,7 @@
 extends Camera2D
 class_name TrackingCam
 
+signal transition_started;
 @onready var world:World = get_parent();
 
 
@@ -29,3 +30,4 @@ func _on_area_2d_body_exited(body: Node2D) -> void:
 		tween.set_ease(Tween.EASE_OUT);
 		tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
 		tween.tween_property(self, "position", target_pos, GV.TRACKING_CAM_TRANSITION_TIME).set_trans(Tween.TRANS_QUINT);
+		transition_started.emit();
