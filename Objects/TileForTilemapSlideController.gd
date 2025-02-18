@@ -29,6 +29,7 @@ func _init(tile:TileForTilemap, dir:Vector2i):
 
 #returns false if movement has finished
 func step(delta:float):
+	print("slide step");
 	#update position
 	var prev_position:Vector2 = tile.position;
 	var target_step_dist:float = min(GV.TILE_SLIDE_SPEED * delta, remaining_dist);
