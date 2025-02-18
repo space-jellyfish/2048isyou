@@ -20,6 +20,7 @@ var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if
 
 
 func _init(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap):
+	print("tile init at pos_t: ", pos_t);
 	self.src_pos_t = pos_t;
 	self.world = world;
 	self.is_splitted = is_splitted;
@@ -39,6 +40,7 @@ func _init(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, di
 	match transit_id:
 		GV.TransitId.SLIDE:
 			move_controller = TileForTilemapSlideController.new(self, dir);
+			print("slide.new_atlas_coords: ", new_atlas_coords);
 			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, 1, [], null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SHIFT:
@@ -86,6 +88,7 @@ func _physics_process(delta: float) -> void:
 			finalize_transit(is_aligned, pos_t);
 
 func finalize_transit(is_aligned:bool, pos_t:Vector2i):
+	print("FINALIZE")
 	# update entity.is_busy so it can try new premoves
 	var tile_entity:Entity = world.get_entity(old_type_id, self);
 	if tile_entity:
@@ -101,6 +104,10 @@ func finalize_transit(is_aligned:bool, pos_t:Vector2i):
 				tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
 	
 		world.return_pooled_tile(self);
+	
+	elif prev_sprite:
+		prev_sprite.queue_free();
+		prev_sprite = null;
 
 func are_sprite_animators_finished() -> bool:
 	return (not prev_sprite or prev_sprite.animators.is_empty()) and (not curr_sprite or curr_sprite.animators.is_empty());

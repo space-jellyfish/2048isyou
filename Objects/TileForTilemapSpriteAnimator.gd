@@ -1,4 +1,3 @@
-#should not queue_free() when done since 
 class_name TileForTilemapSpriteAnimator
 
 signal finished;
