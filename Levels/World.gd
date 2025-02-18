@@ -416,7 +416,6 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 		return false;
 	
 	var push_count:int = get_slide_push_count(tile_entity.pos_t, dir);
-	print("tpc: ", push_count);
 	if push_count != -1:
 		# start audio
 		var merge_pos_t:Vector2i = tile_entity.pos_t + (push_count + 1) * dir;
@@ -524,12 +523,10 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	#add frontmost tiles first so chain moves in sync every frame
 	var curr_tile:TileForTilemap = back_tile;
 	$TransitTiles.add_child(curr_tile);
-	print("slide tile added");
 	while curr_tile.back_tile != null:
 		curr_tile.back_tile.front_tile = curr_tile;
 		curr_tile = curr_tile.back_tile;
 		$TransitTiles.add_child(curr_tile);
-		print("slide tile added")
 
 	#add splitting tile
 	if is_splitted:
