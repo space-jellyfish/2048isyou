@@ -416,6 +416,7 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 		return false;
 	
 	var push_count:int = get_slide_push_count(tile_entity.pos_t, dir);
+	print("tpc: ", push_count);
 	if push_count != -1:
 		# start audio
 		var merge_pos_t:Vector2i = tile_entity.pos_t + (push_count + 1) * dir;
@@ -433,6 +434,7 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 	return false;
 
 func try_split(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
+	#if not tile_entity.is_busy and tile_entity.body:
 	if tile_entity.body:
 		assert(tile_entity.body is TileForTilemap);
 		game.show_message(GV.MessageId.SPLIT_NA);
@@ -508,7 +510,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		#add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
 		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
-		var curr_tile:TileForTilemap = get_pooled_tile(pusher_entity_id, GV.TransitId.SLIDE, pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null);
+		var curr_tile:TileForTilemap = get_pooled_tile(pusher_entity_id, GV.TransitId.SLIDE, curr_pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null);
 		assert(curr_tile != null);
 		
 		#update entity
@@ -522,10 +524,12 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	#add frontmost tiles first so chain moves in sync every frame
 	var curr_tile:TileForTilemap = back_tile;
 	$TransitTiles.add_child(curr_tile);
+	print("slide tile added");
 	while curr_tile.back_tile != null:
 		curr_tile.back_tile.front_tile = curr_tile;
 		curr_tile = curr_tile.back_tile;
 		$TransitTiles.add_child(curr_tile);
+		print("slide tile added")
 
 	#add splitting tile
 	if is_splitted:

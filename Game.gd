@@ -246,7 +246,7 @@ func show_message(message_id:int):
 	right_sidebar.add_child(label);
 	
 	#play fade-out animation and free label
-	var tween = Tween.new();
+	var tween = create_tween();
 	tween.set_ease(Tween.EASE_IN);
 	tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
 	tween.tween_property(label, "modulate:a", 0, GV.ERROR_MESSAGE_FADE_TIME).set_trans(Tween.TRANS_EXPO);
