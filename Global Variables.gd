@@ -109,6 +109,31 @@ const UNDO_REPEAT_DELAY_FMIN:int = 14;
 
 const PREMOVE_STREAK_END_DELAY = 6; #must >= MOVE_REPEAT_DELAY_F0 - slide frame count
 
+const TILE_SHEET_HFRAMES = 31;
+const TILE_SHEET_VFRAMES = 6;
+
+const DUANG_TRIGGER_RATIO:float = 1/2.7;
+const DUANG_TRIGGER_SEPARATION:float = (1 - DUANG_TRIGGER_RATIO) * TILE_WIDTH;
+const DUANG_START_ANGLE:float = 1;
+const DUANG_FACTOR:float = 1/sin(DUANG_START_ANGLE);
+const DUANG_END_ANGLE:float = PI - DUANG_START_ANGLE;
+const DUANG_SPEED:float = 0.1;
+
+const DWING_START_ANGLE:float = 1;
+const DWING_FACTOR:float = sin(DWING_START_ANGLE);
+const DWING_END_ANGLE:float = PI - DWING_START_ANGLE;
+const DWING_SPEED:float = 0.1;
+
+const FADE_SPEED:float = 0.07;
+
+const SHIFT_TIME:float = 6; #in frames
+const SHIFT_LERP_WEIGHT:float = 0.6;
+const SHIFT_SPEED_MIN:float = TILE_SLIDE_SPEED;
+var SHIFT_LERP_WEIGHT_TOTAL:float = 0;
+var SHIFT_DISTANCE_TO_MAX_SPEED:float;
+
+var snap_mode:bool = true; #move mode
+
 enum InputType {
 	MOVE,
 	UNDO,
@@ -118,14 +143,17 @@ enum InputType {
 #animation-related stuff
 enum ConversionAnimatorType {
 	SCALE, #dwing, duang
-	FADE, #in, out
+	DUANG_FADE, #in, out
+	DWING_FADE, #in, out
 }
 
 enum ConversionAnimatorId {
 	DWING = (ConversionAnimatorType.SCALE << 1), #temp shrink upon split
 	DUANG = (ConversionAnimatorType.SCALE << 1) + 1, #temp expand upon merge
-	FADE_IN = (ConversionAnimatorType.FADE << 1),
-	FADE_OUT = (ConversionAnimatorType.FADE << 1) + 1,
+	DUANG_FADE_IN = (ConversionAnimatorType.DUANG_FADE << 1),
+	DUANG_FADE_OUT = (ConversionAnimatorType.DUANG_FADE << 1) + 1,
+	DWING_FADE_IN = (ConversionAnimatorType.DWING_FADE << 1),
+	DWING_FADE_OUT = (ConversionAnimatorType.DWING_FADE << 1) + 1,
 }
 
 enum ActionId {
@@ -164,33 +192,6 @@ enum CollisionId {
 	SAVE_OR_GOAL, # savepoint/goal, (hostile tiles, squid)
 	TRACKING_CAM, # player (tracking cam)
 }
-
-const TILE_SHEET_HFRAMES = 31;
-const TILE_SHEET_VFRAMES = 6;
-
-const DUANG_TRIGGER_RATIO:float = 1/2.7;
-const DUANG_TRIGGER_SEPARATION:float = (1 - DUANG_TRIGGER_RATIO) * TILE_WIDTH;
-const DUANG_START_MODULATE:float = 0; #0.2;
-const DUANG_START_ANGLE:float = 1;
-const DUANG_FACTOR:float = 1/sin(DUANG_START_ANGLE);
-const DUANG_END_ANGLE:float = PI - DUANG_START_ANGLE;
-const DUANG_SPEED:float = 0.1;
-const DUANG_FADE_SPEED:float = 0.07;
-
-const FADE_START_ANGLE:float = 1;
-const DWING_START_ANGLE:float = 1;
-const DWING_FACTOR:float = sin(DWING_START_ANGLE);
-const DWING_END_ANGLE:float = PI - DWING_START_ANGLE;
-const DWING_SPEED:float = 0.1;
-const DWING_FADE_SPEED:float = 0.07;
-
-const SHIFT_TIME:float = 6; #in frames
-const SHIFT_LERP_WEIGHT:float = 0.6;
-const SHIFT_SPEED_MIN:float = TILE_SLIDE_SPEED;
-var SHIFT_LERP_WEIGHT_TOTAL:float = 0;
-var SHIFT_DISTANCE_TO_MAX_SPEED:float;
-
-var snap_mode:bool = true; #move mode
 
 const directions = {
 	"left" : Vector2i(-1, 0),

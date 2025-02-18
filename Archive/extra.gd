@@ -1391,3 +1391,12 @@ func set_tile_entity_not_busy(tile:TileForTilemap):
 	var entity:Entity = get_tile_entity_by_body(tile);
 	entity.set_is_busy(false);
 '''
+
+'''
+const DUANG_START_MODULATE:float = 0; #0.2;
+const DUANG_FADE_SPEED:float = 0.07;
+
+const FADE_START_ANGLE:float = 1;
+const DWING_FADE_SPEED:float = 0.07;
+
+'''
