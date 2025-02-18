@@ -39,19 +39,19 @@ func _init(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, di
 	match transit_id:
 		GV.TransitId.SLIDE:
 			move_controller = TileForTilemapSlideController.new(self, dir);
-			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], null);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, 1, [], null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SHIFT:
 			move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
-			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, [], null);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, 1, [], null);
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		GV.TransitId.SPLIT:
-			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, [GV.ConversionAnimatorId.FADE_OUT, GV.ConversionAnimatorId.DWING], governor_tile);
-			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, [GV.ConversionAnimatorId.FADE_IN, GV.ConversionAnimatorId.DWING], governor_tile);
+			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, 1, [GV.ConversionAnimatorId.DWING_FADE_OUT, GV.ConversionAnimatorId.DWING], governor_tile);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, 0, [GV.ConversionAnimatorId.DWING_FADE_IN, GV.ConversionAnimatorId.DWING], governor_tile);
 			set_collision_layer_value(GV.CollisionId.SPLITTING, true);
 		GV.TransitId.MERGE:
-			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, [GV.ConversionAnimatorId.FADE_OUT, GV.ConversionAnimatorId.DUANG], governor_tile);
-			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, [GV.ConversionAnimatorId.FADE_IN, GV.ConversionAnimatorId.DUANG], governor_tile);
+			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, 1, [GV.ConversionAnimatorId.DUANG_FADE_OUT, GV.ConversionAnimatorId.DUANG], governor_tile);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, 0, [GV.ConversionAnimatorId.DUANG_FADE_IN, GV.ConversionAnimatorId.DUANG], governor_tile);
 			set_collision_layer_value(GV.CollisionId.COMBINING, true);
 	
 	# set collision masks if tile moves
