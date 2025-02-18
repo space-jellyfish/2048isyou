@@ -6,6 +6,7 @@ var angle_rad:float = GV.DUANG_START_ANGLE;
 
 #should sync to slide progress in case tile bounces
 func step(delta:float):
+	print("duang step");
 	#if governor finished or governor past trigger threshold, Duang += duang_speed
 	#else wait
 	if not is_governor_tile_finished:
@@ -23,4 +24,9 @@ func step(delta:float):
 		(angle_rad == GV.DUANG_START_ANGLE and is_reversed)):
 		finished.emit();
 		return false;
+	#if is_governor_tile_finished:
+		#print("yay, duang slower");
+	#if 	((angle_rad == GV.DUANG_END_ANGLE and not is_reversed) or \
+		#(angle_rad == GV.DUANG_START_ANGLE and is_reversed)):
+		#print("aww, waiting for governor");
 	return true;
