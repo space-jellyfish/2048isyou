@@ -1,6 +1,7 @@
 class_name TileForTilemap
 extends CharacterBody2D;
 
+signal moved;
 var src_pos_t:Vector2i; #correct for split/merge only
 var atlas_coords:Vector2i;
 var curr_sprite:TileForTilemapSprite;

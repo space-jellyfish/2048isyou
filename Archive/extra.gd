@@ -1296,7 +1296,7 @@ func _on_animator_finished(successful:bool):
 
 func _physics_process(delta:float):
 
-	for entity_id in GV.entity_ids_decreasing_premove_priority:
+	for entity_id in GV.ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:
 		for entity in entities[entity_id]:
 			entity.try_curr_frame_premoves();
 '''
@@ -1463,4 +1463,35 @@ var is_tilemap_cleared:bool = false;
 
 '''
 var unsplit_atlas_coords:Vector2i; #used if tile is_splitted and is_reversed when finalizing
+'''
+
+'''
+func _on_area_2d_body_exited(body: Node2D) -> void:
+	if body.is_inside_tree(): #not snapped to tilemap
+		assert(body is TileForTilemap and body.old_type_id == GV.TypeId.PLAYER);
+		
+		#start pan
+		var player_offset:Vector2 = body.position - position;
+		var target_pos:Vector2 = position + GV.TRACKING_CAM_LEAD_RATIO * player_offset
+		
+		var tween:Tween = create_tween();
+		tween.set_ease(Tween.EASE_OUT);
+		tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
+		tween.tween_property(self, "position", target_pos, GV.TRACKING_CAM_TRANSITION_TIME).set_trans(Tween.TRANS_QUINT);
+		transition_started.emit();
+
+func _ready() -> void:
+	#set initial position
+	position = GV.pos_t_to_world(world.initial_player_pos_t);
+	
+	#set initial zoom
+	var zoom_ratio:float = GV.VIEWPORT_RESOLUTION.x / GV.tracking_cam_resolution.x;
+	set_zoom_custom(Vector2(zoom_ratio, zoom_ratio));
+'''
+
+'''
+#pathfinder-related stuff
+#var level_hash_numbers:Array = [];
+#var x_hash_numbers:Array = [];
+#var y_hash_numbers:Array = [];
 '''

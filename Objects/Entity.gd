@@ -6,10 +6,14 @@
 # update entity stats (is_player_alive, player_pos_t, ...)
 # call (deferred) if premove added or action finished
 
-#manages premoves for an entity instance
-#clear premoves if entity dies or last premove failed
-#roaming entities can try new premoves before the old ones finish
+# manages premoves for an entity instance
+# clear premoves if entity dies or last premove failed
+# roaming entities can try new premoves before the old ones finish
 class_name Entity
+
+# emitted when body emits moved or set_body/set_pos_t changes entity position
+# assumes body has a moved signal
+signal moved;
 
 var world:World;
 var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
@@ -95,10 +99,23 @@ func set_entity_id_and_body(entity_id:int, body:Node2D):
 	#update dictionary keys
 	change_keys(self.entity_id, entity_id, old_key, new_key);
 	
+	#emit moved signal
+	var old_pos:Vector2 = get_position();
+	var new_pos:Vector2 = body.position if body else GV.pos_t_to_world(pos_t);
+	if new_pos != old_pos:
+		moved.emit();
+	
+	#connect/disconnect body.moved signal
+	if self.body and self.body != body:
+		self.body.moved.disconnect(_on_body_moved);
+	if body and body != self.body:
+		body.moved.connect(_on_body_moved);
+	
 	#update properties
 	self.entity_id = entity_id;
 	self.body = body;
 
+# NOTE body is set to null
 func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
 	#check if no action required
 	if self.entity_id == entity_id and self.pos_t == pos_t and not body:
@@ -116,6 +133,16 @@ func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
 			world.get_node("Pathfinder").rrd_clear_iad();
 		world.get_node("Pathfinder").set_player_pos(pos_t);
 	
+	#emit moved signal
+	var old_pos:Vector2 = get_position();
+	var new_pos:Vector2 = GV.pos_t_to_world(pos_t);
+	if new_pos != old_pos:
+		moved.emit();
+	
+	#connect/disconnect body.moved signal
+	if body:
+		body.moved.disconnect(_on_body_moved);
+	
 	#update properties
 	self.entity_id = entity_id;
 	self.pos_t = pos_t;
@@ -130,3 +157,8 @@ func set_is_busy(is_busy:bool):
 	if not is_busy and premoves:
 		world.add_curr_frame_premove_entity(self);
 		
+func _on_body_moved():
+	moved.emit();
+
+func get_position() -> Vector2:
+	return body.position if body else GV.pos_t_to_world(pos_t);

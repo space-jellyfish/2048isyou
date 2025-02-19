@@ -20,7 +20,7 @@ var combinations:Array[Array] = [[1]];
 #size-related stuff
 const TILE_WIDTH:float = 40; #px
 const VIEWPORT_RESOLUTION:Vector2 = Vector2(1600, 1200);
-const CAMERA_RESOLUTION:Vector2 = Vector2(800, 600);
+var tracking_cam_resolution:Vector2 = Vector2(800, 600);
 const BORDER_DISTANCE_T:int = 120; #128; #2000000000;
 const BORDER_MIN_POS_T:Vector2i = -Vector2i(BORDER_DISTANCE_T, BORDER_DISTANCE_T);
 const BORDER_MAX_POS_T:Vector2i = Vector2i(BORDER_DISTANCE_T, BORDER_DISTANCE_T);
@@ -44,11 +44,6 @@ const TILE_LOAD_BUFFER:float = 8 * TILE_WIDTH;
 const TILE_UNLOAD_BUFFER:float = 8 * TILE_WIDTH;
 const P_GEN_INVINCIBLE:float = 0.0005;
 const P_GEN_HOSTILE:float = 0.005;
-
-#pathfinder-related stuff
-#var level_hash_numbers:Array = [];
-#var x_hash_numbers:Array = [];
-#var y_hash_numbers:Array = [];
 
 #save-related stuff
 #note non-export variables are not saved in packed scene
@@ -127,10 +122,11 @@ const DWING_SPEED:float = 0.1;
 
 const FADE_SPEED:float = 0.07;
 
-const SHIFT_TIME:float = 6; #in frames
+const SHIFT_TIME:float = 9; #in frames
 const SHIFT_LERP_WEIGHT:float = 0.6;
 const SHIFT_SPEED_MIN:float = TILE_SLIDE_SPEED;
-var SHIFT_LERP_WEIGHT_TOTAL:float = 0;
+const SHIFT_BOUNCE_DECELERATION:float = 0.85;
+var SHIFT_LERP_WEIGHT_TOTAL:float = 0; # NOTE capitalized since these are technically constants, they just require some calculation
 var SHIFT_DISTANCE_TO_MAX_SPEED:float;
 
 var snap_mode:bool = true; #move mode
@@ -193,6 +189,12 @@ enum CollisionId {
 	SAVE_OR_GOAL, # savepoint/goal, (hostile tiles, squid)
 	TRACKING_CAM, # player (tracking cam)
 }
+
+enum TrackingCamTriggerMode {
+	LEAVE_AREA,
+	FINISH_ACTION,
+}
+var tracking_cam_trigger_mode:int = TrackingCamTriggerMode.LEAVE_AREA;
 
 const directions = {
 	"left" : Vector2i(-1, 0),
@@ -356,7 +358,7 @@ var premove_priorities:Dictionary = {
 	EntityId.STP_SPAWNED : 7,
 	#snake continuity at 90deg turns?
 }
-var entity_ids_decreasing_premove_priority:Array;
+var ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:Array;
 
 var max_shift_dists:Dictionary = {
 	TypeId.PLAYER : 4,
@@ -533,8 +535,8 @@ func _ready():
 	SHIFT_DISTANCE_TO_MAX_SPEED = 60 / SHIFT_LERP_WEIGHT_TOTAL;
 	
 	#fill sorted entity_id lists
-	entity_ids_decreasing_premove_priority = premove_priorities.keys();
-	entity_ids_decreasing_premove_priority.sort_custom(func(a, b): return premove_priorities[a] > premove_priorities[b]);
+	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY = premove_priorities.keys();
+	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY.sort_custom(func(a, b): return premove_priorities[a] > premove_priorities[b]);
 	
 #	#init physics enabler size
 #	set_tile_push_limit(abilities["tile_push_limit"]);

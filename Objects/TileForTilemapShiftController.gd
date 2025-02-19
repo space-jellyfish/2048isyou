@@ -21,11 +21,16 @@ func step(delta:float):
 	#update position
 	var prev_position:Vector2 = tile.position;
 	tile.velocity = tile.velocity.lerp(max_speed * dir, GV.SHIFT_LERP_WEIGHT);
+	tile.velocity = tile.velocity.max(GV.TILE_SLIDE_SPEED * dir);
 	var collision:KinematicCollision2D = tile.move_and_collide(tile.velocity * delta);
 	
 	#update remaining_dist
 	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	remaining_dist -= true_step_dist;
+	
+	#emit moved signal
+	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:
+		tile.moved.emit();
 	
 	#bounce (with deceleration), update tilemap if shift finished
 	if remaining_dist <= GV.SNAP_TOLERANCE:
@@ -33,6 +38,8 @@ func step(delta:float):
 		return false;
 		
 	elif collision:
+		tile.velocity *= GV.SHIFT_BOUNCE_DECELERATION;
+		tile.velocity = tile.velocity.max(GV.TILE_SLIDE_SPEED * dir);
 		reverse();
 	
 	return true;
