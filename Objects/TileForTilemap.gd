@@ -1,7 +1,7 @@
 class_name TileForTilemap
 extends CharacterBody2D;
 
-var src_pos_t:Vector2i;
+var src_pos_t:Vector2i; #correct for split/merge only
 var atlas_coords:Vector2i;
 var curr_sprite:TileForTilemapSprite;
 var prev_sprite:TileForTilemapSprite;
@@ -16,10 +16,14 @@ var new_type_id:int;
 var merger_tile:TileForTilemap;
 var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if tile not moving
 
-#var is_aligned:bool = true;
+@onready var collision_shape:CollisionPolygon2D = get_node("CollisionPolygon2D");
 
 
-func _init(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap):
+#must be empty so packed_tile instantiates with script attached
+func _init():
+	pass;
+	
+func initialize(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap):
 	self.src_pos_t = pos_t;
 	self.world = world;
 	self.is_splitted = is_splitted;
@@ -33,9 +37,6 @@ func _init(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, di
 	velocity = Vector2.ZERO;
 	
 	# set move_controller, sprites, and collision layers
-	if old_type_id == GV.TypeId.PLAYER:
-		set_collision_layer_value(GV.CollisionId.TRACKING_CAM, true);
-	
 	match transit_id:
 		GV.TransitId.SLIDE:
 			move_controller = TileForTilemapSlideController.new(self, dir);
@@ -53,6 +54,9 @@ func _init(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, di
 			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, 1, [GV.ConversionAnimatorId.DUANG_FADE_OUT, GV.ConversionAnimatorId.DUANG], governor_tile);
 			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, 0, [GV.ConversionAnimatorId.DUANG_FADE_IN, GV.ConversionAnimatorId.DUANG], governor_tile);
 			set_collision_layer_value(GV.CollisionId.COMBINING, true);
+
+	if move_controller and old_type_id == GV.TypeId.PLAYER:
+		set_collision_layer_value(GV.CollisionId.TRACKING_CAM, true);
 	
 	# set collision masks if tile moves
 	if move_controller:
@@ -73,6 +77,9 @@ func _init(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, di
 
 func set_merger_tile(tile:TileForTilemap):
 	self.merger_tile = tile;
+
+func _ready() -> void:
+	collision_shape.scale = GV.PLAYER_COLLIDER_SCALE * Vector2.ONE;
 
 #pooled tiles do not call _physics_process() since it's only called if the node is present in the scene tree
 func _physics_process(delta: float) -> void:
@@ -101,12 +108,25 @@ func finalize_transit(is_aligned:bool, pos_t:Vector2i):
 	if tile_entity and (not is_aligned or not merger_tile):
 		tile_entity.set_is_busy(false);
 	
-	#return to pool or delete prev_sprite to prepare for next transition
+	#return to pool or prepare for next transition (by resetting properties that _init() doesn't）
+	#if not aligned, assume type does not change
 	if is_aligned:
 		world.return_pooled_tile(self);
-	elif prev_sprite:
-		prev_sprite.queue_free();
-		prev_sprite = null;
+	else:
+		#necessary since _init() does not reset these
+		if prev_sprite:
+			prev_sprite.queue_free();
+			prev_sprite = null;
+		move_controller = null;
+		front_tile = null;
+		back_tile = null;
+		merger_tile = null;
+		
+		#unnecessary since these aren't technically used until the next _init()
+		is_splitted = false;
+		is_merging = false;
+		old_type_id = new_type_id;
+		pusher_entity_id = GV.EntityId.NONE;
 
 func are_sprite_animators_finished() -> bool:
 	return (not prev_sprite or prev_sprite.animators.is_empty()) and (not curr_sprite or curr_sprite.animators.is_empty());

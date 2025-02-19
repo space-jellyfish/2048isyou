@@ -87,6 +87,7 @@ const PLAYER_SPAWN_INVINCIBILITY_TIME:float = 0.25;
 
 const SNAP_TOLERANCE:float = 0.1; #epsilon; in px
 const COLLISION_TEST_DISTANCE:float = 0.4;
+const PLAYER_COLLIDER_SCALE:float = 0.98;
 const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;

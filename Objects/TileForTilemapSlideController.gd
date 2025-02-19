@@ -29,7 +29,6 @@ func _init(tile:TileForTilemap, dir:Vector2i):
 
 #returns false if movement has finished
 func step(delta:float):
-	print("slide step");
 	#update position
 	var prev_position:Vector2 = tile.position;
 	var target_step_dist:float = min(GV.TILE_SLIDE_SPEED * delta, remaining_dist);
@@ -51,7 +50,7 @@ func step(delta:float):
 		var collider:Node2D = collision.get_collider();
 	
 		#check if collision requires handling (front tile handles self reverse logic)
-		if collider != tile.front_tile:
+		if collider != tile.front_tile and Vector2(dir).dot(collision.get_normal()):
 			#bounce self if collider can't bounce; collider should call its own bounce
 			if collider is TileForTilemap:
 				var collider_mover:TileForTilemapController = collider.move_controller;
