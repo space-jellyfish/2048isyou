@@ -19,7 +19,7 @@ func _init(tile:TileForTilemap, tile_sheet:CompressedTexture2D, tile_atlas_coord
 	frame_coords = tile_atlas_coords;
 	texture = tile_sheet;
 
-func _physics_process(delta:float) -> void:
+func _process(delta:float) -> void:
 	for key in animators.keys():
 		var animator:TileForTilemapSpriteAnimator = animators[key];
 		

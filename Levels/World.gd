@@ -8,7 +8,8 @@ class_name World
 extends Node2D
 
 @onready var game:Node2D = $"/root/Game";
-@onready var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.png");
+var packed_tile:PackedScene = preload("res://Objects/TileForTilemap.tscn");
+var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.png");
 
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
@@ -87,11 +88,10 @@ func get_pooled_tile(pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:V
 	var tile:TileForTilemap;
 	if not tile_pool.is_empty():
 		tile = tile_pool.pop_back();
-		tile._init(self, pusher_entity_id, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
 	else:
-		tile = TileForTilemap.new(self, pusher_entity_id, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
+		tile = packed_tile.instantiate();
 	
-	assert(tile != null);
+	tile.initialize(self, pusher_entity_id, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
 	return tile;
 
 func return_pooled_tile(tile:TileForTilemap):
@@ -114,7 +114,7 @@ func return_pooled_tile(tile:TileForTilemap):
 	tile.front_tile = null;
 	tile.merger_tile = null;
 		
-	for collision_id in [GV.CollisionId.DEFAULT, GV.CollisionId.SPLITTING, GV.CollisionId.COMBINING]:
+	for collision_id in GV.CollisionId.values():
 		tile.set_collision_layer_value(collision_id, false);
 	
 	for collision_id in GV.CollisionId.values():
@@ -492,6 +492,9 @@ func add_entity(entity_id:int, key:Variant, entity:Entity):
 # sliding (governor) tiles are added before splitting/merging (governed) tiles,
 # so by tree order, position/remaining_dist is updated before SpriteAnimator.step()
 # update affected entities
+# NOTE problem: collision persists after clearing TileMap cell
+# add_child via call_deferred doesn't work bc it's already in idle time so the tiles still get added immediately
+# add tile via await get_tree().physics_frame doesn't work bc tile might not exist during render
 func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
 	#add sliding tiles
 	var back_tile:TileForTilemap;
@@ -523,16 +526,19 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	#add frontmost tiles first so chain moves in sync every frame
 	var curr_tile:TileForTilemap = back_tile;
 	$TransitTiles.add_child(curr_tile);
+	#$TransitTiles.call_deferred("add_child", curr_tile);
 	while curr_tile.back_tile != null:
 		curr_tile.back_tile.front_tile = curr_tile;
 		curr_tile = curr_tile.back_tile;
 		$TransitTiles.add_child(curr_tile);
+		#$TransitTiles.call_deferred("add_child", curr_tile);
 
 	#add splitting tile
 	if is_splitted:
 		var split_atlas_coords:Vector2i = Vector2i(curr_tile.atlas_coords.x, GV.TypeId.REGULAR);
 		var splitting_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, unsplit_atlas_coords, split_atlas_coords, null, false, false, curr_tile); #cannot substitute with sprites bc collision shape needed
 		$TransitTiles.add_child(splitting_tile);
+		#$TransitTiles.call_deferred("add_child", splitting_tile);
 	
 	#add merging tile (without starting the animation)
 	if is_merging:
@@ -546,6 +552,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var merging_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.MERGE, merge_pos_t, Vector2i.ZERO, 0, old_atlas_coords, new_atlas_coords, null, false, false, back_tile);
 		back_tile.set_merger_tile(merging_tile);
 		$TransitTiles.add_child(merging_tile);
+		#$TransitTiles.call_deferred("add_child", merging_tile);
 		
 		#update entity
 		if old_type_id != GV.EntityId.NONE:
@@ -562,6 +569,7 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	#add transit_tile
 	var tile:TileForTilemap = get_pooled_tile(pusher_entity_id, GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null);
 	$TransitTiles.add_child(tile);
+	#$TransitTiles.call_deferred("add_child", tile);
 	
 	#update entity
 	if type_id != GV.EntityId.NONE:

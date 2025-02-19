@@ -3,6 +3,8 @@
 [ext_resource type="Script" path="res://Objects/TileForTilemap.gd" id="1_w0hdh"]
 
 [node name="Tile" type="CharacterBody2D"]
+collision_layer = 0
+collision_mask = 0
 script = ExtResource("1_w0hdh")
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]

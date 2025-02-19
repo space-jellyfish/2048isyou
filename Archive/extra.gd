@@ -1095,7 +1095,6 @@ func is_collision_before_snap(collision:KinematicCollision2D) -> bool:
 '''
 
 '''
-const PLAYER_COLLIDER_SCALE:float = 0.98;
 const PLAYER_SNAP_RANGE:float = TILE_WIDTH * (1 - PLAYER_COLLIDER_SCALE);
 '''
 
@@ -1454,4 +1453,10 @@ const DWING_FADE_SPEED:float = 0.07;
 		##reset cumulative times
 		#$Pathfinder.reset_sa_cumulative_search_times();
 
+'''
+
+'''
+var is_tilemap_cleared:bool = false;
+	# wait for TileMap cell removal to take effect
+	#if is_tilemap_cleared:
 '''
