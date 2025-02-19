@@ -75,7 +75,7 @@ const LEVEL_NAME_FADE_IN_TIME:float = 1.6;
 const LEVEL_NAME_DISPLAY_TIME:float = 3;
 const LEVEL_NAME_FADE_OUT_TIME:float = 1.2;
 
-const TRACKING_CAM_LEAD_RATIO:float = 1.35; #target = pos + ratio * (track_pos - pos)
+const TRACKING_CAM_LEAD_RATIO:float = 1.3; #target = pos + ratio * (track_pos - pos)
 const TRACKING_CAM_SLACK_RATIO:float = 0.15; #0.25; #ratio applied to slack (tracking movement along the non-trigger axis)
 const TRACKING_CAM_TRANSITION_TIME:float = 1.28;
 const PLAYER_SPAWN_INVINCIBILITY_TIME:float = 0.25;
@@ -187,7 +187,7 @@ enum CollisionId {
 	COMBINING, # combining tiles, (non-merging tiles, squid)
 	MEMBRANE, # membrane, (non-player tiles, squid)
 	SAVE_OR_GOAL, # savepoint/goal, (hostile tiles, squid)
-	TRACKING_CAM, # player (tracking cam)
+	TRACKING_CAM, # player, tracking_cam ()
 }
 
 enum TrackingCamTriggerMode {

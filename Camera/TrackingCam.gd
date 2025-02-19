@@ -39,13 +39,19 @@ func set_zoom_and_area_scale(zoom_ratio:float):
 func _on_target_entity_moved():
 	var target_entity_pos:Vector2 = target_entity.get_position();
 	
-	var polygon:PackedVector2Array = $Area2D/CollisionShape2D.polygon;
-	var global_polygon:PackedVector2Array;
-	for point in polygon:
-		global_polygon.push_back($Area2D/CollisionShape2D.to_global(point));
+	var space_state = get_world_2d().direct_space_state
+	var params = PhysicsPointQueryParameters2D.new()
+	params.collide_with_areas = true;
+	params.collide_with_bodies = false;
+	params.collision_mask = (1 << (GV.CollisionId.TRACKING_CAM - 1));
+	params.position = target_entity_pos;
+	var colliders_info:Array[Dictionary] = space_state.intersect_point(params);
 	
-	if not Geometry2D.is_point_in_polygon(target_entity_pos, global_polygon):
-		transition(target_entity_pos);
+	print(colliders_info);
+	for collider_info in colliders_info:
+		if collider_info["collider"] == $Area2D:
+			return;
+	transition(target_entity_pos);
 
 # assume transition has been triggered (target_entity_pos is outside area)
 func transition(target_entity_pos:Vector2):
