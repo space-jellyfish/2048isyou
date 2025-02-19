@@ -55,6 +55,10 @@ func _ready():
 	#init entities_with_curr_frame_premoves
 	for entity_id in GV.EntityId.values():
 		entities_with_curr_frame_premoves[entity_id] = Dictionary();
+	
+	#init trackingCam stuff
+	$TrackingCam.set_target_entity(player, false);
+	$TrackingCam.set_zoom_and_area_scale(GV.VIEWPORT_RESOLUTION.x / GV.tracking_cam_resolution.x);
 
 func add_curr_frame_premove_entity(entity:Entity):
 	#add to entities_with_curr_frame_premoves
@@ -67,7 +71,7 @@ func add_curr_frame_premove_entity(entity:Entity):
 
 # call deferred so that premove priority is respected
 func try_curr_frame_premoves():
-	for entity_id in GV.entity_ids_decreasing_premove_priority:
+	for entity_id in GV.ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:
 		var typed_entities:Dictionary = entities_with_curr_frame_premoves[entity_id];
 		
 		for entity in typed_entities.keys():

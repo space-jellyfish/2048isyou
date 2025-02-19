@@ -39,6 +39,10 @@ func step(delta:float):
 	var new_remaining_dist:float = remaining_dist - true_step_dist;
 	call_deferred("set_remaining_dist", new_remaining_dist);
 	
+	#emit moved signal
+	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:
+		tile.moved.emit();
+	
 	#bounce, finalize slide (if applicable)
 	#bounce if true_step_dist ~< target_step_dist? NAH, older slide should continue
 	#bounce if ^ for 2+ frames in a row? NAH, allows two well-timed shifts to bounce a slide

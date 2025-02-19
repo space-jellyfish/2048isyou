@@ -19,7 +19,13 @@ func step(delta:float):
 	if tile.velocity.length() < GV.PLAYER_SLIDE_SPEED_MIN:
 		tile.velocity = Vector2.ZERO;
 	
+	#move
 	tile.move_and_slide()
+	
+	#emit moved signal
+	if tile.get_last_motion().length():
+		tile.moved.emit();
+	
 	for index in tile.get_slide_collision_count():
 		var collision:KinematicCollision2D = tile.get_slide_collision(index);
 		var collider:Node2D = collision.get_collider();
