@@ -14,7 +14,9 @@ var is_merging:bool;
 var old_type_id:int;
 var new_type_id:int;
 var merger_tile:TileForTilemap;
+var splitter_tile:TileForTilemap;
 var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if tile not moving
+var transit_id:int;
 
 @onready var collision_shape:CollisionPolygon2D = get_node("CollisionPolygon2D");
 
@@ -29,6 +31,7 @@ func initialize(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2
 	self.is_splitted = is_splitted;
 	self.is_merging = is_merging;
 	self.pusher_entity_id = pusher_entity_id;
+	self.transit_id = transit_id;
 	position = GV.pos_t_to_world(pos_t);
 	atlas_coords = new_atlas_coords;
 	self.back_tile = back_tile;
@@ -78,6 +81,9 @@ func initialize(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2
 func set_merger_tile(tile:TileForTilemap):
 	self.merger_tile = tile;
 
+func set_splitter_tile(tile:TileForTilemap):
+	self.splitter_tile = tile;
+
 func _ready() -> void:
 	collision_shape.scale = GV.PLAYER_COLLIDER_SCALE * Vector2.ONE;
 
@@ -90,16 +96,20 @@ func _physics_process(delta: float) -> void:
 			var offset:Vector2 = position - GV.pos_t_to_world(pos_t); #this is the vector from nearest grid center (not intersection) to tile position
 			var is_aligned:bool = (move_controller.dir.x and abs(offset.y) <= GV.SNAP_TOLERANCE) or \
 									(move_controller.dir.y and abs(offset.x) <= GV.SNAP_TOLERANCE);
-			finalize_transit(is_aligned, pos_t);
+			finalize_transit(is_aligned, pos_t, move_controller.is_reversed);
 
-func finalize_transit(is_aligned:bool, pos_t:Vector2i):
+# if governor and its splitter are reversed, governor should be responsible for finalizing (since it is entity key (if entity exists))
+# merge governor finalizes to merger, which then finalizes to pos_t
+func finalize_transit(is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
 	var tile_entity:Entity = world.get_entity(old_type_id, self);
 	
-	if is_aligned:
-		#update tilemap, entity.pos_t, and tile pool
-		world.set_atlas_coords(GV.LayerId.TILE, pos_t, atlas_coords);
+	if is_aligned and (transit_id != GV.TransitId.SPLIT or not is_reversed):
+		#update tilemap and entity.pos_t
+		var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if (is_splitted and is_reversed) else atlas_coords;
+		world.set_atlas_coords(GV.LayerId.TILE, pos_t, final_atlas_coords);
 		if tile_entity:
-			if merger_tile:
+			# NOTE the following assumes merger/splitter are aligned
+			if merger_tile and pos_t == merger_tile.src_pos_t:
 				tile_entity.set_entity_id_and_body(merger_tile.old_type_id, merger_tile);
 			else:
 				tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
@@ -127,6 +137,7 @@ func finalize_transit(is_aligned:bool, pos_t:Vector2i):
 		is_merging = false;
 		old_type_id = new_type_id;
 		pusher_entity_id = GV.EntityId.NONE;
+		#transit_id = ?
 
 func are_sprite_animators_finished() -> bool:
 	return (not prev_sprite or prev_sprite.animators.is_empty()) and (not curr_sprite or curr_sprite.animators.is_empty());
