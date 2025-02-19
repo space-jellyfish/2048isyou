@@ -3,15 +3,15 @@
 [ext_resource type="Script" path="res://Camera/TrackingCam.gd" id="1_tn13t"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_14c1m"]
-radius = 200.0
-height = 800.0
+radius = 240.0
+height = 880.0
 
 [node name="TrackingCam" type="Camera2D"]
 script = ExtResource("1_tn13t")
 
 [node name="Area2D" type="Area2D" parent="."]
-collision_layer = 0
-collision_mask = 32
+collision_layer = 32
+collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
 rotation = 1.5708

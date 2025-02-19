@@ -1487,6 +1487,18 @@ func _ready() -> void:
 	#set initial zoom
 	var zoom_ratio:float = GV.VIEWPORT_RESOLUTION.x / GV.tracking_cam_resolution.x;
 	set_zoom_custom(Vector2(zoom_ratio, zoom_ratio));
+
+# transition if target_entity is outside area
+func _on_target_entity_moved():
+	var target_entity_pos:Vector2 = target_entity.get_position();
+	
+	var polygon:PackedVector2Array = $Area2D/CollisionShape2D.polygon;
+	var global_polygon:PackedVector2Array;
+	for point in polygon:
+		global_polygon.push_back($Area2D/CollisionShape2D.to_global(point));
+	
+	if not Geometry2D.is_point_in_polygon(target_entity_pos, global_polygon):
+		transition(target_entity_pos);
 '''
 
 '''

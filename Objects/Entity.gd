@@ -136,7 +136,7 @@ func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
 	#emit moved signal
 	var old_pos:Vector2 = get_position();
 	var new_pos:Vector2 = GV.pos_t_to_world(pos_t);
-	if new_pos != old_pos:
+	if new_pos != old_pos or (GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.FINISH_ACTION and pos_t != self.pos_t):
 		moved.emit();
 	
 	#connect/disconnect body.moved signal
