@@ -491,6 +491,7 @@ func sin_approx(angle_rad:float):
 func tile_val_to_id(power:int, ssign:int) -> int:
 	return (power + 1) * ssign + TileId.ZERO;
 
+# ssign should be 1 for TileId.ZERO (required by is_vals_mergeable())
 func id_to_tile_val(id:int):
 	if id == TileId.ZERO:
 		return Vector2i(-1, 1);

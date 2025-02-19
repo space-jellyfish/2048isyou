@@ -48,6 +48,7 @@ func step(delta:float):
 		
 	elif collision:
 		var collider:Node2D = collision.get_collider();
+		print("slide collided with ", collider);
 	
 		#check if collision requires handling (front tile handles self reverse logic)
 		if collider != tile.front_tile and Vector2(dir).dot(collision.get_normal()):
@@ -81,7 +82,7 @@ func step(delta:float):
 							#opposing slide
 							if should_bounce(collider):
 								bounce();
-						elif not collider_mover.dir.dot(dir):
+						elif not Vector2(collider_mover.dir).dot(Vector2(dir)):
 							#perp
 							bounce();
 						#else tailing another slide; don't chain bc different chains should bounce independently
@@ -105,6 +106,7 @@ func detach_from_front_chain():
 		tile.front_tile = null;
 
 func reverse():
+	print("slide reversed");
 	dir *= -1;
 	remaining_dist = GV.TILE_WIDTH - remaining_dist;
 	

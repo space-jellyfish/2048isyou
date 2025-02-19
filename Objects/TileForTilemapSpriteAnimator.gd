@@ -25,6 +25,8 @@ func step(delta:float) -> bool:
 #reverses animation direction (start and end keyframes get swapped)
 #does not change current animation parameter(s)
 func reverse():
+	if self is TileForTilemapSpriteDwingAnimator:
+		print("Dwing reversed")
 	anim_dir *= -1;
 	is_reversed = not is_reversed;
 

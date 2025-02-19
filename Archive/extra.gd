@@ -1460,3 +1460,7 @@ var is_tilemap_cleared:bool = false;
 	# wait for TileMap cell removal to take effect
 	#if is_tilemap_cleared:
 '''
+
+'''
+var unsplit_atlas_coords:Vector2i; #used if tile is_splitted and is_reversed when finalizing
+'''

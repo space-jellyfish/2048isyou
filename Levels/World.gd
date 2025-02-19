@@ -272,18 +272,24 @@ func get_atlas_coords(layer_id:int, pos_t:Vector2i) -> Vector2i:
 func set_atlas_coords(layer_id:int, pos_t:Vector2i, coords:Vector2i):
 	$Cells.set_cell(layer_id, pos_t, layer_id, coords);
 
+func atlas_coords_to_tile_id(tile_atlas_coords:Vector2i):
+	return tile_atlas_coords.x + 1;
+
+func atlas_coords_to_type_id(tile_atlas_coords:Vector2i):
+	return GV.TypeId.REGULAR if tile_atlas_coords.y == -1 else tile_atlas_coords.y;
+
+func atlas_coords_to_back_id(back_atlas_coords:Vector2i):
+	return maxi(back_atlas_coords.x, 0);
+	
 func get_tile_id(pos_t:Vector2i):
-	return get_atlas_coords(GV.LayerId.TILE, pos_t).x + 1;
+	return atlas_coords_to_tile_id(get_atlas_coords(GV.LayerId.TILE, pos_t));
 
 func get_type_id(pos_t:Vector2i):
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
 	return atlas_coords_to_type_id(atlas_coords);
 
-func atlas_coords_to_type_id(atlas_coords:Vector2i):
-	return GV.TypeId.REGULAR if atlas_coords.y == -1 else atlas_coords.y;
-
 func get_back_id(pos_t:Vector2i):
-	return maxi(get_atlas_coords(GV.LayerId.BACK, pos_t).x, 0);
+	return atlas_coords_to_back_id(get_atlas_coords(GV.LayerId.BACK, pos_t));
 
 func is_tile(pos_t:Vector2i):
 	return get_tile_id(pos_t) != 0;
@@ -311,10 +317,19 @@ func is_pow_splittable(pow:int):
 
 #return -Vector2i.ONE if not splittable
 func get_splitted_tile_atlas_coords(atlas_coords:Vector2i, keep_type:bool = true):
-	var val:Vector2i = GV.id_to_tile_val(atlas_coords.x + 1);
-	if not is_pow_splittable(val.x):
+	var tile_val:Vector2i = GV.id_to_tile_val(atlas_coords.x + 1);
+	if not is_pow_splittable(tile_val.x):
 		return -Vector2i.ONE;
-	return Vector2i(atlas_coords.x - val.y, atlas_coords.y if keep_type else GV.TypeId.REGULAR);
+	return Vector2i(atlas_coords.x - tile_val.y, atlas_coords.y if keep_type else GV.TypeId.REGULAR);
+
+func get_doubled_tile_atlas_coords(atlas_coords:Vector2i, keep_type:bool = true):
+	var tile_id:int = atlas_coords_to_tile_id(atlas_coords);
+	var tile_val:Vector2i = GV.id_to_tile_val(tile_id);
+	assert(tile_val.x < GV.TILE_POW_MAX);
+	
+	if tile_id == GV.TileId.ZERO:
+		return atlas_coords;
+	return Vector2i(atlas_coords.x + tile_val.y, atlas_coords.y if keep_type else GV.TypeId.REGULAR);
 
 func is_compatible(type_id:int, back_id:int):
 	if back_id in GV.B_EMPTY:
