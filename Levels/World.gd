@@ -532,7 +532,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# play sound
 		# NOTE attach split/merge sounds to split/merge tiles
-		if not curr_splitted:
+		if not dist_to_src and not is_splitted:
 			curr_tile.get_node("Audio/Slide").play();
 	
 	# init front_tiles and add slide tiles to tree
