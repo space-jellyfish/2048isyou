@@ -98,21 +98,27 @@ func _physics_process(delta: float) -> void:
 # if governor and its splitter are reversed, governor should be responsible for finalizing (since it is entity key (if entity exists))
 # merge governor finalizes to merger, which then finalizes to pos_t
 func finalize_transit(is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
+	if transit_id == GV.TransitId.MERGE:
+		print("break");
 	var tile_entity:Entity = world.get_entity(old_type_id, self);
+	var is_merging_and_merged:bool = merger_tile and pos_t == merger_tile.src_pos_t; # NOTE assumes merger is aligned
+	var is_splitter_and_reversed:bool = (transit_id == GV.TransitId.SPLIT and is_reversed);
 	
-	if is_aligned and (transit_id != GV.TransitId.SPLIT or not is_reversed):
-		#update tilemap and entity.pos_t
-		var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if (is_splitted and is_reversed) else atlas_coords;
-		world.set_atlas_coords(GV.LayerId.TILE, pos_t, final_atlas_coords);
+	if is_aligned and not is_splitter_and_reversed:
+		# update tilemap
+		if not is_merging_and_merged:
+			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if (is_splitted and is_reversed) else atlas_coords;
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, final_atlas_coords);
+		
+		# update entity.pos_t
 		if tile_entity:
-			# NOTE the following assumes merger/splitter are aligned
-			if merger_tile and pos_t == merger_tile.src_pos_t:
+			if is_merging_and_merged:
 				tile_entity.set_entity_id_and_body(merger_tile.old_type_id, merger_tile);
 			else:
 				tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
 
 	# update entity.is_busy so it can try new premoves
-	if tile_entity and (not is_aligned or not merger_tile):
+	if tile_entity and not is_merging_and_merged:
 		tile_entity.set_is_busy(false);
 	
 	#return to pool or prepare for next transition (by resetting properties that _init() doesn't）

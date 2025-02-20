@@ -92,6 +92,7 @@ func get_pooled_tile(pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:V
 	var tile:TileForTilemap;
 	if not tile_pool.is_empty():
 		tile = tile_pool.pop_back();
+		tile.collision_shape.disabled = false;
 	else:
 		tile = packed_tile.instantiate();
 	
@@ -123,6 +124,12 @@ func return_pooled_tile(tile:TileForTilemap):
 	
 	for collision_id in GV.CollisionId.values():
 		tile.set_collision_mask_value(collision_id, false);
+	
+	# disabling collision shape fixes a rare collision bug where pusher tile teleports to an adjacent cell
+	# so this line is staying
+	tile.collision_shape.disabled = true;
+	# wait for collision shape to update
+	await get_tree().physics_frame;
 	
 	tile_pool.append(tile);
 
