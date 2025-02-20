@@ -16,12 +16,14 @@ func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
 	self.dir = dir;
 	remaining_dist = GV.TILE_WIDTH * target_dist_t;
 	max_speed = target_dist_t * GV.TILE_WIDTH * GV.SHIFT_DISTANCE_TO_MAX_SPEED;
+	print(max_speed, " ", GV.TILE_SLIDE_SPEED);
+	assert(max_speed >= GV.TILE_SLIDE_SPEED);
 
 func step(delta:float):
 	#update position
 	var prev_position:Vector2 = tile.position;
 	tile.velocity = tile.velocity.lerp(max_speed * dir, GV.SHIFT_LERP_WEIGHT);
-	tile.velocity = tile.velocity.max(GV.TILE_SLIDE_SPEED * dir);
+	tile.velocity = clamp(Vector2(dir).dot(tile.velocity), GV.TILE_SLIDE_SPEED, max_speed) * dir;
 	var collision:KinematicCollision2D = tile.move_and_collide(tile.velocity * delta);
 	
 	#update remaining_dist
@@ -39,7 +41,7 @@ func step(delta:float):
 		
 	elif collision:
 		tile.velocity *= GV.SHIFT_BOUNCE_DECELERATION;
-		tile.velocity = tile.velocity.max(GV.TILE_SLIDE_SPEED * dir);
+		tile.velocity = clamp(Vector2(dir).dot(tile.velocity), GV.TILE_SLIDE_SPEED, max_speed) * dir;
 		reverse();
 	
 	return true;

@@ -123,7 +123,7 @@ const DWING_SPEED:float = 0.1;
 const FADE_SPEED:float = 0.07;
 
 const SHIFT_TIME:float = 9; #in frames
-const SHIFT_LERP_WEIGHT:float = 0.6;
+const SHIFT_LERP_WEIGHT:float = 0.59;
 const SHIFT_SPEED_MIN:float = TILE_SLIDE_SPEED;
 const SHIFT_BOUNCE_DECELERATION:float = 0.85;
 var SHIFT_LERP_WEIGHT_TOTAL:float = 0; # NOTE capitalized since these are technically constants, they just require some calculation
@@ -533,6 +533,7 @@ func _ready():
 			SHIFT_LERP_WEIGHT_TOTAL += term_sign * combinations_dp(frame, term) * pow(SHIFT_LERP_WEIGHT, term);
 			term_sign *= -1;
 	SHIFT_DISTANCE_TO_MAX_SPEED = 60 / SHIFT_LERP_WEIGHT_TOTAL;
+	assert(SHIFT_DISTANCE_TO_MAX_SPEED >= TILE_SLIDE_SPEED / TILE_WIDTH);
 	
 	#fill sorted entity_id lists
 	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY = premove_priorities.keys();
