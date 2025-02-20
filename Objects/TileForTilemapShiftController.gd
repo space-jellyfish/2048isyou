@@ -16,7 +16,6 @@ func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
 	self.dir = dir;
 	remaining_dist = GV.TILE_WIDTH * target_dist_t;
 	max_speed = target_dist_t * GV.TILE_WIDTH * GV.SHIFT_DISTANCE_TO_MAX_SPEED;
-	print(max_speed, " ", GV.TILE_SLIDE_SPEED);
 	assert(max_speed >= GV.TILE_SLIDE_SPEED);
 
 func step(delta:float):

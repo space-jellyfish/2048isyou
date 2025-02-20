@@ -15,7 +15,6 @@ var is_merging:bool;
 var old_type_id:int;
 var new_type_id:int;
 var merger_tile:TileForTilemap;
-var splitter_tile:TileForTilemap;
 var pusher_entity_id:int; #id of entity that initiated move, GV.EntityId.NONE if tile not moving
 var transit_id:int;
 
@@ -81,9 +80,6 @@ func initialize(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2
 
 func set_merger_tile(tile:TileForTilemap):
 	self.merger_tile = tile;
-
-func set_splitter_tile(tile:TileForTilemap):
-	self.splitter_tile = tile;
 
 func _ready() -> void:
 	collision_shape.scale = GV.PLAYER_COLLIDER_SCALE * Vector2.ONE;

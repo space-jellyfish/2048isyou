@@ -8,11 +8,6 @@ extends Node2D
 @onready var mode_label:Label = right_sidebar.get_node("MoveMode");
 @onready var sa_search_id_selector:OptionButton = $GUI/Control/SASearchIdSelector;
 
-@onready var combine_sound = $"Audio/Combine";
-@onready var slide_sound = $"Audio/Slide";
-@onready var split_sound = $"Audio/Split";
-@onready var shift_sound = $"Audio/Shift";
-
 var current_level:Node2D;
 var current_level_name:Label;
 var levels = [];

@@ -1507,3 +1507,15 @@ func _on_target_entity_moved():
 #var x_hash_numbers:Array = [];
 #var y_hash_numbers:Array = [];
 '''
+
+'''
+func set_splitter_tile(tile:TileForTilemap):
+	self.splitter_tile = tile;
+'''
+
+'''
+@onready var combine_sound = $"Audio/Combine";
+@onready var slide_sound = $"Audio/Slide";
+@onready var split_sound = $"Audio/Split";
+@onready var shift_sound = $"Audio/Shift";
+'''
