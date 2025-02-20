@@ -47,7 +47,6 @@ func _on_target_entity_moved():
 	params.position = target_entity_pos;
 	var colliders_info:Array[Dictionary] = space_state.intersect_point(params);
 	
-	print(colliders_info);
 	for collider_info in colliders_info:
 		if collider_info["collider"] == $Area2D:
 			return;

@@ -436,15 +436,6 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 	
 	var push_count:int = get_slide_push_count(tile_entity.pos_t, dir);
 	if push_count != -1:
-		# start audio
-		var merge_pos_t:Vector2i = tile_entity.pos_t + (push_count + 1) * dir;
-		if get_tile_id(merge_pos_t):
-			game.get_node("Audio/Combine").play();
-		if is_splitted:
-			game.get_node("Audio/Split").play();
-		else:
-			game.get_node("Audio/Slide").play();
-
 		# start animation
 		animate_slide(pusher_entity_id, tile_entity.pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
 			
@@ -488,9 +479,6 @@ func try_shift(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
 	
 	var target_distance:int = get_shift_target_dist(tile_entity.pos_t, dir);
 	if target_distance:
-		#start audio
-		game.get_node("Audio/Shift").play();
-		
 		#update tile_id and player stats during animation
 		animate_shift(pusher_entity_id, tile_entity.pos_t, dir, target_distance);
 		
@@ -514,7 +502,7 @@ func add_entity(entity_id:int, key:Variant, entity:Entity):
 # NOTE problem: collision persists after clearing TileMap cell
 # add_child via call_deferred doesn't work bc it's already in idle time so the tiles still get added immediately
 # add tile via await get_tree().physics_frame doesn't work bc tile might not exist during render
-func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
+func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):	
 	#add sliding tiles
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -522,62 +510,70 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	var is_merging:bool = is_tile(merge_pos_t);
 	
 	for dist_to_src in range(tile_push_count + 1):
-		#get atlas_coord and erase from tilemap
+		# get atlas_coord and erase from tilemap
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
 		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t);
 		var curr_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, -Vector2i.ONE);
 		
-		#add transit tile
+		# add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
 		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
 		var curr_tile:TileForTilemap = get_pooled_tile(pusher_entity_id, GV.TransitId.SLIDE, curr_pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null);
-		assert(curr_tile != null);
+		$TransitTiles.add_child(curr_tile);
+		#$TransitTiles.call_deferred("add_child", curr_tile);
 		
-		#update entity
+		# update entity
 		if curr_type_id != GV.EntityId.NONE:
 			get_entity(curr_type_id, curr_pos_t).set_entity_id_and_body(curr_type_id, curr_tile);
 		
-		#update back_tile
+		# update back_tile
 		back_tile = curr_tile;
+		
+		# play sound
+		# NOTE attach split/merge sounds to split/merge tiles
+		if not curr_splitted:
+			curr_tile.get_node("Audio/Slide").play();
 	
-	#init front_tiles and add slide tiles to tree
-	#add frontmost tiles first so chain moves in sync every frame
+	# init front_tiles and add slide tiles to tree
+	# add frontmost tiles first so chain moves in sync every frame? NAH, collision uses positions from previous frame
 	var curr_tile:TileForTilemap = back_tile;
-	$TransitTiles.add_child(curr_tile);
-	#$TransitTiles.call_deferred("add_child", curr_tile);
 	while curr_tile.back_tile != null:
 		curr_tile.back_tile.front_tile = curr_tile;
 		curr_tile = curr_tile.back_tile;
-		$TransitTiles.add_child(curr_tile);
-		#$TransitTiles.call_deferred("add_child", curr_tile);
 
-	#add splitting tile
+	# add splitting tile
 	if is_splitted:
 		var split_atlas_coords:Vector2i = Vector2i(curr_tile.atlas_coords.x, GV.TypeId.REGULAR);
 		var splitting_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, unsplit_atlas_coords, split_atlas_coords, null, false, false, curr_tile); #cannot substitute with sprites bc collision shape needed
 		$TransitTiles.add_child(splitting_tile);
 		#$TransitTiles.call_deferred("add_child", splitting_tile);
+		
+		# play sound
+		splitting_tile.get_node("Audio/Split").play();
 	
-	#add merging tile (without starting the animation)
+	# add merging tile (without starting the animation)
 	if is_merging:
-		#get atlas_coords and erase from tilemap
+		# get atlas_coords and erase from tilemap
 		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t);
 		var old_type_id:int = atlas_coords_to_type_id(old_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, -Vector2i.ONE);
 		
-		#add transit_tile
+		# add transit_tile
 		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
 		var merging_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.MERGE, merge_pos_t, Vector2i.ZERO, 0, old_atlas_coords, new_atlas_coords, null, false, false, back_tile);
 		back_tile.set_merger_tile(merging_tile);
 		$TransitTiles.add_child(merging_tile);
 		#$TransitTiles.call_deferred("add_child", merging_tile);
 		
-		#update entity
+		# update entity
 		if old_type_id != GV.EntityId.NONE:
-			#use old_type_id until merge animation finishes
-			#don't switch to new_type_id when governor_tile finishes to stay consistent with splitting tile
+			# use old_type_id until merge animation finishes
+			# don't switch to new_type_id when governor_tile finishes to stay consistent with splitting tile
 			get_entity(old_type_id, merge_pos_t).set_entity_id_and_body(old_type_id, merging_tile);
+		
+		# play sound
+		merging_tile.get_node("Audio/Combine").play();
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#get atlas_coords and erase from tilemap
@@ -593,3 +589,6 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	#update entity
 	if type_id != GV.EntityId.NONE:
 		get_entity(type_id, pos_t).set_entity_id_and_body(type_id, tile);
+
+	#start audio
+	tile.get_node("Audio/Shift").play();
