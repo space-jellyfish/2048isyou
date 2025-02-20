@@ -1519,3 +1519,10 @@ func set_splitter_tile(tile:TileForTilemap):
 @onready var split_sound = $"Audio/Split";
 @onready var shift_sound = $"Audio/Shift";
 '''
+
+'''
+	# force a collision shape update
+	# alternatively, await get_tree().physics_frame
+	tile.collision_shape.disabled = true;
+	tile.collision_shape.disabled = false;
+'''
