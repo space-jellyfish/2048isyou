@@ -98,8 +98,6 @@ func _physics_process(delta: float) -> void:
 # if governor and its splitter are reversed, governor should be responsible for finalizing (since it is entity key (if entity exists))
 # merge governor finalizes to merger, which then finalizes to pos_t
 func finalize_transit(is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
-	if transit_id == GV.TransitId.MERGE:
-		print("break");
 	var tile_entity:Entity = world.get_entity(old_type_id, self);
 	var is_merging_and_merged:bool = merger_tile and pos_t == merger_tile.src_pos_t; # NOTE assumes merger is aligned
 	var is_splitter_and_reversed:bool = (transit_id == GV.TransitId.SPLIT and is_reversed);
