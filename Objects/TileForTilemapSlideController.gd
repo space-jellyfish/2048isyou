@@ -38,10 +38,6 @@ func step(delta:float):
 	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	var new_remaining_dist:float = remaining_dist - true_step_dist;
 	call_deferred("set_remaining_dist", new_remaining_dist);
-
-	if tile.atlas_coords == Vector2i(13, 0):
-		print("position: ", tile.position, " prev_position: ", prev_position, " remaining_dist: ", remaining_dist, " target_step_dist: ", target_step_dist, "true_step_dist: ", true_step_dist);
-	
 	
 	#emit moved signal
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:
@@ -56,10 +52,6 @@ func step(delta:float):
 		
 	elif collision:
 		var collider:Node2D = collision.get_collider();
-		if tile.atlas_coords == Vector2i(13, 0):
-			print("is TileForTilemap: ", collider is TileForTilemap);
-			print("slide collided with ", collider);
-			print("prev_pos: ", prev_position, "collider_pos: ", collider.position);
 	
 		#check if collision requires handling (front tile handles self reverse logic)
 		if collider != tile.front_tile and Vector2(dir).dot(collision.get_normal()):
@@ -117,7 +109,6 @@ func detach_from_front_chain():
 		tile.front_tile = null;
 
 func reverse():
-	print("slide reversed");
 	dir *= -1;
 	remaining_dist = GV.TILE_WIDTH - remaining_dist;
 	
