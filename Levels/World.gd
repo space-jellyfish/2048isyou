@@ -37,7 +37,11 @@ var atimer:AccelTimer = AccelTimer.new();
 #last_saved_pos_t is pos_t stored in TileMap that is reverted to if game crashes (or force quit)
 var tile_pool:Array[TileForTilemap];
 
-	
+# for tiles with finished governor but unfinished split/merge animation
+# tiles should be removed from ~ upon starting move
+var tiles_in_transient:Dictionary; #Dictionary[pos_t, TileForTilemap]
+
+
 func _ready():
 	set_level_name();
 	
@@ -60,6 +64,22 @@ func _ready():
 	$TrackingCam.set_target_entity(player, false);
 	$TrackingCam.set_zoom_and_area_scale(GV.VIEWPORT_RESOLUTION.x / GV.tracking_cam_resolution.x);
 
+func set_level_name():
+	if has_node("LevelName"):
+		game.current_level_name = $LevelName;
+		game.current_level_name.modulate.a = 0;
+	else:
+		game.current_level_name = null;
+
+func save():
+	var save_dict = {
+		
+	};
+
+func _exit_tree():
+	#print_orphan_nodes();
+	pass;
+	
 func add_curr_frame_premove_entity(entity:Entity):
 	#add to entities_with_curr_frame_premoves
 	entities_with_curr_frame_premoves[entity.entity_id][entity] = true;
@@ -133,21 +153,11 @@ func return_pooled_tile(tile:TileForTilemap):
 	
 	tile_pool.append(tile);
 
-func set_level_name():
-	if has_node("LevelName"):
-		game.current_level_name = $LevelName;
-		game.current_level_name.modulate.a = 0;
-	else:
-		game.current_level_name = null;
+func add_tile_in_transient(tile:TileForTilemap):
+	tiles_in_transient[tile.src_pos_t] = tile;
 
-func save():
-	var save_dict = {
-		
-	};
-
-func _exit_tree():
-	#print_orphan_nodes();
-	pass;
+func remove_tile_in_transient(tile:TileForTilemap):
+	tiles_in_transient.erase(tile.src_pos_t);
 
 func is_world_border(pos_t:Vector2i) -> bool:
 	if pos_t.x == GV.BORDER_MIN_POS_T.x or pos_t.x == GV.BORDER_MAX_POS_T.x:
@@ -212,7 +222,7 @@ func load_rect(pos_t_min:Vector2i, pos_t_max:Vector2i):
 			generate_cell(pos_t);
 
 func generate_cell(pos_t:Vector2i):
-	if get_atlas_coords(GV.LayerId.BACK, pos_t) != -Vector2i.ONE:
+	if get_atlas_coords(GV.LayerId.BACK, pos_t, false) != -Vector2i.ONE:
 		#once generated, tile may return to -Vector2i.ONE, so use BackId to mark generated cells
 		return; #cell was previously generated
 	if is_world_border(pos_t):
@@ -243,8 +253,8 @@ func generate_cell(pos_t:Vector2i):
 	#type
 	var type:int = GV.TypeId.REGULAR;
 	var n_type:float = randf();
-	if n_type < GV.P_GEN_INVINCIBLE:
-		type = GV.TypeId.INVINCIBLE;
+	if n_type < GV.P_GEN_DUPLICATOR:
+		type = GV.TypeId.DUPLICATOR;
 	elif n_type < GV.P_GEN_HOSTILE:
 		type = GV.TypeId.HOSTILE;
 	
@@ -277,7 +287,11 @@ func _input(event):
 		else:
 			update_last_input_premove(event, GV.ActionId.SLIDE);
 
-func get_atlas_coords(layer_id:int, pos_t:Vector2i) -> Vector2i:
+func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> Vector2i:
+	if include_transient and layer_id == GV.LayerId.TILE:
+		var tile:TileForTilemap = tiles_in_transient.get(pos_t);
+		if tile:
+			return tile.atlas_coords;
 	return $Cells.get_cell_atlas_coords(layer_id, pos_t);
 
 func set_atlas_coords(layer_id:int, pos_t:Vector2i, coords:Vector2i):
@@ -292,18 +306,20 @@ func atlas_coords_to_type_id(tile_atlas_coords:Vector2i):
 func atlas_coords_to_back_id(back_atlas_coords:Vector2i):
 	return maxi(back_atlas_coords.x, 0);
 	
-func get_tile_id(pos_t:Vector2i):
-	return atlas_coords_to_tile_id(get_atlas_coords(GV.LayerId.TILE, pos_t));
+func get_tile_id(pos_t:Vector2i, include_transient:bool):
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, include_transient);
+	return atlas_coords_to_tile_id(atlas_coords);
 
-func get_type_id(pos_t:Vector2i):
-	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
+func get_type_id(pos_t:Vector2i, include_transient:bool):
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, include_transient);
 	return atlas_coords_to_type_id(atlas_coords);
 
 func get_back_id(pos_t:Vector2i):
-	return atlas_coords_to_back_id(get_atlas_coords(GV.LayerId.BACK, pos_t));
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.BACK, pos_t, false);
+	return atlas_coords_to_back_id(atlas_coords);
 
-func is_tile(pos_t:Vector2i):
-	return get_tile_id(pos_t) != 0;
+func is_tile(pos_t:Vector2i, include_transient:bool):
+	return get_tile_id(pos_t, include_transient) != GV.TileId.EMPTY;
 
 func is_vals_mergeable(pow1:int, sign1:int, pow2:int, sign2:int):
 	if pow1 == -1 or pow2 == -1:
@@ -356,8 +372,8 @@ func is_compatible(type_id:int, back_id:int):
 #assume src_pos_t is stable
 func get_slide_push_count(src_pos_t:Vector2i, dir:Vector2i):
 	var curr_pos_t:Vector2i = src_pos_t;
-	var curr_tile_id:int = get_tile_id(src_pos_t);
-	var src_type_id:int = get_type_id(src_pos_t);
+	var curr_tile_id:int = get_tile_id(src_pos_t, true);
+	var src_type_id:int = get_type_id(src_pos_t, true);
 	var curr_type_id:int = src_type_id;
 	var push_count:int = 0;
 	var nearest_merge_push_count:int = -1;
@@ -366,16 +382,16 @@ func get_slide_push_count(src_pos_t:Vector2i, dir:Vector2i):
 		#check for obstruction
 		var prev_type_id:int = curr_type_id;
 		curr_pos_t += dir;
-		curr_type_id = get_type_id(curr_pos_t);
+		curr_type_id = get_type_id(curr_pos_t, true);
 		var curr_back_id:int = get_back_id(curr_pos_t);
-		#if is_immediate_collision(dir, get_collision_id(curr_pos_t)) or \
+		
 		if not is_compatible(prev_type_id, curr_back_id) or \
 			(push_count > 0 and src_type_id in GV.T_ENEMY and curr_type_id == GV.TypeId.PLAYER):
 			return nearest_merge_push_count;
 		
 		#push/merge logic
 		var prev_tile_id:int = curr_tile_id;
-		curr_tile_id = get_tile_id(curr_pos_t);
+		curr_tile_id = get_tile_id(curr_pos_t, true);
 		
 		if is_ids_mergeable(prev_tile_id, curr_tile_id):
 			if nearest_merge_push_count == -1:
@@ -412,7 +428,7 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	var atlas_y:int = coords1.y if get_tile_type_merge_priority(coords1.y) > get_tile_type_merge_priority(coords2.y) else coords2.y;
 	var atlas_x:int = get_merged_tile_id(coords1.x + 1, coords2.x + 1) - 1;
 	#hostile death
-	if atlas_x == GV.TileId.ZERO - 1 and atlas_y == GV.TypeId.HOSTILE:
+	if atlas_x == GV.TileId.ZERO - 1 and atlas_y in GV.T_ENEMY_KILLABLE_BY_ZEROING:
 		atlas_y = GV.TypeId.REGULAR;
 	assert(atlas_y != -1 && atlas_x != -1);
 	return Vector2i(atlas_x, atlas_y);
@@ -420,13 +436,12 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 #used for shift speed calculation
 #assume src_pos_t stable
 func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
-	var max_distance:int = GV.max_shift_dists[get_type_id(src_pos_t)];
+	var max_distance:int = GV.max_shift_dists[get_type_id(src_pos_t, true)];
 	var next_pos_t:Vector2i = src_pos_t + dir;
 	var distance:int = 0;
-	var src_type_id:int = get_type_id(src_pos_t);
+	var src_type_id:int = get_type_id(src_pos_t, true);
 
-	#while distance < max_distance and not is_immediate_collision(dir, get_collision_id(next_pos_t)) and is_compatible(src_type_id, get_back_id(next_pos_t)) and not is_tile(next_pos_t):
-	while distance < max_distance and is_compatible(src_type_id, get_back_id(next_pos_t)) and not is_tile(next_pos_t):
+	while distance < max_distance and is_compatible(src_type_id, get_back_id(next_pos_t)) and not is_tile(next_pos_t, true):
 		distance += 1;
 		next_pos_t += dir;
 	return distance;
@@ -438,7 +453,7 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 		assert(tile_entity.body is TileForTilemap);
 		tile_entity.body.move_controller = TileForTilemapSlideController.new(tile_entity.body, dir);
 		return true;
-	if not is_tile(tile_entity.pos_t): # moving due to another entity
+	if not is_tile(tile_entity.pos_t, true): # moving due to another entity
 		return false;
 	
 	var push_count:int = get_slide_push_count(tile_entity.pos_t, dir);
@@ -455,11 +470,11 @@ func try_split(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
 		assert(tile_entity.body is TileForTilemap);
 		game.show_message(GV.MessageId.SPLIT_NA);
 		return false;
-	if not is_tile(tile_entity.pos_t):
+	if not is_tile(tile_entity.pos_t, true):
 		return false;
 	
 	#check if split possible
-	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t);
+	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t, true);
 	var splitted_coords:Vector2i = get_splitted_tile_atlas_coords(src_coords);
 	if splitted_coords == -Vector2i.ONE:
 		return false;
@@ -481,7 +496,7 @@ func try_shift(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
 		assert(tile_entity.body is TileForTilemap);
 		game.show_message(GV.MessageId.SHIFT_NA);
 		return false;
-	if not is_tile(tile_entity.pos_t):
+	if not is_tile(tile_entity.pos_t, true):
 		return false;
 	
 	var target_distance:int = get_shift_target_dist(tile_entity.pos_t, dir);
@@ -514,12 +529,12 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
 	var merge_pos_t:Vector2i = pos_t + (tile_push_count + 1) * dir;
-	var is_merging:bool = is_tile(merge_pos_t);
+	var is_merging:bool = is_tile(merge_pos_t, true);
 	
 	for dist_to_src in range(tile_push_count + 1):
 		# get atlas_coord and erase from tilemap
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
-		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t);
+		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t, true);
 		var curr_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, -Vector2i.ONE);
 		
@@ -551,8 +566,13 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 
 	# add splitting tile
 	if is_splitted:
-		var split_atlas_coords:Vector2i = Vector2i(curr_tile.atlas_coords.x, GV.TypeId.REGULAR);
-		var splitting_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, unsplit_atlas_coords, split_atlas_coords, null, false, false, curr_tile); #cannot substitute with sprites bc collision shape needed
+		# find split atlas coords
+		var splitter_type_id:int = atlas_coords_to_type_id(curr_tile.atlas_coords);
+		splitter_type_id = splitter_type_id if GV.duplicate_upon_split[splitter_type_id] else GV.TypeId.REGULAR;
+		var splitter_atlas_coords:Vector2i = Vector2i(curr_tile.atlas_coords.x, splitter_type_id);
+		
+		var splitting_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, unsplit_atlas_coords, splitter_atlas_coords, null, false, false, curr_tile); #cannot substitute with sprites bc collision shape needed
+		curr_tile.set_splitter_tile(splitting_tile);
 		$TransitTiles.add_child(splitting_tile);
 		#$TransitTiles.call_deferred("add_child", splitting_tile);
 		
@@ -562,7 +582,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	# add merging tile (without starting the animation)
 	if is_merging:
 		# get atlas_coords and erase from tilemap
-		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t);
+		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t, true);
 		var old_type_id:int = atlas_coords_to_type_id(old_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, -Vector2i.ONE);
 		
@@ -584,7 +604,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#get atlas_coords and erase from tilemap
-	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, true);
 	var type_id:int = atlas_coords_to_type_id(atlas_coords);
 	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
 	

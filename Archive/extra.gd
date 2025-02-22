@@ -846,6 +846,14 @@ func is_stable(pos_t:Vector2i):
 		assert(get_alternative_id(pos_t) != GV.AlternativeId.ANIMATING);
 	
 	return get_collision_id(pos_t) == GV.CollisionId.STABLE;
+
+		if is_immediate_collision(dir, get_collision_id(curr_pos_t)) or \
+			(push_count > 0 and src_type_id in GV.T_ENEMY and curr_type_id == GV.TypeId.PLAYER):
+			return nearest_merge_push_count;
+
+	while distance < max_distance and not is_immediate_collision(dir, get_collision_id(next_pos_t)) and is_compatible(src_type_id, get_back_id(next_pos_t)) and not is_tile(next_pos_t):
+		distance += 1;
+		next_pos_t += dir;
 '''
 
 ''' with collision_id updating
@@ -1177,7 +1185,7 @@ func _physics_process(delta:float):
 #player tile_push_limit does not change when roaming
 var tile_push_limits:Dictionary = {
 	TypeId.PLAYER : 2,
-	TypeId.INVINCIBLE : 1,
+	TypeId.DUPLICATOR : 1,
 	TypeId.HOSTILE : 1,
 	TypeId.VOID : 1,
 	TypeId.REGULAR : 0,
@@ -1525,4 +1533,35 @@ func set_splitter_tile(tile:TileForTilemap):
 	# alternatively, await get_tree().physics_frame
 	tile.collision_shape.disabled = true;
 	tile.collision_shape.disabled = false;
+'''
+
+''' fast_combine
+		# update entity.pos_t
+		if tile_entity:
+			if is_merging_and_merged:
+				tile_entity.set_entity_id_and_body(merger_tile.old_type_id, merger_tile);
+			else:
+				tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
+
+	# update entity.is_busy so it can try new premoves
+	if tile_entity and not is_merging_and_merged:
+		tile_entity.set_is_busy(false);
+
+func is_tile_including_transient(pos_t:Vector2i):
+	var tile:TileForTilemap = tiles_in_transient.get(pos_t);
+	if tile:
+		return true;
+	return is_tile(pos_t);
+
+func get_tile_id_including_transient(pos_t:Vector2i):
+	var tile:TileForTilemap = tiles_in_transient.get(pos_t);
+	if tile:
+		return atlas_coords_to_tile_id(tile.atlas_coords);
+	return get_tile_id(pos_t);
+
+func get_type_id_including_transient(pos_t:Vector2i):
+	var tile:TileForTilemap = tiles_in_transient.get(pos_t);
+	if tile:
+		return atlas_coords_to_type_id(tile.atlas_coords);
+	return get_type_id(pos_t);
 '''

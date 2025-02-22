@@ -42,7 +42,7 @@ const TILE_GEN_POW_MAX:int = 11;
 const TILE_VALUE_COUNT:int = 2 * TILE_POW_MAX + 3;
 const TILE_LOAD_BUFFER:float = 8 * TILE_WIDTH;
 const TILE_UNLOAD_BUFFER:float = 8 * TILE_WIDTH;
-const P_GEN_INVINCIBLE:float = 0.0005;
+const P_GEN_DUPLICATOR:float = 0.0005;
 const P_GEN_HOSTILE:float = 0.005;
 
 #save-related stuff
@@ -222,7 +222,7 @@ enum TileId { #5 bits
 
 enum TypeId { #3 bits
 	PLAYER = 0,
-	INVINCIBLE,
+	DUPLICATOR,
 	HOSTILE,
 	VOID,
 	REGULAR,
@@ -245,12 +245,13 @@ enum BackId { #8 bits
 const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
 const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
 const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
-const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
+const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
+const T_ENEMY_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
 
 # NOTE TypeId should be usable as EntityId without conversion
 enum EntityId {
 	PLAYER, #for simplicity, player priorities/push_weight/tpl are the same when roaming
-	INVINCIBLE,
+	DUPLICATOR,
 	HOSTILE,
 	VOID,
 	NONE, #TypeId.REGULAR
@@ -258,6 +259,7 @@ enum EntityId {
 	SQUID_CLUB,
 	STP_SPAWNING,
 	STP_SPAWNED,
+	SNAKE,
 }
 
 enum LayerId {
@@ -276,7 +278,7 @@ enum ColorId {
 #player tile_push_limit does not change when roaming
 var tile_push_limits:Dictionary = {
 	EntityId.PLAYER : 1,
-	EntityId.INVINCIBLE : 1,
+	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 3,
 	EntityId.NONE : 0,
@@ -284,35 +286,46 @@ var tile_push_limits:Dictionary = {
 	EntityId.SQUID_CLUB : 6,
 	EntityId.STP_SPAWNING : 0,
 	EntityId.STP_SPAWNED : 2,
+	EntityId.SNAKE : 4,
 };
+
+var duplicate_upon_split:Dictionary = {
+	TypeId.PLAYER : false,
+	TypeId.DUPLICATOR : true,
+	TypeId.HOSTILE : false,
+	TypeId.VOID : false,
+	TypeId.REGULAR : false,
+	TypeId.SQUID : false,
+}
 
 var merge_priorities:Dictionary = {
 	-1 : -1,
 	TypeId.REGULAR : 0,
 	TypeId.PLAYER : 1,
 	TypeId.HOSTILE : 2,
-	TypeId.INVINCIBLE : 3,
-	TypeId.VOID : 4,
+	TypeId.VOID : 3,
+	TypeId.DUPLICATOR : 4,
 	TypeId.SQUID : 5,
 }
 
 #push is possible if pusher push_weight >= pushed slide_weight
 var slide_weights:Dictionary = {
 	EntityId.PLAYER : 3, #INT64_MAX when roaming, but doesn't matter since only SQUID_CLUB can push player
-	EntityId.INVINCIBLE : 2,
-	EntityId.HOSTILE : 1,
+	EntityId.DUPLICATOR : 1,
+	EntityId.HOSTILE : 2,
 	EntityId.VOID : 0,
 	EntityId.NONE : 0,
 	EntityId.SQUID_BODY : 0,
 	EntityId.SQUID_CLUB : INT64_MAX,
 	EntityId.STP_SPAWNING : INT64_MAX,
 	EntityId.STP_SPAWNED : INT64_MAX,
+	EntityId.SNAKE : INT64_MAX,
 }
 
 #-1 if entity cannot push anything
 var push_weights:Dictionary = {
 	EntityId.PLAYER : 2,
-	EntityId.INVINCIBLE : 1,
+	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 2,
 	EntityId.NONE : -1,
@@ -320,6 +333,7 @@ var push_weights:Dictionary = {
 	EntityId.SQUID_CLUB : 3,
 	EntityId.STP_SPAWNING : -1,
 	EntityId.STP_SPAWNED : 2,
+	EntityId.SNAKE : 2,
 }
 
 # (slide collision) arbitration modes
@@ -332,15 +346,16 @@ enum SlideArbitrationMode {
 # for tiebreaking when two slides collide at midpoint
 # id of entity that initiated move is used, not EntityId of moving tile
 var slide_priorities:Dictionary = {
-	EntityId.PLAYER : 7,
-	EntityId.INVINCIBLE : 4,
-	EntityId.HOSTILE : 3,
+	EntityId.PLAYER : 8,
+	EntityId.DUPLICATOR : 3,
+	EntityId.HOSTILE : 4,
 	EntityId.VOID : 5,
 	EntityId.NONE : -1,
 	EntityId.SQUID_BODY : 2,
 	EntityId.SQUID_CLUB : 1,
 	EntityId.STP_SPAWNING : 0,
-	EntityId.STP_SPAWNED : 6,
+	EntityId.STP_SPAWNED : 7,
+	EntityId.SNAKE : 6,
 }
 
 # for tiebreaking if 2+ entities have premoves queued (represents 'reaction time' of entity)
@@ -348,23 +363,24 @@ var slide_priorities:Dictionary = {
 # roaming entities should use the premove system instead of initiating moves in the middle of physics frame
 var premove_priorities:Dictionary = {
 	EntityId.PLAYER : 3,
-	EntityId.INVINCIBLE : 5,
+	EntityId.DUPLICATOR : 5,
 	EntityId.HOSTILE : 4,
 	EntityId.VOID : 6,
 	EntityId.NONE : -1,
 	EntityId.SQUID_BODY : 2,
 	EntityId.SQUID_CLUB : 1,
 	EntityId.STP_SPAWNING : 0,
-	EntityId.STP_SPAWNED : 7,
-	#snake continuity at 90deg turns?
+	EntityId.STP_SPAWNED : 8,
+	EntityId.SNAKE : 7,
+	#snake continuity at 90deg turns (if snake is composed of tiles)?
 }
 var ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:Array;
 
 var max_shift_dists:Dictionary = {
 	TypeId.PLAYER : 4,
-	TypeId.INVINCIBLE : 4,
+	TypeId.DUPLICATOR : 0,
 	TypeId.HOSTILE : 0,
-	TypeId.VOID : 8,
+	TypeId.VOID : 6,
 	TypeId.REGULAR : 0,
 	TypeId.SQUID : 8,
 }
