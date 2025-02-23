@@ -107,8 +107,8 @@ func try_curr_frame_premoves():
 func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
 	var local_pos:Vector2 = $TrackingCam.position - GV.VIEWPORT_RESOLUTION/2 + viewport_pos;
 	return get_node("Cells").local_to_map(local_pos);
-	
-func get_pooled_tile(pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap) -> TileForTilemap:
+
+func get_pooled_tile(pos_t:Vector2i) -> TileForTilemap:
 	var tile:TileForTilemap;
 	if not tile_pool.is_empty():
 		tile = tile_pool.pop_back();
@@ -116,7 +116,7 @@ func get_pooled_tile(pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:V
 	else:
 		tile = packed_tile.instantiate();
 	
-	tile.initialize(self, pusher_entity_id, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
+	tile.initialize(self, tile_sheet, pos_t);
 	return tile;
 
 func return_pooled_tile(tile:TileForTilemap):
@@ -138,12 +138,9 @@ func return_pooled_tile(tile:TileForTilemap):
 	tile.back_tile = null;
 	tile.front_tile = null;
 	tile.merger_tile = null;
-		
-	for collision_id in GV.CollisionId.values():
-		tile.set_collision_layer_value(collision_id, false);
-	
-	for collision_id in GV.CollisionId.values():
-		tile.set_collision_mask_value(collision_id, false);
+	tile.splitter_tile = null;
+	tile.velocity = Vector2.ZERO;
+	tile.clear_collision_values();
 	
 	# disabling collision shape fixes a rare collision bug where pusher tile teleports to an adjacent cell
 	# so this line is staying
@@ -158,6 +155,12 @@ func add_tile_in_transient(tile:TileForTilemap):
 
 func remove_tile_in_transient(tile:TileForTilemap):
 	tiles_in_transient.erase(tile.src_pos_t);
+
+func get_transit_tile(pos_t:Vector2i) -> TileForTilemap:
+	var tile:TileForTilemap = tiles_in_transient.get(pos_t);
+	if tile:
+		return tile;
+	return get_pooled_tile(pos_t);
 
 func is_world_border(pos_t:Vector2i) -> bool:
 	if pos_t.x == GV.BORDER_MIN_POS_T.x or pos_t.x == GV.BORDER_MAX_POS_T.x:
@@ -541,7 +544,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		# add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
 		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
-		var curr_tile:TileForTilemap = get_pooled_tile(pusher_entity_id, GV.TransitId.SLIDE, curr_pos_t, dir, 1, curr_atlas_coords, curr_atlas_coords, back_tile, curr_splitted, curr_merging, null);
+		var curr_tile:TileForTilemap = get_transit_tile(curr_pos_t);
+		curr_tile.initialize_slide(pusher_entity_id, dir, curr_atlas_coords, back_tile, curr_splitted, curr_merging);
 		$TransitTiles.add_child(curr_tile);
 		#$TransitTiles.call_deferred("add_child", curr_tile);
 		
@@ -571,7 +575,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		splitter_type_id = splitter_type_id if GV.duplicate_upon_split[splitter_type_id] else GV.TypeId.REGULAR;
 		var splitter_atlas_coords:Vector2i = Vector2i(curr_tile.atlas_coords.x, splitter_type_id);
 		
-		var splitting_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.SPLIT, pos_t, Vector2i.ZERO, 0, unsplit_atlas_coords, splitter_atlas_coords, null, false, false, curr_tile); #cannot substitute with sprites bc collision shape needed
+		var splitting_tile:TileForTilemap = get_transit_tile(pos_t);
+		splitting_tile.initialize_split(unsplit_atlas_coords, splitter_atlas_coords, curr_tile);
 		curr_tile.set_splitter_tile(splitting_tile);
 		$TransitTiles.add_child(splitting_tile);
 		#$TransitTiles.call_deferred("add_child", splitting_tile);
@@ -588,7 +593,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# add transit_tile
 		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
-		var merging_tile:TileForTilemap = get_pooled_tile(GV.EntityId.NONE, GV.TransitId.MERGE, merge_pos_t, Vector2i.ZERO, 0, old_atlas_coords, new_atlas_coords, null, false, false, back_tile);
+		var merging_tile:TileForTilemap = get_transit_tile(merge_pos_t);
+		merging_tile.initialize_merge(old_atlas_coords, new_atlas_coords, back_tile);
 		back_tile.set_merger_tile(merging_tile);
 		$TransitTiles.add_child(merging_tile);
 		#$TransitTiles.call_deferred("add_child", merging_tile);
@@ -609,7 +615,8 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
 	
 	#add transit_tile
-	var tile:TileForTilemap = get_pooled_tile(pusher_entity_id, GV.TransitId.SHIFT, pos_t, dir, target_dist, atlas_coords, atlas_coords, null, false, false, null);
+	var tile:TileForTilemap = get_transit_tile(pos_t);
+	tile.initialize_shift(dir, target_dist, atlas_coords);
 	$TransitTiles.add_child(tile);
 	#$TransitTiles.call_deferred("add_child", tile);
 	

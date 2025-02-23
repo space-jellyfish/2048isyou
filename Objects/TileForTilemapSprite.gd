@@ -28,7 +28,7 @@ func _process(delta:float) -> void:
 			
 			if tile.are_sprite_animators_finished():
 				# assume is_reversed is same for all sprite animators
-				tile.finalize_transit(true, tile.src_pos_t, animator.is_reversed);
+				tile.finalize_transit(tile.conversion_transit_id, true, tile.src_pos_t, animator.is_reversed);
 
 func add_animator(conversion_anim_id:int, governor_tile:TileForTilemap):
 	var anim_type:int = GV.get_animator_type(conversion_anim_id);
