@@ -2,7 +2,6 @@ class_name TileForTilemap
 extends CharacterBody2D;
 
 signal moved;
-var src_pos_t:Vector2i; #correct for split/merge only
 var atlas_coords:Vector2i;
 var curr_sprite:TileForTilemapSprite;
 var prev_sprite:TileForTilemapSprite;
@@ -11,17 +10,19 @@ var front_tile:TileForTilemap; #in direction of initial action
 var back_tile:TileForTilemap; #in direction of initial action
 var world:World;
 var tile_sheet:CompressedTexture2D;
-var is_splitted:bool;
-var is_merging:bool;
 var old_type_id:int;
 var new_type_id:int;
 var merger_tile:TileForTilemap;
 var splitter_tile:TileForTilemap;
 # id of entity that initiated move, GV.EntityId.NONE if tile not moving
 # used to index GV.slide_priorities for tiebreaking
+var is_merging:bool = false;
+var is_splitted:bool = false;
 var pusher_entity_id:int = GV.EntityId.NONE;
 var move_transit_id:int = GV.TransitId.NONE;
 var conversion_transit_id:int = GV.TransitId.NONE;
+var is_aligned:bool = true;
+var pos_t:Vector2i; #only valid if is_aligned
 
 @onready var collision_shape:CollisionPolygon2D = get_node("CollisionPolygon2D");
 
@@ -33,7 +34,7 @@ func _init():
 func initialize(world:World, tile_sheet:CompressedTexture2D, pos_t:Vector2i):
 	self.world = world;
 	self.tile_sheet = tile_sheet;
-	src_pos_t = pos_t;
+	self.pos_t = pos_t;
 	position = GV.pos_t_to_world(pos_t);
 
 func set_merger_tile(tile:TileForTilemap):
@@ -291,6 +292,9 @@ func _physics_process(delta: float) -> void:
 #	set atlas_coords at pos_t
 #	return to pool if conversion animators finished
 func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
+	self.is_aligned = is_aligned;
+	self.pos_t = pos_t;
+	
 	# get tile entity
 	var tile_entity:Entity = world.get_entity(old_type_id if is_reversed else new_type_id, self);
 	
@@ -364,6 +368,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			is_merging = false;
 			old_type_id = new_type_id;
 			pusher_entity_id = GV.EntityId.NONE;
+		
 		if conversion_transit_id == GV.TransitId.NONE and prev_sprite:
 			prev_sprite.queue_free();
 
