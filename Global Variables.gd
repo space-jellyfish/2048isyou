@@ -160,6 +160,8 @@ enum ActionId {
 }
 
 enum TransitId {
+	NONE,
+	ROAM,
 	SLIDE, # uniform speed
 	SPLIT,
 	SHIFT, # accelerates to cover shift dist in same time as a slide
@@ -170,13 +172,14 @@ enum TransitId {
 enum ZId {
 	BACKGROUND = -10,
 	HIDDEN_LABEL = -9,
-	SAVE_OR_GOAL = -2,
-	MOVING = -1, # tiles merging into another (stationary) tile; for simplicity, all sliding/shifting tiles are grouped here
-	DEFAULT = 0, # walls, stationary tiles
+	SAVE_OR_GOAL = -1,
+	DEFAULT = 0, # walls, stationary tiles, non-converting moving tiles
 	SPLITTING_NEW = 1,
 	SPLITTING_OLD = 2,
-	COMBINING_NEW = 3,
-	COMBINING_OLD = 4,
+	COMBINING_NEW_MOVING = 3,
+	COMBINING_OLD_MOVING = 4,
+	COMBINING_NEW = 5,
+	COMBINING_OLD = 6,
 	LEVEL_NAME = 10,
 }
 

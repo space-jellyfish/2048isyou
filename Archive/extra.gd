@@ -1564,4 +1564,118 @@ func get_type_id_including_transient(pos_t:Vector2i):
 	if tile:
 		return atlas_coords_to_type_id(tile.atlas_coords);
 	return get_type_id(pos_t);
+
+func finalize_transit(...)
+	# get tile_entity
+	var is_merging_and_merged:bool = merger_tile and pos_t == merger_tile.src_pos_t; # NOTE assumes merger is aligned
+	var is_splitter_and_reversed:bool = (transit_id == GV.TransitId.SPLIT and is_reversed);
+	var entity_type_id:int = new_type_id if transit_id == GV.TransitId.MERGE else old_type_id;
+	
+	
+	if is_aligned and not is_splitter_and_reversed:
+		# update tilemap
+		if not is_merging_and_merged:
+			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if (is_splitted and is_reversed) else atlas_coords;
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, final_atlas_coords);
+		
+		# update entity.pos_t
+		if tile_entity:
+			if is_merging_and_merged:
+				tile_entity.set_entity_id_and_body(merger_tile.new_type_id, merger_tile);
+			else:
+				tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
+
+	# update entity.is_busy so it can try new premoves
+	if tile_entity and transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
+		tile_entity.set_is_busy(false);
+		
+	
+	#return to pool or prepare for next transition (by resetting properties that _init() doesn't）
+	#if not aligned, assume type does not change
+	if is_aligned:
+		world.return_pooled_tile(self);
+	else:
+		#necessary since _init() does not reset these
+		if prev_sprite:
+			prev_sprite.queue_free();
+			prev_sprite = null;
+		move_controller = null;
+		front_tile = null;
+		back_tile = null;
+		merger_tile = null;
+		
+		#unnecessary since these aren't technically used until the next _init()
+		is_splitted = false;
+		is_merging = false;
+		old_type_id = new_type_id;
+		pusher_entity_id = GV.EntityId.NONE;
+		#transit_id = ?
+'''
+
+'''
+	if move_controller and old_type_id == GV.TypeId.PLAYER:
+		set_collision_layer_value(GV.CollisionId.TRACKING_CAM, true);
+'''
+
+'''
+func initialize(world:World, pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, tile_sheet:CompressedTexture2D, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap):
+	self.src_pos_t = pos_t;
+	self.world = world;
+	self.is_splitted = is_splitted;
+	self.is_merging = is_merging;
+	self.pusher_entity_id = pusher_entity_id;
+	self.transit_id = transit_id;
+	position = GV.pos_t_to_world(pos_t);
+	atlas_coords = new_atlas_coords;
+	self.back_tile = back_tile;
+	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
+	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
+	velocity = Vector2.ZERO;
+	
+	# set move_controller, sprites, and collision layers
+	match transit_id:
+		GV.TransitId.SLIDE:
+			move_controller = TileForTilemapSlideController.new(self, dir);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, 1, [], null);
+			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
+		GV.TransitId.SHIFT:
+			move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.MOVING, 1, [], null);
+			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
+		GV.TransitId.SPLIT:
+			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, 1, [GV.ConversionAnimatorId.DWING_FADE_OUT, GV.ConversionAnimatorId.DWING], governor_tile);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, 0, [GV.ConversionAnimatorId.DWING_FADE_IN, GV.ConversionAnimatorId.DWING], governor_tile);
+			set_collision_layer_value(GV.CollisionId.SPLITTING, true);
+		GV.TransitId.MERGE:
+			prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, 1, [GV.ConversionAnimatorId.DUANG_FADE_OUT, GV.ConversionAnimatorId.DUANG], governor_tile);
+			curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, 0, [GV.ConversionAnimatorId.DUANG_FADE_IN, GV.ConversionAnimatorId.DUANG], governor_tile);
+			set_collision_layer_value(GV.CollisionId.COMBINING, true);
+	
+	# set collision masks if tile moves
+	if move_controller:
+		set_collision_mask_value(GV.CollisionId.DEFAULT, true);
+		if not is_splitted:
+			set_collision_mask_value(GV.CollisionId.SPLITTING, true);
+		if not is_merging:
+			set_collision_mask_value(GV.CollisionId.COMBINING, true);
+		if old_type_id != GV.TypeId.PLAYER:
+			set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
+		if old_type_id in GV.T_ENEMY:
+			set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
+	
+	# add sprites
+	for sprite in [prev_sprite, curr_sprite]:
+		if sprite:
+			add_child(sprite);
+
+func get_pooled_tile(pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:Vector2i, target_dist_t:int, old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool, governor_tile:TileForTilemap) -> TileForTilemap:
+	var tile:TileForTilemap;
+	if not tile_pool.is_empty():
+		tile = tile_pool.pop_back();
+		tile.collision_shape.disabled = false;
+	else:
+		tile = packed_tile.instantiate();
+	
+	tile.initialize(self, pusher_entity_id, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
+	return tile;
 '''
