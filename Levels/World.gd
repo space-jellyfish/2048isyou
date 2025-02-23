@@ -139,8 +139,9 @@ func return_pooled_tile(tile:TileForTilemap):
 	tile.back_tile = null;
 	tile.world = null;
 	tile.tile_sheet = null;
-	tile.is_splitted = false;
 	tile.is_merging = false;
+	tile.is_splitted = false;
+	tile.is_aligned = true;
 	tile.merger_tile = null;
 	tile.splitter_tile = null;
 	tile.pusher_entity_id = GV.EntityId.NONE;
@@ -158,10 +159,10 @@ func return_pooled_tile(tile:TileForTilemap):
 	tile_pool.append(tile);
 
 func add_tile_in_transient(tile:TileForTilemap):
-	tiles_in_transient[tile.src_pos_t] = tile;
+	tiles_in_transient[tile.pos_t] = tile;
 
 func remove_tile_in_transient(tile:TileForTilemap):
-	tiles_in_transient.erase(tile.src_pos_t);
+	tiles_in_transient.erase(tile.pos_t);
 
 func get_transit_tile(pos_t:Vector2i) -> TileForTilemap:
 	var tile:TileForTilemap = tiles_in_transient.get(pos_t);
@@ -382,7 +383,6 @@ func is_compatible(type_id:int, back_id:int):
 	return type_id == GV.TypeId.PLAYER or type_id == GV.TypeId.REGULAR;
 
 #-1 if slide not possible
-#assume src_pos_t is stable
 func get_slide_push_count(src_pos_t:Vector2i, dir:Vector2i):
 	var curr_pos_t:Vector2i = src_pos_t;
 	var curr_tile_id:int = get_tile_id(src_pos_t, true);
@@ -447,7 +447,6 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	return Vector2i(atlas_x, atlas_y);
 
 #used for shift speed calculation
-#assume src_pos_t stable
 func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
 	var max_distance:int = GV.max_shift_dists[get_type_id(src_pos_t, true)];
 	var next_pos_t:Vector2i = src_pos_t + dir;
@@ -462,27 +461,41 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
 # returns true if slide is initiated
 # if is_splitted, assume atlas_coord at pos_t is already splitted with keep_type = true
 func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitted:bool=false, unsplit_atlas_coords=Vector2i.ZERO) -> bool:
-	if not is_tile(tile_entity.pos_t, true): # moving due to another entity
+	# check if not aligned
+	var tile:TileForTilemap = tile_entity.body;
+	if tile and not tile.is_aligned:
+		tile.initialize_slide(pusher_entity_id, dir, tile.atlas_coords, null, false, false);
+		return true;
+	
+	# get pos_t
+	var pos_t:Vector2i = tile.pos_t if tile else tile_entity.pos_t;
+	
+	if not is_tile(pos_t, true): # moving due to another entity
 		return false;
 	
-	var push_count:int = get_slide_push_count(tile_entity.pos_t, dir);
+	var push_count:int = get_slide_push_count(pos_t, dir);
 	if push_count != -1:
 		# start animation
-		animate_slide(pusher_entity_id, tile_entity.pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
+		animate_slide(pusher_entity_id, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
 			
 		return true;
 	return false;
 
 func try_split(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
-	if tile_entity.body:
-		assert(tile_entity.body is TileForTilemap);
+	# check if not aligned
+	var tile:TileForTilemap = tile_entity.body;
+	if tile and not tile.is_aligned:
 		game.show_message(GV.MessageId.SPLIT_NA);
 		return false;
-	if not is_tile(tile_entity.pos_t, true):
+	
+	# get pos_t
+	var pos_t:Vector2i = tile.pos_t if tile else tile_entity.pos_t;
+	
+	if not is_tile(pos_t, true):
 		return false;
 	
 	#check if split possible
-	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t, true);
+	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, true);
 	var splitted_coords:Vector2i = get_splitted_tile_atlas_coords(src_coords);
 	if splitted_coords == -Vector2i.ONE:
 		return false;
@@ -491,26 +504,31 @@ func try_split(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
 	# once split animation finishes (without worrying about the slide bouncing)
 	# set splitted coord for try_slide().get_slide_push_count() (and try_slide() does not have to calculate it again)
 	# try_slide() will add parent_atlas_coords at src_pos_t if it initiates
-	set_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t, splitted_coords);
+	set_atlas_coords(GV.LayerId.TILE, pos_t, splitted_coords);
 	var initiated:bool = try_slide(pusher_entity_id, tile_entity, dir, true, src_coords);
 	if not initiated:
 		#reset src coords
-		set_atlas_coords(GV.LayerId.TILE, tile_entity.pos_t, src_coords);
+		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords);
 	return initiated;
 
 #update player_pos_t
 func try_shift(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
-	if tile_entity.body:
-		assert(tile_entity.body is TileForTilemap);
+	# check if not aligned
+	var tile:TileForTilemap = tile_entity.body;
+	if tile and not tile.is_aligned:
 		game.show_message(GV.MessageId.SHIFT_NA);
 		return false;
-	if not is_tile(tile_entity.pos_t, true):
+	
+	# get pos_t
+	var pos_t:Vector2i = tile.pos_t if tile else tile_entity.pos_t;
+	
+	if not is_tile(pos_t, true):
 		return false;
 	
-	var target_distance:int = get_shift_target_dist(tile_entity.pos_t, dir);
+	var target_distance:int = get_shift_target_dist(pos_t, dir);
 	if target_distance:
 		#update tile_id and player stats during animation
-		animate_shift(pusher_entity_id, tile_entity.pos_t, dir, target_distance);
+		animate_shift(pusher_entity_id, pos_t, dir, target_distance);
 		
 		return true;
 	return false;
