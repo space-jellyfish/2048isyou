@@ -298,6 +298,7 @@ func _input(event):
 			update_last_input_premove(event, GV.ActionId.SLIDE);
 	if event.is_action_pressed("debug"):
 		print(entities);
+		#print(entities[0][Vector2i(1, 0)].is_busy)
 
 func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> Vector2i:
 	if include_transient and layer_id == GV.LayerId.TILE:
@@ -461,10 +462,6 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
 # returns true if slide is initiated
 # if is_splitted, assume atlas_coord at pos_t is already splitted with keep_type = true
 func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitted:bool=false, unsplit_atlas_coords=Vector2i.ZERO) -> bool:
-	if tile_entity.body:
-		assert(tile_entity.body is TileForTilemap);
-		tile_entity.body.move_controller = TileForTilemapSlideController.new(tile_entity.body, dir);
-		return true;
 	if not is_tile(tile_entity.pos_t, true): # moving due to another entity
 		return false;
 	
@@ -477,7 +474,6 @@ func try_slide(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i, is_splitt
 	return false;
 
 func try_split(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
-	#if not tile_entity.is_busy and tile_entity.body:
 	if tile_entity.body:
 		assert(tile_entity.body is TileForTilemap);
 		game.show_message(GV.MessageId.SPLIT_NA);
@@ -589,6 +585,10 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		curr_tile.set_splitter_tile(splitting_tile);
 		$TransitTiles.add_child(splitting_tile);
 		#$TransitTiles.call_deferred("add_child", splitting_tile);
+		
+		# add entity if duplicated
+		if splitter_type_id != GV.TypeId.REGULAR:
+			add_entity(splitter_type_id, splitting_tile, Entity.new(self, splitting_tile, splitter_type_id, Vector2i()));
 		
 		# play sound
 		splitting_tile.get_node("Audio/Split").play();
