@@ -80,6 +80,7 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
 	
 	# collision layers and masks
+	# don't set MEMBRANE mask if src_back_id is MEMBRANE (REGULAR can get inside MEMBRANE via player splitting)
 	clear_collision_values();
 	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 	
@@ -88,7 +89,7 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 		set_collision_mask_value(GV.CollisionId.SPLITTING, true);
 	if not is_merging:
 		set_collision_mask_value(GV.CollisionId.COMBINING, true);
-	if old_type_id != GV.TypeId.PLAYER:
+	if old_type_id != GV.TypeId.PLAYER and not (is_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if old_type_id in GV.T_ENEMY:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
@@ -112,13 +113,14 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
 	
 	# collision layers and masks
+	# don't set MEMBRANE mask if src_back_id is MEMBRANE (REGULAR can get inside MEMBRANE via player splitting)
 	clear_collision_values();
 	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 	
 	set_collision_mask_value(GV.CollisionId.DEFAULT, true);
 	set_collision_mask_value(GV.CollisionId.SPLITTING, true);
 	set_collision_mask_value(GV.CollisionId.COMBINING, true);
-	if old_type_id != GV.TypeId.PLAYER:
+	if old_type_id != GV.TypeId.PLAYER and not (is_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if old_type_id in GV.T_ENEMY:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
