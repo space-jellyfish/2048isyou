@@ -124,6 +124,8 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 
 func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
 	assert(not move_controller);
+	assert(not is_merging);
+	assert(not is_splitted);
 	conversion_transit_id = GV.TransitId.SPLIT;
 	atlas_coords = new_atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
@@ -131,8 +133,9 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	velocity = Vector2.ZERO;
 	
 	# sprites
-	if conversion_transit_id != GV.TransitId.NONE:
+	if prev_sprite:
 		prev_sprite.queue_free();
+	if curr_sprite:
 		curr_sprite.queue_free();
 	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, 1, [GV.ConversionAnimatorId.DWING_FADE_OUT, GV.ConversionAnimatorId.DWING], governor_tile);
 	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, 0, [GV.ConversionAnimatorId.DWING_FADE_IN, GV.ConversionAnimatorId.DWING], governor_tile);
@@ -145,6 +148,8 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 
 func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
 	assert(not move_controller);
+	assert(not is_merging);
+	assert(not is_splitted);
 	conversion_transit_id = GV.TransitId.MERGE;
 	atlas_coords = new_atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
@@ -330,7 +335,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	
 	# update tilemap
 	if is_aligned and move_transit_id == GV.TransitId.NONE:
-		if (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or prev_transit_id == GV.TransitId.MERGE or (is_merging and is_reversed) or (is_splitted and not is_reversed):
+		if (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or prev_transit_id == GV.TransitId.MERGE or (is_merging and is_reversed) or (is_splitted and not is_reversed) or (prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and not is_splitted and not is_merging):
 			world.set_atlas_coords(GV.LayerId.TILE, pos_t, atlas_coords);
 		elif is_splitted and is_reversed:
 			world.set_atlas_coords(GV.LayerId.TILE, pos_t, world.get_doubled_tile_atlas_coords(atlas_coords));

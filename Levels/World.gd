@@ -135,10 +135,17 @@ func return_pooled_tile(tile:TileForTilemap):
 		tile.prev_sprite.queue_free();
 		tile.prev_sprite = null;
 	tile.move_controller = null;
-	tile.back_tile = null;
 	tile.front_tile = null;
+	tile.back_tile = null;
+	tile.world = null;
+	tile.tile_sheet = null;
+	tile.is_splitted = false;
+	tile.is_merging = false;
 	tile.merger_tile = null;
 	tile.splitter_tile = null;
+	tile.pusher_entity_id = GV.EntityId.NONE;
+	tile.move_transit_id = GV.TransitId.NONE;
+	tile.conversion_transit_id = GV.TransitId.NONE;
 	tile.velocity = Vector2.ZERO;
 	tile.clear_collision_values();
 	
@@ -289,6 +296,8 @@ func _input(event):
 			update_last_input_premove(event, GV.ActionId.SHIFT);
 		else:
 			update_last_input_premove(event, GV.ActionId.SLIDE);
+	if event.is_action_pressed("debug"):
+		print(entities);
 
 func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> Vector2i:
 	if include_transient and layer_id == GV.LayerId.TILE:
