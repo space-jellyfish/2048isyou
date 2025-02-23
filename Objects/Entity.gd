@@ -60,10 +60,14 @@ func try_curr_frame_premoves():
 func try_premove(premove:Premove):
 	var initiated:bool = false;
 	if premove.action_id == GV.ActionId.SLIDE:
+		print("try slide")
+		print("is busy: ", is_busy);
 		initiated = world.try_slide(entity_id, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SPLIT:
+		print("try split");
 		initiated = world.try_split(entity_id, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SHIFT:
+		print("try shift")
 		initiated = world.try_shift(entity_id, premove.tile_entity, premove.dir);
 	
 	if initiated:
@@ -82,6 +86,7 @@ func try_premove(premove:Premove):
 			GV.EntityId.PLAYER:
 				world.get_node("Pathfinder").set_player_last_dir(premove.dir);
 	else:
+		print("premoves cleared")
 		clear_premoves();
 
 func is_tile() -> bool:
