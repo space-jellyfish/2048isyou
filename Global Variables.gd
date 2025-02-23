@@ -280,7 +280,7 @@ enum ColorId {
 
 #player tile_push_limit does not change when roaming
 var tile_push_limits:Dictionary = {
-	EntityId.PLAYER : 1,
+	EntityId.PLAYER : 2,
 	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 3,
