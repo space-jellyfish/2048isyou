@@ -302,7 +302,8 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	self.pos_t = pos_t;
 	
 	# get tile entity
-	var tile_entity:Entity = world.get_entity(old_type_id if is_reversed else new_type_id, self);
+	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
+	var tile_entity:Entity = world.get_entity(tile_entity_id, self);
 	
 	# update transit_ids
 	if prev_transit_id == move_transit_id:
@@ -314,7 +315,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# remove self entity
 	if (is_merging and not is_reversed and merger_tile.new_type_id in [merger_tile.old_type_id, GV.TypeId.REGULAR]) or \
 	(prev_transit_id == GV.TransitId.SPLIT and is_reversed and new_type_id == old_type_id):
-		world.remove_entity(old_type_id, self);
+		world.remove_entity(tile_entity_id, self);
 		tile_entity = null;
 
 	# set self entity key
@@ -335,11 +336,11 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	
 	# set splitter/merger entity not busy
 	if is_merging and not is_reversed:
-		var merger_tile_entity:Entity = world.get_entity(merger_tile.old_type_id, merger_tile);
+		var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
 		if merger_tile_entity:
 			merger_tile_entity.set_is_busy(false);
 	elif is_splitted and not is_reversed:
-		var splitter_tile_entity:Entity = world.get_entity(splitter_tile.old_type_id, splitter_tile);
+		var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
 		if splitter_tile_entity:
 			splitter_tile_entity.set_is_busy(false);
 	
