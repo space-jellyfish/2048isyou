@@ -87,7 +87,7 @@ const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;
 #const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
-const TILE_SLIDE_SPEED:float = 288; #320
+const TILE_SLIDE_SPEED:float = 256; #288; #320
 
 const SNAP_FRAME_COUNT:int = 1;
 const COMBINING_FRAME_COUNT:int = 6; #9; #1;
@@ -113,14 +113,16 @@ const DUANG_TRIGGER_SEPARATION:float = (1 - DUANG_TRIGGER_RATIO) * TILE_WIDTH;
 const DUANG_START_ANGLE:float = 1;
 const DUANG_FACTOR:float = 1/sin(DUANG_START_ANGLE);
 const DUANG_END_ANGLE:float = PI - DUANG_START_ANGLE;
-const DUANG_SPEED:float = 0.1;
+const DUANG_SPEED:float = 0.09; #0.1;
+const DUANG_FADE_SPEED:float = DUANG_SPEED / (DUANG_END_ANGLE - DUANG_START_ANGLE);
 
 const DWING_START_ANGLE:float = 1;
 const DWING_FACTOR:float = sin(DWING_START_ANGLE);
 const DWING_END_ANGLE:float = PI - DWING_START_ANGLE;
-const DWING_SPEED:float = 0.1;
+const DWING_SPEED:float = 0.09; #0.1;
+const DWING_FADE_SPEED:float = DWING_SPEED / (DWING_END_ANGLE - DWING_START_ANGLE);
 
-const FADE_SPEED:float = 0.07;
+#const FADE_SPEED:float = 0.07;
 
 const SHIFT_TIME:float = 9; #in frames
 const SHIFT_LERP_WEIGHT:float = 0.59;

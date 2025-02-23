@@ -40,13 +40,13 @@ func add_animator(conversion_anim_id:int, governor_tile:TileForTilemap):
 		GV.ConversionAnimatorId.DUANG:
 			animator = TileForTilemapSpriteDuangAnimator.new(self, governor_tile);
 		GV.ConversionAnimatorId.DUANG_FADE_IN:
-			animator = TileForTilemapSpriteFadeAnimator.new(self, 1, governor_tile, GV.DUANG_TRIGGER_SEPARATION);
+			animator = TileForTilemapSpriteFadeAnimator.new(self, 1, governor_tile, GV.DUANG_TRIGGER_SEPARATION, GV.DUANG_FADE_SPEED);
 		GV.ConversionAnimatorId.DUANG_FADE_OUT:
-			animator = TileForTilemapSpriteFadeAnimator.new(self, -1, governor_tile, GV.DUANG_TRIGGER_SEPARATION);
+			animator = TileForTilemapSpriteFadeAnimator.new(self, -1, governor_tile, GV.DUANG_TRIGGER_SEPARATION, GV.DUANG_FADE_SPEED);
 		GV.ConversionAnimatorId.DWING_FADE_IN:
-			animator = TileForTilemapSpriteFadeAnimator.new(self, 1, governor_tile, 0);
+			animator = TileForTilemapSpriteFadeAnimator.new(self, 1, governor_tile, 0, GV.DWING_FADE_SPEED);
 		GV.ConversionAnimatorId.DWING_FADE_OUT:
-			animator = TileForTilemapSpriteFadeAnimator.new(self, -1, governor_tile, 0);
+			animator = TileForTilemapSpriteFadeAnimator.new(self, -1, governor_tile, 0, GV.DWING_FADE_SPEED);
 	
 	assert(animators.get(anim_type) == null);
 	animators[anim_type] = animator;
