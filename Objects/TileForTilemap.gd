@@ -318,7 +318,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# set self entity key
 	# NOTE assume type did not change if not is_aligned
 	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
-		if is_merging and merger_tile.new_type_id == old_type_id:
+		if is_merging and not is_reversed and merger_tile.new_type_id == old_type_id and merger_tile.new_type_id != merger_tile.old_type_id:
 			tile_entity.set_entity_id_and_body(old_type_id, merger_tile);
 		else:
 			tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
@@ -343,7 +343,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	
 	# update tilemap
 	if is_aligned and move_transit_id == GV.TransitId.NONE:
-		if (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or prev_transit_id == GV.TransitId.MERGE or (is_merging and is_reversed) or (is_splitted and not is_reversed) or (prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and not is_splitted and not is_merging):
+		if ((prev_transit_id == GV.TransitId.SPLIT or is_splitted) and not is_reversed) or prev_transit_id == GV.TransitId.MERGE or (is_merging and is_reversed) or (prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and not is_splitted and not is_merging):
 			world.set_atlas_coords(GV.LayerId.TILE, pos_t, atlas_coords);
 		elif is_splitted and is_reversed:
 			world.set_atlas_coords(GV.LayerId.TILE, pos_t, world.get_doubled_tile_atlas_coords(atlas_coords));

@@ -576,6 +576,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		curr_tile.initialize_slide(pusher_entity_id, dir, curr_atlas_coords, back_tile, curr_splitted, curr_merging);
 		if not curr_tile.is_inside_tree():
 			$TransitTiles.add_child(curr_tile);
+		else:
+			$TransitTiles.move_child(curr_tile, -1);
 		#$TransitTiles.call_deferred("add_child", curr_tile);
 		
 		# update entity
@@ -612,6 +614,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		curr_tile.set_splitter_tile(splitting_tile);
 		if not splitting_tile.is_inside_tree():
 			$TransitTiles.add_child(splitting_tile);
+		else:
+			$TransitTiles.move_child(splitting_tile, -1);
 		#$TransitTiles.call_deferred("add_child", splitting_tile);
 		
 		# add entity if duplicated
@@ -635,6 +639,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		back_tile.set_merger_tile(merging_tile);
 		if not merging_tile.is_inside_tree():
 			$TransitTiles.add_child(merging_tile);
+		else:
+			$TransitTiles.move_child(merging_tile, -1);
 		#$TransitTiles.call_deferred("add_child", merging_tile);
 		
 		# update entity
@@ -657,6 +663,8 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	tile.initialize_shift(dir, target_dist, atlas_coords);
 	if not tile.is_inside_tree():
 		$TransitTiles.add_child(tile);
+	else:
+		$TransitTiles.move_child(tile, -1);
 	#$TransitTiles.call_deferred("add_child", tile);
 	
 	#update entity

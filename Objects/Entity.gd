@@ -60,13 +60,10 @@ func try_curr_frame_premoves():
 func try_premove(premove:Premove):
 	var initiated:bool = false;
 	if premove.action_id == GV.ActionId.SLIDE:
-		print("try slide")
 		initiated = world.try_slide(entity_id, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SPLIT:
-		print("try split");
 		initiated = world.try_split(entity_id, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SHIFT:
-		print("try shift")
 		initiated = world.try_shift(entity_id, premove.tile_entity, premove.dir);
 	
 	if initiated:
@@ -157,7 +154,6 @@ func change_keys(old_entity_id:int, new_entity_id:int, old_key:Variant, new_key:
 	world.add_entity(new_entity_id, new_key, self);
 
 func set_is_busy(is_busy:bool):
-	print("set is_busy to ", is_busy);
 	self.is_busy = is_busy;
 	if not is_busy and premoves:
 		world.add_curr_frame_premove_entity(self);
