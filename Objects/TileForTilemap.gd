@@ -136,8 +136,10 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	# sprites
 	if prev_sprite:
 		prev_sprite.queue_free();
+		prev_sprite = null;
 	if curr_sprite:
 		curr_sprite.queue_free();
+		curr_sprite = null;
 	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, 1, [GV.ConversionAnimatorId.DWING_FADE_OUT, GV.ConversionAnimatorId.DWING], governor_tile);
 	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, 0, [GV.ConversionAnimatorId.DWING_FADE_IN, GV.ConversionAnimatorId.DWING], governor_tile);
 	add_child(prev_sprite);
@@ -160,8 +162,10 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	# sprites
 	if prev_sprite:
 		prev_sprite.queue_free();
+		prev_sprite = null;
 	if curr_sprite:
 		curr_sprite.queue_free();
+		curr_sprite = null;
 	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, 1, [GV.ConversionAnimatorId.DUANG_FADE_OUT, GV.ConversionAnimatorId.DUANG], governor_tile);
 	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, 0, [GV.ConversionAnimatorId.DUANG_FADE_IN, GV.ConversionAnimatorId.DUANG], governor_tile);
 	add_child(prev_sprite);
@@ -371,6 +375,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		
 		if conversion_transit_id == GV.TransitId.NONE and prev_sprite:
 			prev_sprite.queue_free();
+			prev_sprite = null;
 
 func are_sprite_animators_finished() -> bool:
 	return (not prev_sprite or prev_sprite.animators.is_empty()) and (not curr_sprite or curr_sprite.animators.is_empty());

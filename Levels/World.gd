@@ -164,9 +164,14 @@ func add_tile_in_transient(tile:TileForTilemap):
 func remove_tile_in_transient(tile:TileForTilemap):
 	tiles_in_transient.erase(tile.pos_t);
 
-func get_transit_tile(pos_t:Vector2i) -> TileForTilemap:
-	var tile:TileForTilemap = tiles_in_transient.get(pos_t);
+func get_tile_in_transient(pos_t:Vector2i) -> TileForTilemap:
+	return tiles_in_transient.get(pos_t);
+
+func get_transit_tile(pos_t:Vector2i, remove_transient_tile:bool = true) -> TileForTilemap:
+	var tile:TileForTilemap = get_tile_in_transient(pos_t);
 	if tile:
+		if remove_transient_tile:
+			remove_tile_in_transient(tile);
 		return tile;
 	return get_pooled_tile(pos_t);
 
@@ -303,7 +308,7 @@ func _input(event):
 
 func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> Vector2i:
 	if include_transient and layer_id == GV.LayerId.TILE:
-		var tile:TileForTilemap = tiles_in_transient.get(pos_t);
+		var tile:TileForTilemap = get_tile_in_transient(pos_t);
 		if tile:
 			return tile.atlas_coords;
 	return $Cells.get_cell_atlas_coords(layer_id, pos_t);
@@ -569,12 +574,16 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
 		var curr_tile:TileForTilemap = get_transit_tile(curr_pos_t);
 		curr_tile.initialize_slide(pusher_entity_id, dir, curr_atlas_coords, back_tile, curr_splitted, curr_merging);
-		$TransitTiles.add_child(curr_tile);
+		if not curr_tile.is_inside_tree():
+			$TransitTiles.add_child(curr_tile);
 		#$TransitTiles.call_deferred("add_child", curr_tile);
 		
 		# update entity
 		if curr_type_id != GV.EntityId.NONE:
-			get_entity(curr_type_id, curr_pos_t).set_entity_id_and_body(curr_type_id, curr_tile);
+			var tile_entity:Entity = get_entity(curr_type_id, curr_pos_t);
+			if tile_entity:
+				tile_entity.set_entity_id_and_body(curr_type_id, curr_tile);
+			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
 		
 		# update back_tile
 		back_tile = curr_tile;
@@ -601,7 +610,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var splitting_tile:TileForTilemap = get_transit_tile(pos_t);
 		splitting_tile.initialize_split(unsplit_atlas_coords, splitter_atlas_coords, curr_tile);
 		curr_tile.set_splitter_tile(splitting_tile);
-		$TransitTiles.add_child(splitting_tile);
+		if not splitting_tile.is_inside_tree():
+			$TransitTiles.add_child(splitting_tile);
 		#$TransitTiles.call_deferred("add_child", splitting_tile);
 		
 		# add entity if duplicated
@@ -623,14 +633,15 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var merging_tile:TileForTilemap = get_transit_tile(merge_pos_t);
 		merging_tile.initialize_merge(old_atlas_coords, new_atlas_coords, back_tile);
 		back_tile.set_merger_tile(merging_tile);
-		$TransitTiles.add_child(merging_tile);
+		if not merging_tile.is_inside_tree():
+			$TransitTiles.add_child(merging_tile);
 		#$TransitTiles.call_deferred("add_child", merging_tile);
 		
 		# update entity
 		if old_type_id != GV.EntityId.NONE:
-			# use old_type_id until merge animation finishes
-			# don't switch to new_type_id when governor_tile finishes to stay consistent with splitting tile
-			get_entity(old_type_id, merge_pos_t).set_entity_id_and_body(old_type_id, merging_tile);
+			var tile_entity:Entity = get_entity(old_type_id, merge_pos_t);
+			if tile_entity:
+				tile_entity.set_entity_id_and_body(old_type_id, merging_tile);
 		
 		# play sound
 		merging_tile.get_node("Audio/Combine").play();
@@ -644,12 +655,15 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	#add transit_tile
 	var tile:TileForTilemap = get_transit_tile(pos_t);
 	tile.initialize_shift(dir, target_dist, atlas_coords);
-	$TransitTiles.add_child(tile);
+	if not tile.is_inside_tree():
+		$TransitTiles.add_child(tile);
 	#$TransitTiles.call_deferred("add_child", tile);
 	
 	#update entity
 	if type_id != GV.EntityId.NONE:
-		get_entity(type_id, pos_t).set_entity_id_and_body(type_id, tile);
+		var tile_entity:Entity = get_entity(type_id, pos_t);
+		if tile_entity:
+			tile_entity.set_entity_id_and_body(type_id, tile);
 
 	#start audio
 	tile.get_node("Audio/Shift").play();
