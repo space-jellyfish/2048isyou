@@ -14,7 +14,7 @@ func _init(sprite:TileForTilemapSprite, governor_tile:TileForTilemap):
 	
 	#connect governor tile signals
 	assert(governor_tile);
-	assert(governor_tile.move_controller);
+	assert(governor_tile.move_controller is TileForTilemapSlideController);
 	governor_tile.move_controller.reversed.connect(_on_governor_tile_reversed);
 	governor_tile.move_controller.finished.connect(_on_governor_tile_finished);
 
