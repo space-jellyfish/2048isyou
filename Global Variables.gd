@@ -186,8 +186,6 @@ enum ZId {
 # layer, (mask)
 enum CollisionId {
 	DEFAULT = 1, # walls, non-converting tiles, squid (tiles, squid)
-	SPLITTING, # splitting tiles, (non-splitted tiles, squid)
-	COMBINING, # combining tiles, (non-merging tiles, squid)
 	MEMBRANE, # membrane, (non-player tiles, squid)
 	SAVE_OR_GOAL, # savepoint/goal, (hostile tiles, squid)
 	TRACKING_CAM, # player, tracking_cam ()

@@ -142,8 +142,12 @@ func return_pooled_tile(tile:TileForTilemap):
 	tile.is_merging = false;
 	tile.is_splitted = false;
 	tile.is_aligned = true;
-	tile.merger_tile = null;
-	tile.splitter_tile = null;
+	if tile.merger_tile:
+		tile.remove_collision_exception_with(tile.merger_tile);
+		tile.merger_tile = null;
+	if tile.splitter_tile:
+		tile.remove_collision_exception_with(tile.splitter_tile);
+		tile.splitter_tile = null;
 	tile.pusher_entity_id = GV.EntityId.NONE;
 	tile.move_transit_id = GV.TransitId.NONE;
 	tile.conversion_transit_id = GV.TransitId.NONE;
