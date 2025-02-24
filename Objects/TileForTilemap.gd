@@ -49,6 +49,7 @@ func clear_collision_values():
 		set_collision_mask_value(collision_id, false);
 
 func initialize_roam(atlas_coords:Vector2i):
+	print("initialize roam")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.ROAM;
 	self.atlas_coords = atlas_coords;
@@ -59,6 +60,7 @@ func initialize_roam(atlas_coords:Vector2i):
 
 # does not require tile to be aligned
 func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool):
+	print("initialize slide")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.SLIDE;
 	self.pusher_entity_id = pusher_entity_id;
@@ -96,6 +98,7 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 
 # does not require tile to be aligned
 func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
+	print("initialize shift")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.SHIFT;
 	self.atlas_coords = atlas_coords;
@@ -126,6 +129,7 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
 
 func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
+	print("initialize split")
 	assert(not move_controller);
 	assert(not is_merging);
 	assert(not is_splitted);
@@ -152,6 +156,7 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	set_collision_layer_value(GV.CollisionId.SPLITTING, true);
 
 func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
+	print("initialize merge")
 	assert(not move_controller);
 	assert(not is_merging);
 	assert(not is_splitted);
@@ -192,6 +197,7 @@ func _physics_process(delta: float) -> void:
 			finalize_transit(move_transit_id, is_aligned, pos_t, move_controller.is_reversed);
 
 # NOTE don't use governor_tile.is_splitted/is_merging to get prev_transit_id bc it might've been returned to pool already
+# NOTE when merger/splitter finalizes depends on framerate, so they should only be responsible for entity key (switch to pos_t), atlas_coords, tiles_in_transient, and return to pool
 # Type and Entity Key/Busy/Removal and TileMap and tiles_in_transient and tile_pool Changes
 # MERGE Case 1: m: b->b, g: a->a
 #	not reversed
@@ -298,8 +304,7 @@ func _physics_process(delta: float) -> void:
 #	set atlas_coords at pos_t
 #	return to pool if conversion animators finished
 func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
-	if is_reversed:
-		print("finalize transit_id ", prev_transit_id, " is_reversed");
+	print("finalize ", GV.TransitId.keys()[prev_transit_id], "\tis_reversed: ", is_reversed);
 	self.is_aligned = is_aligned;
 	self.pos_t = pos_t;
 	

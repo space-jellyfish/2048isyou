@@ -34,6 +34,7 @@ func has_premove():
 
 func add_premove(premove:Premove):
 	premoves.push_back(premove);
+	print(premoves)
 	
 	#if premove added or last move finished
 	if not is_busy:
@@ -58,6 +59,7 @@ func try_curr_frame_premoves():
 			try_premove(premove);
 
 func try_premove(premove:Premove):
+	print("try premove")
 	var initiated:bool = false;
 	if premove.action_id == GV.ActionId.SLIDE:
 		initiated = world.try_slide(entity_id, premove.tile_entity, premove.dir);

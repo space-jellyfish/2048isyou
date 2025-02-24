@@ -304,7 +304,8 @@ func _input(event):
 		else:
 			update_last_input_premove(event, GV.ActionId.SLIDE);
 	if event.is_action_pressed("debug"):
-		print(entities);
+		player.add_premove(Premove.new(player, Vector2i(1,0), GV.ActionId.SPLIT))
+		player.add_premove(Premove.new(player, Vector2i(-1,0), GV.ActionId.SPLIT))
 		#print(entities[0][Vector2i(1, 0)].is_busy)
 
 func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> Vector2i:
