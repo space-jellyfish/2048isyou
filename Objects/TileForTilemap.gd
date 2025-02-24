@@ -373,8 +373,12 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	else:
 		if move_transit_id == GV.TransitId.NONE:
 			move_controller = null;
-			front_tile = null;
-			back_tile = null;
+			if front_tile:
+				front_tile.back_tile = null;
+				front_tile = null;
+			if back_tile:
+				back_tile.front_tile = null;
+				back_tile = null;
 			if merger_tile:
 				remove_collision_exception_with(merger_tile);
 				merger_tile = null;

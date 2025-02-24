@@ -135,8 +135,12 @@ func return_pooled_tile(tile:TileForTilemap):
 		tile.prev_sprite.queue_free();
 		tile.prev_sprite = null;
 	tile.move_controller = null;
-	tile.front_tile = null;
-	tile.back_tile = null;
+	if tile.front_tile:
+		tile.front_tile.back_tile = null;
+		tile.front_tile = null;
+	if tile.back_tile:
+		tile.back_tile.front_tile = null;
+		tile.back_tile = null;
 	tile.world = null;
 	tile.tile_sheet = null;
 	tile.is_merging = false;
