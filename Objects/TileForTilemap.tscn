@@ -18,16 +18,15 @@ polygon = PackedVector2Array(-16, -19, -14, -20, 14, -20, 16, -19, 19, -16, 20, 
 
 [node name="Combine" type="AudioStreamPlayer2D" parent="Audio"]
 stream = ExtResource("2_pljt6")
-volume_db = -2.0
+volume_db = 1.0
 
 [node name="Slide" type="AudioStreamPlayer2D" parent="Audio"]
 stream = ExtResource("3_v1825")
-volume_db = -3.0
 
 [node name="Split" type="AudioStreamPlayer2D" parent="Audio"]
 stream = ExtResource("4_08a8k")
-volume_db = -0.7
+volume_db = 2.3
 
 [node name="Shift" type="AudioStreamPlayer2D" parent="Audio"]
 stream = ExtResource("5_lgs43")
-volume_db = -5.5
+volume_db = -2.5
