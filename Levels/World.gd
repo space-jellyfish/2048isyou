@@ -314,7 +314,12 @@ func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> V
 			return tile.atlas_coords;
 	return $Cells.get_cell_atlas_coords(layer_id, pos_t);
 
-func set_atlas_coords(layer_id:int, pos_t:Vector2i, coords:Vector2i):
+func set_atlas_coords(layer_id:int, pos_t:Vector2i, coords:Vector2i, include_transient:bool = false):
+	if include_transient and layer_id == GV.LayerId.TILE:
+		var tile:TileForTilemap = get_tile_in_transient(pos_t);
+		if tile:
+			tile.atlas_coords = coords;
+			return;
 	$Cells.set_cell(layer_id, pos_t, layer_id, coords);
 
 func atlas_coords_to_tile_id(tile_atlas_coords:Vector2i):
@@ -510,11 +515,11 @@ func try_split(pusher_entity_id:int, tile_entity:Entity, dir:Vector2i) -> bool:
 	# once split animation finishes (without worrying about the slide bouncing)
 	# set splitted coord for try_slide().get_slide_push_count() (and try_slide() does not have to calculate it again)
 	# try_slide() will add parent_atlas_coords at src_pos_t if it initiates
-	set_atlas_coords(GV.LayerId.TILE, pos_t, splitted_coords);
+	set_atlas_coords(GV.LayerId.TILE, pos_t, splitted_coords, true);
 	var initiated:bool = try_slide(pusher_entity_id, tile_entity, dir, true, src_coords);
 	if not initiated:
 		#reset src coords
-		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords);
+		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords, true);
 	return initiated;
 
 #update player_pos_t
