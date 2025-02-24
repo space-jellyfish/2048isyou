@@ -99,14 +99,19 @@ func step(delta:float):
 	return true;
 
 func bounce():
-	detach_from_front_chain();
+	detach_from_leader();
 	call_deferred("reverse");
 
 #upon self reverse
-func detach_from_front_chain():
-	if tile.front_tile:
-		tile.front_tile.back_tile = null;
-		tile.front_tile = null;
+func detach_from_leader():
+	if not is_reversed:
+		if tile.front_tile:
+			tile.front_tile.back_tile = null;
+			tile.front_tile = null;
+	else:
+		if tile.back_tile:
+			tile.back_tile.front_tile = null;
+			tile.back_tile = null;
 
 func reverse():
 	dir *= -1;
