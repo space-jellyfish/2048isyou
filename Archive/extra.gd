@@ -1679,3 +1679,20 @@ func get_pooled_tile(pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:V
 	tile.initialize(self, pusher_entity_id, transit_id, pos_t, dir, target_dist_t, tile_sheet, old_atlas_coords, new_atlas_coords, back_tile, is_splitted, is_merging, governor_tile);
 	return tile;
 '''
+
+'''
+	SPLITTING, # splitting tiles, (non-splitted tiles, squid)
+	COMBINING, # combining tiles, (non-merging tiles, squid)
+
+	if not is_splitted:
+		set_collision_mask_value(GV.CollisionId.SPLITTING, true);
+	if not is_merging:
+		set_collision_mask_value(GV.CollisionId.COMBINING, true);
+
+	set_collision_mask_value(GV.CollisionId.SPLITTING, true);
+	set_collision_mask_value(GV.CollisionId.COMBINING, true);
+	
+	set_collision_layer_value(GV.CollisionId.SPLITTING, true);
+
+	set_collision_layer_value(GV.CollisionId.COMBINING, true);
+'''
