@@ -29,7 +29,7 @@ const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
 const LEVEL_COUNT:int = 17;
-var current_level_index:int = 14;
+var current_level_index:int = 16;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
@@ -121,8 +121,6 @@ const DWING_FACTOR:float = sin(DWING_START_ANGLE);
 const DWING_END_ANGLE:float = PI - DWING_START_ANGLE;
 const DWING_SPEED:float = 0.09; #0.1;
 const DWING_FADE_SPEED:float = DWING_SPEED / (DWING_END_ANGLE - DWING_START_ANGLE);
-
-#const FADE_SPEED:float = 0.07;
 
 const SHIFT_TIME:float = 9; #in frames
 const SHIFT_LERP_WEIGHT:float = 0.59;
