@@ -298,6 +298,8 @@ func _physics_process(delta: float) -> void:
 #	set atlas_coords at pos_t
 #	return to pool if conversion animators finished
 func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
+	if is_reversed:
+		print("finalize transit_id ", prev_transit_id, " is_reversed");
 	self.is_aligned = is_aligned;
 	self.pos_t = pos_t;
 	
@@ -330,7 +332,8 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	if tile_entity and (is_reversed or prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]):
 		tile_entity.set_is_busy(false);
 	
-	# remove splitter/merger entity
+	# remove old merger entity
+	# if governor and merger_tile have the same type, merger entity is kept
 	if is_merging and not is_reversed and merger_tile.old_type_id != merger_tile.new_type_id:
 		world.remove_entity(merger_tile.old_type_id, merger_tile);
 	
