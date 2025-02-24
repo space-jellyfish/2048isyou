@@ -217,11 +217,11 @@ func _physics_process(delta: float) -> void:
 #		on g.finalize,
 #			set g.entity.key to pos_t
 #			set g.entity.busy to false
+#			set m.entity.busy to false
 #			set atlas_coords
 #			return to pool if conversion animators finished
-#		on m.finalize (this should occur on the same frame as g.finalize),
+#		on m.finalize,
 #			set m.entity.key to pos_t
-#			set m.entity.busy to false
 #			set atlas_coords
 #			return to pool
 # MERGE Case 2: m: b->a, g: a->a, b != a
@@ -272,10 +272,10 @@ func _physics_process(delta: float) -> void:
 #		on g.finalize,
 #			set g.entity.key to pos_t
 #			set g.entity.busy to false
+#			remove s.entity
 #			set unsplit atlas_coords at pos_t
 #			return to pool if conversion animators finished
 #		on s.finalize,
-#			remove s.entity
 #			return to pool
 # SPLIT Case 2: s: a->REG, g: a->a, a != REG
 #	not reversed
@@ -320,8 +320,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		conversion_transit_id = GV.TransitId.NONE;
 	
 	# remove self entity
-	if (is_merging and not is_reversed and merger_tile.new_type_id in [merger_tile.old_type_id, GV.TypeId.REGULAR]) or \
-	(prev_transit_id == GV.TransitId.SPLIT and is_reversed and new_type_id == old_type_id):
+	if is_merging and not is_reversed and merger_tile.new_type_id in [merger_tile.old_type_id, GV.TypeId.REGULAR]:
 		world.remove_entity(tile_entity_id, self);
 		tile_entity = null;
 
@@ -334,16 +333,18 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
 	
 	# set self entity not busy
-	if tile_entity and (is_reversed or prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]):
+	if tile_entity and prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
 		tile_entity.set_is_busy(false);
 	
-	# remove old merger entity
+	# remove merger/splitter entity
 	# if governor and merger_tile have the same type, merger entity is kept
 	if is_merging and not is_reversed and merger_tile.old_type_id != merger_tile.new_type_id:
 		world.remove_entity(merger_tile.old_type_id, merger_tile);
+	elif is_splitted and is_reversed:
+		world.remove_entity(splitter_tile.old_type_id, splitter_tile);
 	
 	# set splitter/merger entity not busy
-	if is_merging and not is_reversed:
+	if is_merging:
 		var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
 		if merger_tile_entity:
 			merger_tile_entity.set_is_busy(false);
