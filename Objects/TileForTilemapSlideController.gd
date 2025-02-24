@@ -113,10 +113,10 @@ func reverse():
 	remaining_dist = GV.TILE_WIDTH - remaining_dist;
 	
 	if not is_reversed:
-		if tile.back_tile:
+		if tile.back_tile and tile.back_tile.move_controller:
 			tile.back_tile.move_controller.reverse();
 	else:
-		if tile.front_tile:
+		if tile.front_tile and tile.front_tile.move_controller:
 			tile.front_tile.move_controller.reverse();
 	
 	is_reversed = not is_reversed;
