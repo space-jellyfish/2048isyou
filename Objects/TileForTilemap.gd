@@ -39,9 +39,11 @@ func initialize(world:World, tile_sheet:CompressedTexture2D, pos_t:Vector2i):
 
 func set_merger_tile(tile:TileForTilemap):
 	self.merger_tile = tile;
+	add_collision_exception_with(tile);
 
 func set_splitter_tile(tile:TileForTilemap):
 	self.splitter_tile = tile;
+	add_collision_exception_with(tile);
 
 func clear_collision_values():
 	for collision_id in GV.CollisionId.values():
@@ -87,10 +89,6 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 	
 	set_collision_mask_value(GV.CollisionId.DEFAULT, true);
-	if is_merging:
-		add_collision_exception_with(merger_tile);
-	if is_splitted:
-		add_collision_exception_with(splitter_tile);
 	if old_type_id != GV.TypeId.PLAYER and not (is_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if old_type_id in GV.T_ENEMY:
