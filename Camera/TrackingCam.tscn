@@ -2,9 +2,8 @@
 
 [ext_resource type="Script" path="res://Camera/TrackingCam.gd" id="1_tn13t"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_14c1m"]
-radius = 240.0
-height = 880.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_kiq20"]
+size = Vector2(880, 480)
 
 [node name="TrackingCam" type="Camera2D"]
 script = ExtResource("1_tn13t")
@@ -13,6 +12,5 @@ script = ExtResource("1_tn13t")
 collision_layer = 8
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
-rotation = 1.5708
-shape = SubResource("CapsuleShape2D_14c1m")
+[node name="CollisionRect" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("RectangleShape2D_kiq20")

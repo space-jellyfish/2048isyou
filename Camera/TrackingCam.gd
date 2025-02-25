@@ -6,6 +6,8 @@ signal transition_started;
 var target_entity:Entity;
 
 @onready var world:World = get_parent();
+@onready var area_width:float = $Area2D/CollisionRect.shape.size.x;
+@onready var area_height:float = $Area2D/CollisionRect.shape.size.y;
 
 
 # if transition true, transition iff position of new target_entity is outside area
@@ -30,7 +32,9 @@ func set_target_entity(target_entity:Entity, transition:bool):
 # transition if target_entity leaves area from zooming
 func set_zoom_and_area_scale(zoom_ratio:float):
 	set_zoom(zoom_ratio * Vector2.ONE);
-	$Area2D.scale = Vector2.ONE / get_zoom();
+	$Area2D.scale = Vector2.ONE / get_zoom(); #this performs element-wise division
+	area_width = $Area2D/CollisionRect.shape.size.x / zoom_ratio;
+	area_height = $Area2D/CollisionRect.shape.size.y / zoom_ratio;
 	
 	if target_entity:
 		_on_target_entity_moved();
@@ -50,12 +54,20 @@ func _on_target_entity_moved():
 	for collider_info in colliders_info:
 		if collider_info["collider"] == $Area2D:
 			return;
-	transition(target_entity_pos);
+	transition(target_entity_pos, not target_entity.is_roaming());
 
 # assume transition has been triggered (target_entity_pos is outside area)
-func transition(target_entity_pos:Vector2):
+func transition(target_entity_pos:Vector2, cardinal_only:bool):
 	var target_entity_offset:Vector2 = target_entity_pos - position;
-	var target_pos:Vector2 = position + GV.TRACKING_CAM_LEAD_RATIO * target_entity_offset;
+	var target_pos:Vector2;
+	
+	if cardinal_only:
+		# only track the axes on which target_entity is outside area
+		var tracked_axes:Vector2i = Vector2i(abs(target_entity_offset.x) > area_width / 2, abs(target_entity_offset.y) > area_height / 2);
+		target_pos = position + GV.TRACKING_CAM_LEAD_RATIO * target_entity_offset * Vector2(tracked_axes);
+	else:
+		# track both axes (diagonally)
+		target_pos = position + GV.TRACKING_CAM_LEAD_RATIO * target_entity_offset;
 	
 	var tween:Tween = create_tween();
 	tween.set_ease(Tween.EASE_OUT);
