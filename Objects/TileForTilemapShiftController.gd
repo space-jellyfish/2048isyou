@@ -19,7 +19,7 @@ func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
 	assert(max_speed >= GV.TILE_SLIDE_SPEED);
 
 func step(delta:float):
-	#update position
+	# accelerate, update position
 	var prev_position:Vector2 = tile.position;
 	tile.velocity = tile.velocity.lerp(max_speed * dir, GV.SHIFT_LERP_WEIGHT);
 	tile.velocity = clamp(Vector2(dir).dot(tile.velocity), GV.TILE_SLIDE_SPEED, max_speed) * dir;
@@ -39,6 +39,7 @@ func step(delta:float):
 		return false;
 		
 	elif collision:
+		# decelerate, reverse
 		tile.velocity *= GV.SHIFT_BOUNCE_DECELERATION;
 		tile.velocity = clamp(Vector2(dir).dot(tile.velocity), GV.TILE_SLIDE_SPEED, max_speed) * dir;
 		reverse();
