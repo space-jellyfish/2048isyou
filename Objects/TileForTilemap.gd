@@ -22,7 +22,9 @@ var pusher_entity_id:int = GV.EntityId.NONE;
 var move_transit_id:int = GV.TransitId.NONE;
 var conversion_transit_id:int = GV.TransitId.NONE;
 var is_aligned:bool = true;
-var pos_t:Vector2i; #only valid if is_aligned
+# only valid if is_aligned
+# since pos_t should be invalid during ROAM, is_aligned should be false during ROAM
+var pos_t:Vector2i;
 
 @onready var collision_shape:CollisionPolygon2D = get_node("CollisionPolygon2D");
 
@@ -54,6 +56,7 @@ func initialize_roam(atlas_coords:Vector2i):
 	print("initialize roam")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.ROAM;
+	is_aligned = false;
 	self.atlas_coords = atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
@@ -65,6 +68,7 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	print("initialize slide")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.SLIDE;
+	is_aligned = false;
 	self.pusher_entity_id = pusher_entity_id;
 	self.is_splitted = is_splitted;
 	self.is_merging = is_merging;
@@ -99,6 +103,7 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	print("initialize shift")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.SHIFT;
+	is_aligned = false;
 	self.atlas_coords = atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
@@ -129,6 +134,7 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	assert(not move_controller);
 	assert(not is_merging);
 	assert(not is_splitted);
+	assert(is_aligned);
 	conversion_transit_id = GV.TransitId.SPLIT;
 	atlas_coords = new_atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
@@ -156,6 +162,7 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	assert(not move_controller);
 	assert(not is_merging);
 	assert(not is_splitted);
+	assert(is_aligned);
 	conversion_transit_id = GV.TransitId.MERGE;
 	atlas_coords = new_atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
