@@ -59,14 +59,13 @@ func try_curr_frame_premoves():
 			try_premove(premove);
 
 func try_premove(premove:Premove):
-	print("try premove")
 	var initiated:bool = false;
 	if premove.action_id == GV.ActionId.SLIDE:
-		initiated = world.try_slide(entity_id, premove.tile_entity, premove.dir);
+		initiated = world.try_slide(self, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SPLIT:
-		initiated = world.try_split(entity_id, premove.tile_entity, premove.dir);
+		initiated = world.try_split(self, premove.tile_entity, premove.dir);
 	elif premove.action_id == GV.ActionId.SHIFT:
-		initiated = world.try_shift(entity_id, premove.tile_entity, premove.dir);
+		initiated = world.try_shift(self, premove.tile_entity, premove.dir);
 	
 	if initiated:
 		# animation should be started from action_func
@@ -165,3 +164,11 @@ func _on_body_moved():
 
 func get_position() -> Vector2:
 	return body.position if body else GV.pos_t_to_world(pos_t);
+
+func get_pos_t() -> Variant:
+	if body:
+		if body is TileForTilemap and body.is_aligned:
+				return body.pos_t;
+		return null;
+	else:
+		return pos_t;
