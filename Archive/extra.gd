@@ -1696,3 +1696,19 @@ func get_pooled_tile(pusher_entity_id:int, transit_id:int, pos_t:Vector2i, dir:V
 
 	set_collision_layer_value(GV.CollisionId.COMBINING, true);
 '''
+
+'''
+const TRACKING_CAM_LEAD_MIN:float = 0.3; #target = track_pos + ratio * pow(track_pos - pos, offset_pow)
+const TRACKING_CAM_OFFSET_POWER:float = 0.4;
+
+	#var target_pos:Vector2 = target_entity_pos + GV.TRACKING_CAM_LEAD_RATIO * pow(target_entity_offset.length(), GV.TRACKING_CAM_OFFSET_POWER) * target_entity_offset_dir;
+
+	var semi_minor_axis:float = $Area2D/CollisionShape2D.shape.radius * $Area2D.scale.y;
+	var target_entity_offset:Vector2 = target_entity_pos - position;
+	print("unclamped offset ratio:", target_entity_offset.length() / semi_minor_axis);
+	var target_entity_offset_ratio:float = max(1, target_entity_offset.length() / semi_minor_axis);
+	var target_pos:Vector2 = position + (pow(target_entity_offset_ratio, GV.TRACKING_CAM_OFFSET_POWER) + GV.TRACKING_CAM_LEAD_MIN) * target_entity_offset;
+
+func get_last_cardinal_dir() -> Variant:
+	
+'''
