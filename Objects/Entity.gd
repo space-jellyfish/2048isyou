@@ -34,7 +34,7 @@ func has_premove():
 
 func add_premove(premove:Premove):
 	premoves.push_back(premove);
-	print(premoves)
+	print(is_busy)
 	
 	#if premove added or last move finished
 	if not is_busy:
