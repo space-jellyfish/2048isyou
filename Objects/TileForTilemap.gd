@@ -22,7 +22,8 @@ var pusher_entity_id:int = GV.EntityId.NONE;
 var move_transit_id:int = GV.TransitId.NONE;
 var conversion_transit_id:int = GV.TransitId.NONE;
 var is_aligned:bool = true;
-# only valid if is_aligned
+# if is_aligned, represents current pos_t
+# if was aligned when move started, represents src_pos_t
 # since pos_t should be invalid during ROAM, is_aligned should be false during ROAM
 var pos_t:Vector2i;
 
