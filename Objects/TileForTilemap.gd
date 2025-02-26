@@ -69,7 +69,6 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	print("initialize slide")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.SLIDE;
-	is_aligned = false;
 	self.pusher_entity_id = pusher_entity_id;
 	self.is_splitted = is_splitted;
 	self.is_merging = is_merging;
@@ -98,13 +97,14 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if old_type_id in GV.T_ENEMY:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
+	
+	is_aligned = false;
 
 # does not require tile to be aligned
 func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	print("initialize shift")
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.SHIFT;
-	is_aligned = false;
 	self.atlas_coords = atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
@@ -129,6 +129,8 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if old_type_id in GV.T_ENEMY:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
+	
+	is_aligned = false;
 
 func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
 	print("initialize split")
