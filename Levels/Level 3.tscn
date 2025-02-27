@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" path="res://Levels/Level 3.gd" id="1_wvf4a"]
 [ext_resource type="TileSet" uid="uid://doeyofpqxc1ic" path="res://Tilesets/wall_set.tres" id="2_paeos"]
-[ext_resource type="PackedScene" uid="uid://bs5pnnv5k17ao" path="res://Objects/TileForFSM.tscn" id="4_hi00y"]
-[ext_resource type="PackedScene" uid="uid://drayn2lsacylt" path="res://Objects/LevelPeripheryCuller.tscn" id="4_mgyxl"]
+[ext_resource type="PackedScene" path="res://Objects/TileForFSM.tscn" id="4_hi00y"]
+[ext_resource type="PackedScene" path="res://Objects/LevelPeripheryCuller.tscn" id="4_mgyxl"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="5_2s88y"]
-[ext_resource type="PackedScene" uid="uid://dvg1vfgncuqoc" path="res://Savepoints/Goal_2x2_Concave.tscn" id="6_g78k8"]
-[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Savepoints/Goal_1x2_Concave.tscn" id="6_jxmc5"]
+[ext_resource type="PackedScene" uid="uid://dvg1vfgncuqoc" path="res://Archive/Savepoints/Goal_2x2_Concave.tscn" id="6_g78k8"]
+[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Archive/Savepoints/Goal_1x2_Concave.tscn" id="6_jxmc5"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_mk0r2"]
 size = Vector2(654, 32)

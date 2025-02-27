@@ -363,9 +363,9 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	var is_poolable:bool = is_aligned and conversion_transit_id == GV.TransitId.NONE and move_transit_id == GV.TransitId.NONE;
 	if is_poolable:
 		if ((prev_transit_id == GV.TransitId.SPLIT or is_splitted) and not is_reversed) or prev_transit_id == GV.TransitId.MERGE or (is_merging and is_reversed) or (prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and not is_splitted and not is_merging):
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, atlas_coords);
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, atlas_coords);
 		elif is_splitted and is_reversed:
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, world.get_doubled_tile_atlas_coords(atlas_coords));
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, world.get_doubled_tile_atlas_coords(atlas_coords));
 	
 	# update tiles_in_transient
 	if not is_reversed:

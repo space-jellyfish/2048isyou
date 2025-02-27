@@ -5,10 +5,10 @@
 [ext_resource type="TileSet" uid="uid://doeyofpqxc1ic" path="res://Tilesets/wall_set.tres" id="2_tkk78"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_y4jbc"]
 [ext_resource type="PackedScene" uid="uid://ccfedk60ha7ud" path="res://Enemy/Baddie 1.tscn" id="3_unses"]
-[ext_resource type="PackedScene" uid="uid://bs5pnnv5k17ao" path="res://Objects/TileForFSM.tscn" id="4_35c3b"]
+[ext_resource type="PackedScene" path="res://Objects/TileForFSM.tscn" id="4_35c3b"]
 [ext_resource type="PackedScene" uid="uid://bs18ouhqw13ql" path="res://Enemy/Baddie 2.tscn" id="4_gmonc"]
-[ext_resource type="PackedScene" uid="uid://drayn2lsacylt" path="res://Objects/LevelPeripheryCuller.tscn" id="4_lbtfe"]
-[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Savepoints/Goal_1x2_Concave.tscn" id="6_fpe11"]
+[ext_resource type="PackedScene" path="res://Objects/LevelPeripheryCuller.tscn" id="4_lbtfe"]
+[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Archive/Savepoints/Goal_1x2_Concave.tscn" id="6_fpe11"]
 [ext_resource type="PackedScene" uid="uid://die53co3fbgij" path="res://Enemy/Baddie 4.tscn" id="8_q5bss"]
 [ext_resource type="PackedScene" uid="uid://bn6hebkuibv6r" path="res://Enemy/Baddie 5.tscn" id="9_w18hv"]
 

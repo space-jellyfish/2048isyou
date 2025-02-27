@@ -4,11 +4,11 @@
 [ext_resource type="TileSet" uid="uid://doeyofpqxc1ic" path="res://Tilesets/wall_set.tres" id="2_h4aqq"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_me7to"]
 [ext_resource type="PackedScene" uid="uid://ccfedk60ha7ud" path="res://Enemy/Baddie 1.tscn" id="4_4kcqd"]
-[ext_resource type="PackedScene" uid="uid://drayn2lsacylt" path="res://Objects/LevelPeripheryCuller.tscn" id="4_5bs3o"]
-[ext_resource type="PackedScene" uid="uid://bs5pnnv5k17ao" path="res://Objects/TileForFSM.tscn" id="5_ecrt2"]
+[ext_resource type="PackedScene" path="res://Objects/LevelPeripheryCuller.tscn" id="4_5bs3o"]
+[ext_resource type="PackedScene" path="res://Objects/TileForFSM.tscn" id="5_ecrt2"]
 [ext_resource type="PackedScene" uid="uid://bs18ouhqw13ql" path="res://Enemy/Baddie 2.tscn" id="7_aq6of"]
-[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Savepoints/Goal_1x2_Concave.tscn" id="8_spjyj"]
-[ext_resource type="PackedScene" uid="uid://0qmtkgfxag4o" path="res://Savepoints/Savepoint_1x1_Concave.tscn" id="9_5a06k"]
+[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Archive/Savepoints/Goal_1x2_Concave.tscn" id="8_spjyj"]
+[ext_resource type="PackedScene" uid="uid://0qmtkgfxag4o" path="res://Archive/Savepoints/Savepoint_1x1_Concave.tscn" id="9_5a06k"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_adef3"]
 size = Vector2(480, 40)

@@ -45,6 +45,8 @@ format = 2
 layer_0/name = "back"
 layer_0/z_index = -2
 layer_1/name = "tile"
+layer_2/name = "nav"
+layer_2/enabled = false
 
 [node name="Pathfinder" type="Pathfinder" parent="."]
 

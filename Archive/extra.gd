@@ -1712,3 +1712,40 @@ const TRACKING_CAM_OFFSET_POWER:float = 0.4;
 func get_last_cardinal_dir() -> Variant:
 	
 '''
+
+''' only used by Goal/Savepoint/Level/PlayerSnapshot
+enum ColorId {
+	ALL = 4,
+	RED = 29,
+	BLUE = 30,
+	BLACK = 31,
+	GRAY = 32,
+};
+'''
+
+'''
+func sin_approx(angle_rad:float):
+	pass;
+
+func set_tile_push_limit(_tile_push_limit):
+	abilities["tile_push_limit"] = _tile_push_limit;
+
+	#change physicsEnabler size
+	var size:Vector2 = PHYSICS_ENABLER_BASE_SIZE + abilities["tile_push_limit"] * 2 * GV.TILE_WIDTH * Vector2.ONE;
+	PHYSICS_ENABLER_SHAPE.set_size(size);
+'''
+
+''' deprecated bc each directional barrier of NavId should be refcounted
+func dir_id_to_nav_id(dir_id:int) -> int:
+	return 1 << dir_id;
+
+func dir_to_nav_id(dir:Vector2i) -> int:
+	return dir_id_to_nav_id(dir_to_dir_id(dir));
+
+func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
+	var dir_id:int = GV.dir_to_dir_id(dir);
+	assert(dir_id in GV.DirectionId.values());
+	
+	# check the bit at position dir_id
+	return not (nav_id & (1 << dir_id));
+'''
