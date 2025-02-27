@@ -6,8 +6,6 @@ var angle_rad:float = GV.DWING_START_ANGLE;
 
 #should sync to slide progress in case tile bounces
 func step(delta:float):
-	if is_governor_tile_finished:
-		print();
 	#progress scale animation
 	angle_rad += anim_dir * GV.DWING_SPEED;
 	angle_rad = clamp(angle_rad, GV.DWING_START_ANGLE, GV.DWING_END_ANGLE);
