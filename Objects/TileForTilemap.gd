@@ -22,6 +22,7 @@ var pusher_entity_id:int = GV.EntityId.NONE;
 var move_transit_id:int = GV.TransitId.NONE;
 var conversion_transit_id:int = GV.TransitId.NONE;
 var is_aligned:bool = true;
+var was_aligned:bool = true; #at start of move transit
 # if is_aligned, represents current pos_t
 # if was aligned when move started, represents src_pos_t
 # since pos_t should be invalid during ROAM, is_aligned should be false during ROAM
@@ -78,6 +79,7 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
 	velocity = Vector2.ZERO;
+	was_aligned = is_aligned;
 	move_controller = TileForTilemapSlideController.new(self, dir);
 	
 	# add NAV wall for pathfinder
@@ -118,6 +120,7 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
 	velocity = Vector2.ZERO;
+	was_aligned = is_aligned;
 	move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
 	
 	# add NAV wall for pathfinder
@@ -386,12 +389,13 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			
 			# NAV layer
 			if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
-				if is_reversed:
-					world.remove_nav_id(pos_t, GV.NAV_UNITS[-move_controller.dir]);
-					world.remove_nav_id(pos_t - move_controller.dir, GV.NavId.ALL);
-				else:
-					world.remove_nav_id(pos_t, GV.NavId.ALL);
-					world.remove_nav_id(self.pos_t, GV.NAV_UNITS[move_controller.dir]);
+				if was_aligned:
+					if is_reversed:
+						world.remove_nav_id(pos_t, GV.NAV_UNITS[-move_controller.dir]);
+						world.remove_nav_id(pos_t - move_controller.dir, GV.NavId.ALL);
+					else:
+						world.remove_nav_id(pos_t, GV.NavId.ALL);
+						world.remove_nav_id(self.pos_t, GV.NAV_UNITS[move_controller.dir]);
 			else:
 				world.remove_nav_id(pos_t, GV.NavId.ALL);
 	

@@ -146,6 +146,7 @@ func return_pooled_tile(tile:TileForTilemap):
 	tile.is_merging = false;
 	tile.is_splitted = false;
 	tile.is_aligned = true;
+	tile.was_aligned = true;
 	if tile.merger_tile:
 		tile.remove_collision_exception_with(tile.merger_tile);
 		tile.merger_tile = null;
