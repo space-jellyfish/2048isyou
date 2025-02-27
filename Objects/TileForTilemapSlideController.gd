@@ -115,7 +115,8 @@ func detach_from_leader():
 
 func reverse():
 	dir *= -1;
-	remaining_dist = GV.TILE_WIDTH - remaining_dist;
+	# NOTE remaining_dist = GV.TILE_WIDTH - remaining_dist; doesn't work if tile wasn't aligned at the start
+	remaining_dist = GV.TILE_WIDTH - fposmod(remaining_dist, GV.TILE_WIDTH);
 	
 	if not is_reversed:
 		if tile.back_tile and tile.back_tile.move_controller:
