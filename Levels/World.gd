@@ -333,10 +333,12 @@ func set_atlas_coords(layer_id:int, pos_t:Vector2i, source_id:int, coords:Vector
 
 func add_nav_id(pos_t:Vector2i, nav_id:int):
 	var new_nav_id:int = get_nav_id(pos_t) + nav_id;
+	assert(new_nav_id >= 0 and new_nav_id <= GV.NAV_REFCOUNT_MAX * GV.NavId.ALL);
 	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(new_nav_id));
 
 func remove_nav_id(pos_t:Vector2i, nav_id:int):
 	var new_nav_id:int = get_nav_id(pos_t) - nav_id;
+	assert(new_nav_id >= 0 and new_nav_id <= GV.NAV_REFCOUNT_MAX * GV.NavId.ALL);
 	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(new_nav_id));
 
 func atlas_coords_to_tile_id(tile_atlas_coords:Vector2i):
@@ -612,9 +614,6 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var curr_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
-		# add NAV wall for pathfinder
-		add_nav_id(curr_pos_t, GV.NavId.ALL if dist_to_src else GV.NAV_UNITS[dir]);
-		
 		# add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
 		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
@@ -642,9 +641,6 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		# NOTE attach split/merge sounds to split/merge tiles
 		if not dist_to_src and not is_splitted:
 			curr_tile.get_node("Audio/Slide").play();
-
-	# add NAV wall for pathfinder
-	add_nav_id(merge_pos_t, GV.NavId.ALL);
 	
 	# init front_tiles and add slide tiles to tree
 	# add frontmost tiles first so chain moves in sync every frame? NAH, collision uses positions from previous frame
@@ -710,10 +706,6 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, true);
 	var type_id:int = atlas_coords_to_type_id(atlas_coords);
 	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
-	
-	# add NAV wall for pathfinder
-	add_nav_id(pos_t, GV.NAV_UNITS[dir]);
-	add_nav_id(pos_t + dir, GV.NavId.ALL);
 	
 	#add transit_tile
 	var tile:TileForTilemap = get_transit_tile(pos_t, true);
