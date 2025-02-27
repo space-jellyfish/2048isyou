@@ -4,9 +4,9 @@
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_3fj3s"]
 [ext_resource type="Script" path="res://Levels/Button.gd" id="3_uu2u2"]
 [ext_resource type="TileSet" uid="uid://doeyofpqxc1ic" path="res://Tilesets/wall_set.tres" id="3_y3btf"]
-[ext_resource type="PackedScene" uid="uid://drayn2lsacylt" path="res://Objects/LevelPeripheryCuller.tscn" id="4_20i30"]
-[ext_resource type="PackedScene" uid="uid://bs5pnnv5k17ao" path="res://Objects/TileForFSM.tscn" id="5_mucte"]
-[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Savepoints/Goal_1x2_Concave.tscn" id="6_dswkw"]
+[ext_resource type="PackedScene" path="res://Objects/LevelPeripheryCuller.tscn" id="4_20i30"]
+[ext_resource type="PackedScene" path="res://Objects/TileForFSM.tscn" id="5_mucte"]
+[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Archive/Savepoints/Goal_1x2_Concave.tscn" id="6_dswkw"]
 
 [node name="Level 8" type="Node2D"]
 process_mode = 1

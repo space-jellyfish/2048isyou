@@ -251,21 +251,21 @@ func generate_cell(pos_t:Vector2i):
 		#once generated, tile may return to -Vector2i.ONE, so use BackId to mark generated cells
 		return; #cell was previously generated
 	if is_world_border(pos_t):
-		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.BORDER_SQUARE, 0));
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.BORDER_SQUARE, 0));
 		return;
 	if pos_t == initial_player_pos_t:
-		set_atlas_coords(GV.LayerId.TILE, pos_t, Vector2i(GV.TileId.ZERO - 1, GV.TypeId.PLAYER));
-		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
-		#set_atlas_coords(GV.LayerId.BACK, player_pos_t, Vector2i(GV.BackId.MEMBRANE, 0));
+		set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(GV.TileId.ZERO - 1, GV.TypeId.PLAYER));
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
+		#set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.MEMBRANE, 0)); #spawn player in membrane
 		return;
 	
 	#back
 	var n_wall:float = clamp(wall_noise.get_noise_2d(pos_t.x, pos_t.y), -1, 1); #[-1, 1]
 	if absf(n_wall) < 0.009:
-		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.BLACK_WALL, 0));
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.BLACK_WALL, 0));
 		return;
 	if absf(n_wall) < 0.02:
-		set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.MEMBRANE, 0));
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.MEMBRANE, 0));
 		return;
 
 	#tile
@@ -283,18 +283,18 @@ func generate_cell(pos_t:Vector2i):
 	elif n_type < GV.P_GEN_HOSTILE:
 		type = GV.TypeId.HOSTILE;
 	
-	set_atlas_coords(GV.LayerId.TILE, pos_t, Vector2i(tile_id-1, type));
-	set_atlas_coords(GV.LayerId.BACK, pos_t, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
+	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(tile_id-1, type));
+	set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
 
 func get_event_dir(event:InputEventKey) -> Vector2i:
 	if event.keycode in [KEY_W, KEY_UP]:
-		return GV.directions["up"];
+		return GV.directions[GV.DirectionId.UP];
 	if event.keycode in [KEY_S, KEY_DOWN]:
-		return GV.directions["down"];
+		return GV.directions[GV.DirectionId.DOWN];
 	if event.keycode in [KEY_A, KEY_LEFT]:
-		return GV.directions["left"];
+		return GV.directions[GV.DirectionId.LEFT];
 	if event.keycode in [KEY_D, KEY_RIGHT]:
-		return GV.directions["right"];
+		return GV.directions[GV.DirectionId.RIGHT];
 	return Vector2i.ZERO;
 
 func update_last_input_premove(event:InputEventKey, action_id:int):
@@ -323,13 +323,13 @@ func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> V
 			return tile.atlas_coords;
 	return $Cells.get_cell_atlas_coords(layer_id, pos_t);
 
-func set_atlas_coords(layer_id:int, pos_t:Vector2i, coords:Vector2i, include_transient:bool = false):
-	if include_transient and layer_id == GV.LayerId.TILE:
+func set_atlas_coords(layer_id:int, pos_t:Vector2i, source_id:int, coords:Vector2i, alternative_id:int = 0, include_transient:bool = false):
+	if include_transient and layer_id == GV.LayerId.TILE and source_id == GV.TileSetSourceId.TILE:
 		var tile:TileForTilemap = get_tile_in_transient(pos_t);
 		if tile:
 			tile.atlas_coords = coords;
 			return;
-	$Cells.set_cell(layer_id, pos_t, layer_id, coords);
+	$Cells.set_cell(layer_id, pos_t, source_id, coords, alternative_id);
 
 func atlas_coords_to_tile_id(tile_atlas_coords:Vector2i):
 	return tile_atlas_coords.x + 1;
@@ -339,6 +339,17 @@ func atlas_coords_to_type_id(tile_atlas_coords:Vector2i):
 
 func atlas_coords_to_back_id(back_atlas_coords:Vector2i):
 	return maxi(back_atlas_coords.x, 0);
+
+func back_id_to_atlas_coords(back_id:int, is_generated:bool = true):
+	if back_id == GV.BackId.EMPTY and not is_generated:
+		return -Vector2i.ONE;
+	return Vector2i(back_id, 0);
+
+func atlas_coords_to_nav_id(nav_atlas_coords:Vector2i):
+	return nav_atlas_coords.x + 1;
+
+func nav_id_to_atlas_coords(nav_id:int):
+	return Vector2i(nav_id - 1, -1);
 	
 func get_tile_id(pos_t:Vector2i, include_transient:bool):
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, include_transient);
@@ -351,6 +362,10 @@ func get_type_id(pos_t:Vector2i, include_transient:bool):
 func get_back_id(pos_t:Vector2i):
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.BACK, pos_t, false);
 	return atlas_coords_to_back_id(atlas_coords);
+
+func get_nav_id(pos_t:Vector2i):
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.NAV, pos_t, false);
+	return atlas_coords_to_nav_id(atlas_coords);
 
 func is_tile(pos_t:Vector2i, include_transient:bool):
 	return get_tile_id(pos_t, include_transient) != GV.TileId.EMPTY;
@@ -392,7 +407,7 @@ func get_doubled_tile_atlas_coords(atlas_coords:Vector2i, keep_type:bool = true)
 		return atlas_coords;
 	return Vector2i(atlas_coords.x + tile_val.y, atlas_coords.y if keep_type else GV.TypeId.REGULAR);
 
-func is_compatible(type_id:int, back_id:int):
+func is_compatible(type_id:int, back_id:int) -> bool:
 	if back_id in GV.B_EMPTY:
 		return true;
 	if back_id in GV.B_WALL_OR_BORDER:
@@ -402,6 +417,10 @@ func is_compatible(type_id:int, back_id:int):
 		
 	# back_id is in GV.B_SAVE_OR_GOAL
 	return type_id in [GV.TypeId.PLAYER, GV.TypeId.REGULAR];
+
+# dir is obstructed if NavId & (NAV_BIT_BLOCK << DirectionId) != 0
+func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
+	return (nav_id & (GV.NAV_BIT_BLOCK << GV.dir_to_dir_id(dir))) == 0;
 
 # -1 if slide not possible
 func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i):
@@ -528,11 +547,11 @@ func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i) -> bool:
 	# once split animation finishes (without worrying about the slide bouncing)
 	# set splitted coord for try_slide().get_slide_push_count() (and try_slide() does not have to calculate it again)
 	# try_slide() will add parent_atlas_coords at src_pos_t if it initiates
-	set_atlas_coords(GV.LayerId.TILE, pos_t, splitted_coords, true);
+	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, splitted_coords, 0, true);
 	var initiated:bool = try_slide(pusher_entity, tile_entity, dir, true, src_coords);
 	if not initiated:
 		#reset src coords
-		set_atlas_coords(GV.LayerId.TILE, pos_t, src_coords, true);
+		set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, src_coords, 0, true);
 	return initiated;
 
 #update player_pos_t
@@ -583,7 +602,10 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
 		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t, true);
 		var curr_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
-		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, -Vector2i.ONE);
+		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
+		
+		# add NAV wall for pathfinder
+		set_atlas_coords(GV.LayerId.NAV, curr_pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NavId.ALL if dist_to_src else GV.NAV_UNITS[dir]));
 		
 		# add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
@@ -612,6 +634,9 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		# NOTE attach split/merge sounds to split/merge tiles
 		if not dist_to_src and not is_splitted:
 			curr_tile.get_node("Audio/Slide").play();
+
+	# add NAV wall for pathfinder
+	set_atlas_coords(GV.LayerId.NAV, merge_pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NavId.ALL));
 	
 	# init front_tiles and add slide tiles to tree
 	# add frontmost tiles first so chain moves in sync every frame? NAH, collision uses positions from previous frame
@@ -648,7 +673,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		# get atlas_coords and erase from tilemap
 		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t, true);
 		var old_type_id:int = atlas_coords_to_type_id(old_atlas_coords);
-		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, -Vector2i.ONE);
+		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
 		# add transit_tile
 		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
@@ -674,7 +699,11 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	#get atlas_coords and erase from tilemap
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, true);
 	var type_id:int = atlas_coords_to_type_id(atlas_coords);
-	set_atlas_coords(GV.LayerId.TILE, pos_t, -Vector2i.ONE);
+	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
+	
+	# add NAV wall for pathfinder
+	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NAV_UNITS[dir]));
+	set_atlas_coords(GV.LayerId.NAV, pos_t + dir, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NavId.ALL));
 	
 	#add transit_tile
 	var tile:TileForTilemap = get_transit_tile(pos_t, true);

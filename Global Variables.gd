@@ -197,14 +197,22 @@ enum TrackingCamTriggerMode {
 }
 var tracking_cam_trigger_mode:int = TrackingCamTriggerMode.LEAVE_AREA;
 
-const directions = {
-	"left" : Vector2i(-1, 0),
-	"right" : Vector2i(1, 0),
-	"up" : Vector2i(0, -1),
-	"down" : Vector2i(0, 1),
+# NOTE order matters! equal to 1.5x - .5y + 1.5
+enum DirectionId {
+	LEFT,
+	DOWN,
+	UP,
+	RIGHT,
+}
+
+const DIRECTIONS:Dictionary = {
+	DirectionId.LEFT : Vector2i(-1, 0),
+	DirectionId.DOWN : Vector2i(0, 1),
+	DirectionId.UP : Vector2i(0, -1),
+	DirectionId.RIGHT : Vector2i(1, 0),
 };
 
-var abilities = {
+var abilities:Dictionary = {
 	"home" : true,
 	"restart" : true,
 	"move_mode" : true,
@@ -263,18 +271,43 @@ enum EntityId {
 	SNAKE,
 }
 
+enum TileSetSourceId {
+	BACK,
+	TILE,
+	NAV,
+}
+
+# NOTE each TileMapLayer can only store one tile per cell; to allow tiles to overlap back cells, both TILE/BACK are necessary
 enum LayerId {
 	BACK,
 	TILE,
+	# only for pathfinder precise state, enabled=false is okay
+	# NOTE use new TileMapLayer instead of {BACK with alt_id=1} or {TILE with source_id = LayerId.BACK} since this is more intuitive and flexible
+	# NOTE pathfinder should check both BACK and NAV layers for compatibility
+	NAV,
 }
 
-enum ColorId {
-	ALL = 4,
-	RED = 29,
-	BLUE = 30,
-	BLACK = 31,
-	GRAY = 32,
-};
+# dir is obstructed if NavId & (NAV_BIT_BLOCK << DirectionId) != 0
+# each NAV_DIR_BITLEN-bit block stores refcount for directional barrier
+# assume refcount can go as high as NAV_REFCOUNT_MAX
+const NAV_REFCOUNT_MAX:int = 4; #one tile approaching per side (this is possible since corners are rounded)
+const NAV_DIR_BITLEN:int = 3; #should be long enough to store max refcount
+const NAV_BIT_BLOCK:int = (1 << NAV_DIR_BITLEN) - 1;
+enum NavId {
+	NONE  = 0,
+	LEFT  = (1 << (DirectionId.LEFT * NAV_DIR_BITLEN)),
+	DOWN  = (1 << (DirectionId.DOWN * NAV_DIR_BITLEN)),
+	UP    = (1 << (DirectionId.UP * NAV_DIR_BITLEN)),
+	RIGHT = (1 << (DirectionId.RIGHT * NAV_DIR_BITLEN)),
+	ALL   = LEFT + DOWN + UP + RIGHT,
+}
+
+const NAV_UNITS:Dictionary = {
+	DIRECTIONS[DirectionId.LEFT]  : NavId.ALL - NavId.LEFT,
+	DIRECTIONS[DirectionId.DOWN]  : NavId.ALL - NavId.DOWN,
+	DIRECTIONS[DirectionId.UP]    : NavId.ALL - NavId.UP,
+	DIRECTIONS[DirectionId.RIGHT] : NavId.ALL - NavId.RIGHT,
+}
 
 #player tile_push_limit does not change when roaming
 var tile_push_limits:Dictionary = {
@@ -437,6 +470,9 @@ var messages:Dictionary = {
 }
 
 
+func dir_to_dir_id(dir:Vector2i) -> int:
+	return 1.5 * dir.x - 0.5 * dir.y + 1.5;
+
 func world_to_pos_t(pos:Vector2) -> Vector2i:
 	return (pos / TILE_WIDTH).floor();
 
@@ -503,9 +539,6 @@ func combinations_dp(n, k) -> int:
 	combinations[n][k] = ans;
 	return ans;
 
-func sin_approx(angle_rad:float):
-	pass;
-
 #doesn't do ZERO->EMPTY optimization
 func tile_val_to_id(power:int, ssign:int) -> int:
 	return (power + 1) * ssign + TileId.ZERO;
@@ -524,13 +557,6 @@ func is_approx_equal(a:float, b:float, tolerance:float) -> bool:
 
 func get_animator_type(animator_id:int) -> int:
 	return animator_id >> 1;
-
-#func set_tile_push_limit(_tile_push_limit):
-#	abilities["tile_push_limit"] = _tile_push_limit;
-#
-#	#change physicsEnabler size
-#	var size:Vector2 = PHYSICS_ENABLER_BASE_SIZE + abilities["tile_push_limit"] * 2 * GV.TILE_WIDTH * Vector2.ONE;
-#	PHYSICS_ENABLER_SHAPE.set_size(size);
 
 
 func _ready():
