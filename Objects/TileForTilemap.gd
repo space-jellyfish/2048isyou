@@ -35,6 +35,7 @@ func _init():
 	pass;
 	
 func initialize(world:World, tile_sheet:CompressedTexture2D, pos_t:Vector2i):
+	assert(is_aligned);
 	self.world = world;
 	self.tile_sheet = tile_sheet;
 	self.pos_t = pos_t;
@@ -79,6 +80,14 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	velocity = Vector2.ZERO;
 	move_controller = TileForTilemapSlideController.new(self, dir);
 	
+	# add NAV wall for pathfinder
+	if is_aligned:
+		add_nav_id(pos_t, GV.NAV_UNITS[dir]);
+		add_nav_id(pos_t + dir, GV.NavId.ALL);
+	else:
+		#TODO
+		pass;
+	
 	# sprites
 	if conversion_transit_id == GV.TransitId.NONE:
 		curr_sprite = TileForTilemapSprite.new(self, tile_sheet, atlas_coords, GV.ZId.DEFAULT, 1, [], null);
@@ -100,16 +109,20 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	
 	is_aligned = false;
 
-# does not require tile to be aligned
 func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	print("initialize shift")
 	assert(not move_controller);
+	assert(is_aligned);
 	move_transit_id = GV.TransitId.SHIFT;
 	self.atlas_coords = atlas_coords;
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
 	velocity = Vector2.ZERO;
 	move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
+	
+	# add NAV wall for pathfinder
+	world.add_nav_id(pos_t, GV.NAV_UNITS[dir]);
+	world.add_nav_id(pos_t + dir, GV.NavId.ALL);
 	
 	# sprites
 	if conversion_transit_id == GV.TransitId.NONE:
@@ -144,6 +157,9 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
 	
+	# add NAV wall for pathfinder
+	world.add_nav_id(pos_t, GV.NavId.ALL);
+	
 	# sprites
 	if prev_sprite:
 		prev_sprite.queue_free();
@@ -171,6 +187,9 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
+	
+	# add NAV wall for pathfinder
+	world.add_nav_id(pos_t, GV.NavId.ALL);
 	
 	# sprites
 	if prev_sprite:
@@ -311,8 +330,6 @@ func _physics_process(delta: float) -> void:
 #	return to pool if conversion animators finished
 func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
 	print("finalize ", GV.TransitId.keys()[prev_transit_id], "\tis_reversed: ", is_reversed);
-	self.is_aligned = is_aligned;
-	self.pos_t = pos_t;
 	
 	# get tile entity
 	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
@@ -362,10 +379,21 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# update tilemap
 	var is_poolable:bool = is_aligned and conversion_transit_id == GV.TransitId.NONE and move_transit_id == GV.TransitId.NONE;
 	if is_poolable:
-		if ((prev_transit_id == GV.TransitId.SPLIT or is_splitted) and not is_reversed) or prev_transit_id == GV.TransitId.MERGE or (is_merging and is_reversed) or (prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and not is_splitted and not is_merging):
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, atlas_coords);
-		elif is_splitted and is_reversed:
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, world.get_doubled_tile_atlas_coords(atlas_coords));
+		if ((prev_transit_id == GV.TransitId.SPLIT or is_splitted) and not is_reversed) or prev_transit_id == GV.TransitId.MERGE or ((is_merging or is_splitted) and is_reversed) or (prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and not is_splitted and not is_merging):
+			# TILE layer
+			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
+			
+			# NAV layer
+			if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
+				if is_reversed:
+					world.remove_nav_id(pos_t, GV.NAV_UNITS[-move_controller.dir]);
+					world.remove_nav_id(pos_t - move_controller.dir, GV.NavId.ALL);
+				else:
+					world.remove_nav_id(pos_t, GV.NavId.ALL);
+					world.remove_nav_id(self.pos_t, GV.NAV_UNITS[move_controller.dir]);
+			else:
+				world.remove_nav_id(pos_t, GV.NavId.ALL);
 	
 	# update tiles_in_transient
 	if not is_reversed:
@@ -381,6 +409,9 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	if is_poolable:
 		world.return_pooled_tile(self);
 	else:
+		self.is_aligned = is_aligned;
+		self.pos_t = pos_t;
+		
 		if move_transit_id == GV.TransitId.NONE:
 			move_controller = null;
 			if front_tile:
