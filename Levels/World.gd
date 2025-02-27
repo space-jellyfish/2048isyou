@@ -288,13 +288,13 @@ func generate_cell(pos_t:Vector2i):
 
 func get_event_dir(event:InputEventKey) -> Vector2i:
 	if event.keycode in [KEY_W, KEY_UP]:
-		return GV.directions[GV.DirectionId.UP];
+		return GV.DIRECTIONS[GV.DirectionId.UP];
 	if event.keycode in [KEY_S, KEY_DOWN]:
-		return GV.directions[GV.DirectionId.DOWN];
+		return GV.DIRECTIONS[GV.DirectionId.DOWN];
 	if event.keycode in [KEY_A, KEY_LEFT]:
-		return GV.directions[GV.DirectionId.LEFT];
+		return GV.DIRECTIONS[GV.DirectionId.LEFT];
 	if event.keycode in [KEY_D, KEY_RIGHT]:
-		return GV.directions[GV.DirectionId.RIGHT];
+		return GV.DIRECTIONS[GV.DirectionId.RIGHT];
 	return Vector2i.ZERO;
 
 func update_last_input_premove(event:InputEventKey, action_id:int):
@@ -330,6 +330,14 @@ func set_atlas_coords(layer_id:int, pos_t:Vector2i, source_id:int, coords:Vector
 			tile.atlas_coords = coords;
 			return;
 	$Cells.set_cell(layer_id, pos_t, source_id, coords, alternative_id);
+
+func add_nav_id(pos_t:Vector2i, nav_id:int):
+	var new_nav_id:int = get_nav_id(pos_t) + nav_id;
+	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(new_nav_id));
+
+func remove_nav_id(pos_t:Vector2i, nav_id:int):
+	var new_nav_id:int = get_nav_id(pos_t) - nav_id;
+	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(new_nav_id));
 
 func atlas_coords_to_tile_id(tile_atlas_coords:Vector2i):
 	return tile_atlas_coords.x + 1;
@@ -605,7 +613,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
 		# add NAV wall for pathfinder
-		set_atlas_coords(GV.LayerId.NAV, curr_pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NavId.ALL if dist_to_src else GV.NAV_UNITS[dir]));
+		add_nav_id(curr_pos_t, GV.NavId.ALL if dist_to_src else GV.NAV_UNITS[dir]);
 		
 		# add transit tile
 		var curr_splitted:bool = (not dist_to_src and is_splitted);
@@ -636,7 +644,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 			curr_tile.get_node("Audio/Slide").play();
 
 	# add NAV wall for pathfinder
-	set_atlas_coords(GV.LayerId.NAV, merge_pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NavId.ALL));
+	add_nav_id(merge_pos_t, GV.NavId.ALL);
 	
 	# init front_tiles and add slide tiles to tree
 	# add frontmost tiles first so chain moves in sync every frame? NAH, collision uses positions from previous frame
@@ -694,6 +702,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# play sound
 		merging_tile.get_node("Audio/Combine").play();
+	
+	print("NavId at ", pos_t, " set to ", get_nav_id(pos_t));
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#get atlas_coords and erase from tilemap
@@ -702,8 +712,8 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 	
 	# add NAV wall for pathfinder
-	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NAV_UNITS[dir]));
-	set_atlas_coords(GV.LayerId.NAV, pos_t + dir, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(GV.NavId.ALL));
+	add_nav_id(pos_t, GV.NAV_UNITS[dir]);
+	add_nav_id(pos_t + dir, GV.NavId.ALL);
 	
 	#add transit_tile
 	var tile:TileForTilemap = get_transit_tile(pos_t, true);

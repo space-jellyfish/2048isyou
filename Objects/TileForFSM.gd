@@ -214,7 +214,7 @@ func get_shape(dir:Vector2i) -> ShapeCast2D:
 
 #push to premoves and premove_dirs
 func add_premove():
-	premove_dirs.push_back(GV.directions[game.current_level.last_input_move]);
+	premove_dirs.push_back(GV.DIRECTIONS[game.current_level.last_input_move]);
 	premoves.push_back(game.current_level.last_input_modifier);
 	premove_added.emit();
 
