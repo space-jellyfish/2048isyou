@@ -294,12 +294,19 @@ const NAV_REFCOUNT_MAX:int = 4; #one tile approaching per side (this is possible
 const NAV_DIR_BITLEN:int = 3; #should be long enough to store max refcount
 const NAV_BIT_BLOCK:int = (1 << NAV_DIR_BITLEN) - 1;
 enum NavId {
-	NONE  = 0,
-	LEFT  = (1 << (DirectionId.LEFT * NAV_DIR_BITLEN)),
-	DOWN  = (1 << (DirectionId.DOWN * NAV_DIR_BITLEN)),
-	UP    = (1 << (DirectionId.UP * NAV_DIR_BITLEN)),
+	NONE = 0,
+	LEFT = (1 << (DirectionId.LEFT * NAV_DIR_BITLEN)),
+	DOWN = (1 << (DirectionId.DOWN * NAV_DIR_BITLEN)),
+	UP = (1 << (DirectionId.UP * NAV_DIR_BITLEN)),
 	RIGHT = (1 << (DirectionId.RIGHT * NAV_DIR_BITLEN)),
-	ALL   = LEFT + DOWN + UP + RIGHT,
+	ALL = LEFT + DOWN + UP + RIGHT,
+}
+
+const NAV_TERMS:Dictionary = {
+	DIRECTIONS[DirectionId.LEFT] : NavId.LEFT,
+	DIRECTIONS[DirectionId.DOWN] : NavId.DOWN,
+	DIRECTIONS[DirectionId.UP] : NavId.UP,
+	DIRECTIONS[DirectionId.RIGHT] : NavId.RIGHT,
 }
 
 const NAV_UNITS:Dictionary = {
