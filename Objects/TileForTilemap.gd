@@ -82,8 +82,8 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	
 	# add NAV wall for pathfinder
 	if is_aligned:
-		add_nav_id(pos_t, GV.NAV_UNITS[dir]);
-		add_nav_id(pos_t + dir, GV.NavId.ALL);
+		world.add_nav_id(pos_t, GV.NAV_UNITS[dir]);
+		world.add_nav_id(pos_t + dir, GV.NavId.ALL);
 	else:
 		#TODO
 		pass;
