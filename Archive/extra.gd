@@ -1749,3 +1749,9 @@ func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
 	# check the bit at position dir_id
 	return not (nav_id & (1 << dir_id));
 '''
+
+'''
+	#assume tile is aligned
+	assert(fposmod(tile.position.x, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
+	assert(fposmod(tile.position.y, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
+'''

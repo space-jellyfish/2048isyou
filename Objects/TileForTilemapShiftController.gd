@@ -5,15 +5,15 @@ extends TileForTilemapController;
 var max_speed:float;
 var dir:Vector2i;
 var remaining_dist:float;
+var latest_pos_t:Vector2i;
 
 
 func _init(tile:TileForTilemap, dir:Vector2i, target_dist_t:int):
-	#assume tile is aligned
-	assert(fposmod(tile.position.x, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
-	assert(fposmod(tile.position.y, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
+	assert(tile.is_aligned);
 	
 	self.tile = tile;
 	self.dir = dir;
+	latest_pos_t = tile.pos_t;
 	remaining_dist = GV.TILE_WIDTH * target_dist_t;
 	max_speed = target_dist_t * GV.TILE_WIDTH * GV.SHIFT_DISTANCE_TO_MAX_SPEED;
 	assert(max_speed >= GV.TILE_SLIDE_SPEED);
@@ -28,6 +28,13 @@ func step(delta:float):
 	#update remaining_dist
 	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	remaining_dist -= true_step_dist;
+	
+	# update latest_pos_t and NAV layer
+	if not is_reversed and remaining_dist > GV.SNAP_TOLERANCE and Vector2(dir).dot(tile.position - GV.pos_t_to_world(latest_pos_t)) >= GV.TILE_WIDTH:
+		tile.world.remove_nav_id(latest_pos_t, GV.NAV_UNITS[dir]);
+		latest_pos_t += dir;
+		tile.world.remove_nav_id(latest_pos_t, GV.NAV_TERMS[-dir]);
+		tile.world.add_nav_id(latest_pos_t + dir, GV.NavId.ALL);
 	
 	#emit moved signal
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:
@@ -49,6 +56,15 @@ func step(delta:float):
 #returns true if bounce succeeds (not blocked by sliding tile)
 #after reverse, snap to nearest cell, even if heading in original shift dir (not reversed)
 func reverse():
+	# update NAV cells
+	if tile.was_aligned:
+		if is_reversed:
+			tile.world.remove_nav_id(latest_pos_t, GV.NAV_TERMS[dir]);
+			tile.world.add_nav_id(latest_pos_t - dir, GV.NAV_TERMS[-dir]);
+		else:
+			tile.world.remove_nav_id(latest_pos_t + dir, GV.NAV_TERMS[dir]);
+			tile.world.add_nav_id(latest_pos_t, GV.NAV_TERMS[-dir]);
+	
 	dir *= -1;
 	tile.velocity *= -1;
 	remaining_dist = GV.TILE_WIDTH - fposmod(remaining_dist, GV.TILE_WIDTH);
