@@ -30,11 +30,15 @@ func step(delta:float):
 	remaining_dist -= true_step_dist;
 	
 	# update latest_pos_t and NAV layer
-	if not is_reversed and remaining_dist > GV.SNAP_TOLERANCE and Vector2(dir).dot(tile.position - GV.pos_t_to_world(latest_pos_t)) >= GV.TILE_WIDTH:
-		tile.world.remove_nav_id(latest_pos_t, GV.NAV_UNITS[dir]);
-		latest_pos_t += dir;
-		tile.world.remove_nav_id(latest_pos_t, GV.NAV_TERMS[-dir]);
-		tile.world.add_nav_id(latest_pos_t + dir, GV.NavId.ALL);
+	if not is_reversed and remaining_dist > GV.SNAP_TOLERANCE:
+		var new_latest_pos_t:Vector2i = GV.world_to_pos_t(tile.position - 0.5 * GV.TILE_WIDTH * dir);
+		if new_latest_pos_t != latest_pos_t:
+			print("HERE", new_latest_pos_t, latest_pos_t);
+			tile.world.remove_nav_id(latest_pos_t, GV.NAV_UNITS[dir]);
+			tile.world.remove_nav_id(latest_pos_t + dir, GV.NavId.ALL);
+			tile.world.add_nav_id(new_latest_pos_t, GV.NAV_UNITS[dir]);
+			tile.world.add_nav_id(new_latest_pos_t + dir, GV.NavId.ALL);
+			latest_pos_t = new_latest_pos_t;
 	
 	#emit moved signal
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:

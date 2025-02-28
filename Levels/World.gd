@@ -302,11 +302,11 @@ func update_last_input_premove(event:InputEventKey, action_id:int):
 	var dir:Vector2i = get_event_dir(event);
 	if dir != Vector2i.ZERO:
 		# check NAV ids
-		#for y in range(-10, 11):
-			#var s:String;
-			#for x in range(-10, 11):
-				#s += str(get_nav_id(Vector2i(x, y))) + '\t';
-			#print(s)
+		for y in range(-10, 11):
+			var s:String;
+			for x in range(-10, 11):
+				s += str(get_nav_id(Vector2i(x, y))) + '\t';
+			print(s)
 			
 		var premove = Premove.new(player, dir, action_id);
 		player.add_premove(premove);

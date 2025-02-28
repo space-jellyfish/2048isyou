@@ -1755,3 +1755,12 @@ func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
 	assert(fposmod(tile.position.x, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
 	assert(fposmod(tile.position.y, GV.TILE_WIDTH) == 0.5 * GV.TILE_WIDTH);
 '''
+
+''' incremental NavId update doesn't work bc Shift can theoretically travel more than one TILE_WIDTH per step
+	# update latest_pos_t and NAV layer
+	if not is_reversed and remaining_dist > GV.SNAP_TOLERANCE and Vector2(dir).dot(tile.position - GV.pos_t_to_world(latest_pos_t)) >= GV.TILE_WIDTH:
+		tile.world.remove_nav_id(latest_pos_t, GV.NAV_UNITS[dir]);
+		latest_pos_t += dir;
+		tile.world.remove_nav_id(latest_pos_t, GV.NAV_TERMS[-dir]);
+		tile.world.add_nav_id(latest_pos_t + dir, GV.NavId.ALL);
+'''
