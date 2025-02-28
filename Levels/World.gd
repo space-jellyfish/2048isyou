@@ -301,6 +301,13 @@ func get_event_dir(event:InputEventKey) -> Vector2i:
 func update_last_input_premove(event:InputEventKey, action_id:int):
 	var dir:Vector2i = get_event_dir(event);
 	if dir != Vector2i.ZERO:
+		# check NAV ids
+		#for y in range(-10, 11):
+			#var s:String;
+			#for x in range(-10, 11):
+				#s += str(get_nav_id(Vector2i(x, y))) + '\t';
+			#print(s)
+			
 		var premove = Premove.new(player, dir, action_id);
 		player.add_premove(premove);
 
@@ -333,13 +340,25 @@ func set_atlas_coords(layer_id:int, pos_t:Vector2i, source_id:int, coords:Vector
 	$Cells.set_cell(layer_id, pos_t, source_id, coords, alternative_id);
 
 func add_nav_id(pos_t:Vector2i, nav_id:int):
+	#if nav_id == GV.NavId.ALL:
+		#print("full navid added at ", pos_t);
+	#else:
+		#print("partial navid addd at: ", pos_t);
 	var new_nav_id:int = get_nav_id(pos_t) + nav_id;
-	assert(new_nav_id >= 0 and new_nav_id <= GV.NAV_REFCOUNT_MAX * GV.NavId.ALL);
+	assert(new_nav_id >= 0);
+	for dir_id in GV.DirectionId.values():
+		assert((new_nav_id & (GV.NAV_BIT_BLOCK << (GV.NAV_DIR_BITLEN * dir_id))) >> (GV.NAV_DIR_BITLEN * dir_id) <= GV.NAV_REFCOUNT_MAX);
 	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(new_nav_id));
 
 func remove_nav_id(pos_t:Vector2i, nav_id:int):
+	#if nav_id == GV.NavId.ALL:
+		#print("full navid removed at ", pos_t);
+	#else:
+		#print("partial navid removed at ", pos_t);
 	var new_nav_id:int = get_nav_id(pos_t) - nav_id;
-	assert(new_nav_id >= 0 and new_nav_id <= GV.NAV_REFCOUNT_MAX * GV.NavId.ALL);
+	assert(new_nav_id >= 0);
+	for dir_id in GV.DirectionId.values():
+		assert((new_nav_id & (GV.NAV_BIT_BLOCK << (GV.NAV_DIR_BITLEN * dir_id))) >> (GV.NAV_DIR_BITLEN * dir_id) <= GV.NAV_REFCOUNT_MAX);
 	set_atlas_coords(GV.LayerId.NAV, pos_t, GV.TileSetSourceId.NAV, nav_id_to_atlas_coords(new_nav_id));
 
 func atlas_coords_to_tile_id(tile_atlas_coords:Vector2i):
@@ -699,8 +718,6 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# play sound
 		merging_tile.get_node("Audio/Combine").play();
-	
-	print("NavId at ", pos_t, " set to ", get_nav_id(pos_t));
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	#get atlas_coords and erase from tilemap

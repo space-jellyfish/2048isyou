@@ -114,6 +114,16 @@ func detach_from_leader():
 			tile.back_tile = null;
 
 func reverse():
+	print("slide reversed")
+	# update NAV cells
+	if tile.was_aligned:
+		if is_reversed:
+			tile.world.remove_nav_id(tile.pos_t, GV.NAV_TERMS[dir]);
+			tile.world.add_nav_id(tile.pos_t - dir, GV.NAV_TERMS[-dir]);
+		else:
+			tile.world.remove_nav_id(tile.pos_t + dir, GV.NAV_TERMS[dir]);
+			tile.world.add_nav_id(tile.pos_t, GV.NAV_TERMS[-dir]);
+	
 	dir *= -1;
 	# NOTE remaining_dist = GV.TILE_WIDTH - remaining_dist; doesn't work if tile wasn't aligned at the start
 	remaining_dist = GV.TILE_WIDTH - fposmod(remaining_dist, GV.TILE_WIDTH);
