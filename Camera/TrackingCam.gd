@@ -9,8 +9,7 @@ var target_entity:Entity;
 var pos_tween:Tween;
 
 @onready var world:World = get_parent();
-@onready var area_width:float = $Area2D/CollisionRect.shape.size.x;
-@onready var area_height:float = $Area2D/CollisionRect.shape.size.y;
+@onready var area_size:Vector2 = $Area2D/CollisionRect.shape.size; #after zooming
 
 
 # if transition true, transition iff position of new target_entity is outside area
@@ -36,28 +35,20 @@ func set_target_entity(target_entity:Entity, transition:bool):
 func set_zoom_and_area_scale(zoom_ratio:float):
 	set_zoom(zoom_ratio * Vector2.ONE);
 	$Area2D.scale = Vector2.ONE / get_zoom(); #this performs element-wise division
-	area_width = $Area2D/CollisionRect.shape.size.x / zoom_ratio;
-	area_height = $Area2D/CollisionRect.shape.size.y / zoom_ratio;
+	area_size = $Area2D/CollisionRect.shape.size / zoom_ratio;
 	
 	if target_entity:
 		_on_target_entity_moved();
 
+func is_in_area(pos:Vector2) -> bool:
+	var offset:Vector2 = (pos - position).abs();
+	return offset.x <= area_size.x / 2 and offset.y <= area_size.y / 2;
+
 # transition if target_entity is outside area
 func _on_target_entity_moved():
 	var target_entity_pos:Vector2 = target_entity.get_position();
-	
-	var space_state = get_world_2d().direct_space_state
-	var params = PhysicsPointQueryParameters2D.new()
-	params.collide_with_areas = true;
-	params.collide_with_bodies = false;
-	params.collision_mask = (1 << (GV.CollisionId.TRACKING_CAM - 1));
-	params.position = target_entity_pos;
-	var colliders_info:Array[Dictionary] = space_state.intersect_point(params);
-	
-	for collider_info in colliders_info:
-		if collider_info["collider"] == $Area2D:
-			return;
-	transition(target_entity_pos, not target_entity.is_roaming());
+	if not is_in_area(target_entity_pos):
+		transition(target_entity_pos, not target_entity.is_roaming());
 
 # assume transition has been triggered (target_entity_pos is outside area)
 func transition(target_entity_pos:Vector2, cardinal_only:bool):
@@ -66,7 +57,7 @@ func transition(target_entity_pos:Vector2, cardinal_only:bool):
 	
 	if cardinal_only:
 		# only track the axes on which target_entity is outside area
-		var tracked_axes:Vector2i = Vector2i(abs(target_entity_offset.x) > area_width / 2, abs(target_entity_offset.y) > area_height / 2);
+		var tracked_axes:Vector2i = Vector2i(abs(target_entity_offset.x) > area_size.x / 2, abs(target_entity_offset.y) > area_size.y / 2);
 		target_pos = position + GV.TRACKING_CAM_LEAD_RATIO * target_entity_offset * Vector2(tracked_axes);
 	else:
 		# track both axes (diagonally)
@@ -78,17 +69,24 @@ func transition(target_entity_pos:Vector2, cardinal_only:bool):
 	pos_tween.set_ease(Tween.EASE_OUT);
 	pos_tween.set_trans(Tween.TRANS_QUINT);
 	pos_tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
-	pos_tween.tween_method(set_position_with_signal, position, target_pos, GV.TRACKING_CAM_TRANSITION_TIME);
+	pos_tween.tween_method(transition_step, position, target_pos, GV.TRACKING_CAM_TRANSITION_TIME);
 	transition_started.emit(target_pos);
 	pos_tween.finished.connect(_on_pos_tween_finished);
 
-func set_position_with_signal(pos:Vector2):
+func transition_step(pos:Vector2):
 	var old_pos:Vector2 = position;
-	set_position(pos);
 	
-	if old_pos != pos:
-		moved.emit(pos);
+	# stop pos_tween and don't update if position = pos causes player to be outside area
+	if is_in_area(target_entity.get_position()):
+		set_position(pos);
+		if not is_in_area(target_entity.get_position()):
+			set_position(old_pos);
+			pos_tween.kill();
+	else:
+		set_position(pos);
+	
+	if position != old_pos:
+		moved.emit(position);
 
 func _on_pos_tween_finished():
 	transition_finished.emit();
-	_on_target_entity_moved(); #to ensure target stays inside area
