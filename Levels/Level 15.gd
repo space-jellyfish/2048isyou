@@ -15,9 +15,6 @@ func _ready():
 	$Pathfinder.generate_hash_keys();
 	$Pathfinder.init_sa_pool(2000);
 	
-	#don't connect tracking cam to avoid generating cells
-	#$TrackingCam.transition_started.connect(_on_camera_transition_started);
-	
 	#connect sa_search_id_selector
 	game.sa_search_id_selector.item_selected.connect(_on_option_button_item_selected);
 

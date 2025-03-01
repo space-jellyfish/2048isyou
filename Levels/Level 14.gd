@@ -12,9 +12,6 @@ func _ready():
 	$Pathfinder.set_tilemap($Cells);
 	$Pathfinder.set_tile_push_limits(GV.tile_push_limits);
 	$Pathfinder.generate_hash_keys();
-	
-	#connect tracking cam
-	$TrackingCam.transition_started.connect(_on_camera_transition_started);
 
 	#randomize();
 	#tile_noise.set_seed(2);
@@ -29,11 +26,9 @@ func _ready():
 	wall_noise.set_fractal_lacunarity(2);
 	tile_noise.set_fractal_gain(0.5); #strength of subsequent layers, default 0.5
 	wall_noise.set_fractal_gain(0.3);
-	
-	#load cells
-	loaded_pos_t_min = GV.world_to_pos_t($TrackingCam.position - half_resolution - Vector2(GV.TILE_LOAD_BUFFER, GV.TILE_LOAD_BUFFER));
-	loaded_pos_t_max = GV.world_to_pos_t($TrackingCam.position + half_resolution + Vector2(GV.TILE_LOAD_BUFFER, GV.TILE_LOAD_BUFFER));
-	load_rect(loaded_pos_t_min, loaded_pos_t_max);
+
+	# init procgen
+	_on_tracking_cam_moved($TrackingCam.position);
 
 	#print($Cells.get_cell_source_id(0, Vector2i.ZERO)) #layer, coord; unnecessary since layer is same as source id
 	#print($Cells.get_cell_source_id(0, Vector2i(1, 0)))

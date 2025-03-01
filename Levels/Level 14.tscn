@@ -8,6 +8,7 @@
 [node name="Level 14" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_40yuo")
+procgen = true
 
 [node name="LevelName" type="Label" parent="."]
 modulate = Color(1, 1, 1, 0)
