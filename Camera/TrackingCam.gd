@@ -44,7 +44,6 @@ func set_zoom_and_area_scale(zoom_ratio:float):
 
 # transition if target_entity is outside area
 func _on_target_entity_moved():
-	print("TE Moved");
 	var target_entity_pos:Vector2 = target_entity.get_position();
 	
 	var space_state = get_world_2d().direct_space_state
@@ -58,7 +57,6 @@ func _on_target_entity_moved():
 	for collider_info in colliders_info:
 		if collider_info["collider"] == $Area2D:
 			return;
-	print("transitioned")
 	transition(target_entity_pos, not target_entity.is_roaming());
 
 # assume transition has been triggered (target_entity_pos is outside area)
@@ -85,9 +83,11 @@ func transition(target_entity_pos:Vector2, cardinal_only:bool):
 	pos_tween.finished.connect(_on_pos_tween_finished);
 
 func set_position_with_signal(pos:Vector2):
-	if pos != position:
-		moved.emit(pos);
+	var old_pos:Vector2 = position;
 	set_position(pos);
+	
+	if old_pos != pos:
+		moved.emit(pos);
 
 func _on_pos_tween_finished():
 	transition_finished.emit();
