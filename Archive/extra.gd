@@ -1833,3 +1833,28 @@ func is_in_area(pos:Vector2) -> bool:
 			return true;
 	return false;
 '''
+
+'''
+	#init pathfinder
+	$Pathfinder.set_player_pos(initial_player_pos_t);
+	$Pathfinder.set_player_last_dir(Vector2i.ZERO);
+	$Pathfinder.set_tilemap($Cells);
+	$Pathfinder.set_tile_push_limits(GV.tile_push_limits);
+	$Pathfinder.generate_hash_keys();
+
+	#init pathfinder
+	$Pathfinder.set_player_pos(initial_player_pos_t);
+	$Pathfinder.set_player_last_dir(Vector2i.ZERO);
+	$Pathfinder.set_tilemap($Cells);
+	$Pathfinder.set_tile_push_limits(GV.tile_push_limits);
+	$Pathfinder.generate_hash_keys();
+	$Pathfinder.init_sa_pool(2000);
+
+	#init pathfinder
+	$Pathfinder.set_player_pos(initial_player_pos_t);
+	$Pathfinder.set_player_last_dir(Vector2i.ZERO);
+	$Pathfinder.set_tilemap($Cells);
+	$Pathfinder.set_tile_push_limits(GV.tile_push_limits);
+	$Pathfinder.generate_hash_keys();
+	$Pathfinder.init_sa_pool(2000);
+'''

@@ -54,8 +54,6 @@ layer_2/name = "nav"
 layer_2/enabled = false
 metadata/_edit_lock_ = true
 
-[node name="Pathfinder" type="Pathfinder" parent="."]
-
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(400, 200)
 texture = ExtResource("5_80ya5")
