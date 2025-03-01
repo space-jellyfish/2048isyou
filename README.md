@@ -12,14 +12,19 @@ walls, hostiles (hostile tiles trying to trap and merge with the player), chests
 
 ## Table of Contents
 
-- [Objects](#objects)
-- [Push/Merge Rules](#push/merge-rules)
-- [Instructions](#instructions)
-- [Code Features](#code-features)
-- [Installation](#installation)
+- [2048IsYou](#2048isyou)
+  - [Demo](#demo)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+    - [Pathfinding](#pathfinding)
+  - [Objects](#objects)
+  - [Push/Merge Rules](#pushmerge-rules)
+  - [Instructions](#instructions)
+  - [Code Features](#code-features)
+  - [Installation](#installation)
 
 ### Pathfinding
-For Godot-related reasons, pathfinding algorithms used in *2048IsYou* are located [here](https://github.com/LingLing40Hours/GDExtension/tree/master/Pathfinding_Tilemap).
+Pathfinding is implemented using GDExtension for performance reasons.
 
 ## Objects
 
