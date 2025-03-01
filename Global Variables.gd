@@ -344,8 +344,8 @@ var merge_priorities:Dictionary = {
 	TypeId.REGULAR : 0,
 	TypeId.PLAYER : 1,
 	TypeId.HOSTILE : 2,
-	TypeId.VOID : 3,
-	TypeId.DUPLICATOR : 4,
+	TypeId.DUPLICATOR : 3,
+	TypeId.VOID : 4,
 	TypeId.SQUID : 5,
 }
 
@@ -424,6 +424,50 @@ var max_shift_dists:Dictionary = {
 	TypeId.VOID : 6,
 	TypeId.REGULAR : 0,
 	TypeId.SQUID : 8,
+}
+
+# whether all instances of entity should move in sync
+var move_sync:Dictionary = {
+	EntityId.PLAYER : false,
+	EntityId.DUPLICATOR : false,
+	EntityId.HOSTILE : false,
+	EntityId.VOID : false,
+	EntityId.NONE : false,
+	EntityId.SQUID_BODY : false,
+	EntityId.SQUID_CLUB : false,
+	EntityId.STP_SPAWNING : false,
+	EntityId.STP_SPAWNED : false,
+	EntityId.SNAKE : false,
+}
+
+# in seconds
+# NOTE use 0 to let entity try premoves as fast as *physically* possible, as determined by TILE_WIDTH and TILE_SLIDE_SPEED
+# NOTE extend to use Vector2i(entity_id, action_id) as key if necessary
+var move_cooldowns:Dictionary = {
+	EntityId.PLAYER : 0,
+	EntityId.DUPLICATOR : 14,
+	EntityId.HOSTILE : 0.8,
+	EntityId.VOID : 0.5,
+	EntityId.NONE : 0,
+	EntityId.SQUID_BODY : 1,
+	EntityId.SQUID_CLUB : 0,
+	EntityId.STP_SPAWNING : 2.8, #should accelerate
+	EntityId.STP_SPAWNED : 0,
+	EntityId.SNAKE : 0, #speed should oscillate for realistic movement
+}
+
+# max random deviation from premove_interval, in seconds
+var move_cooldown_deviations:Dictionary = {
+	EntityId.PLAYER : 0,
+	EntityId.DUPLICATOR : 3,
+	EntityId.HOSTILE : 0,
+	EntityId.VOID : 0,
+	EntityId.NONE : 0,
+	EntityId.SQUID_BODY : 0.1,
+	EntityId.SQUID_CLUB : 0,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 0,
+	EntityId.SNAKE : 0,
 }
 
 enum SASearchId {
