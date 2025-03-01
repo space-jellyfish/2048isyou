@@ -33,7 +33,6 @@ func step(delta:float):
 	if not is_reversed and remaining_dist > GV.SNAP_TOLERANCE:
 		var new_latest_pos_t:Vector2i = GV.world_to_pos_t(tile.position - 0.5 * GV.TILE_WIDTH * dir);
 		if new_latest_pos_t != latest_pos_t:
-			print("HERE", new_latest_pos_t, latest_pos_t);
 			tile.world.remove_nav_id(latest_pos_t, GV.NAV_UNITS[dir]);
 			tile.world.remove_nav_id(latest_pos_t + dir, GV.NavId.ALL);
 			tile.world.add_nav_id(new_latest_pos_t, GV.NAV_UNITS[dir]);

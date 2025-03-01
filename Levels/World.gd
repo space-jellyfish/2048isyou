@@ -216,8 +216,8 @@ func _on_tracking_cam_moved(pos:Vector2):
 		var load_pos_max:Vector2 = pos + GV.tracking_cam_resolution / 2 + GV.TILE_LOAD_BUFFER * Vector2.ONE;
 		var load_pos_t_min:Vector2i = GV.world_to_pos_t(load_pos_min);
 		var load_pos_t_max:Vector2i = GV.world_to_pos_t(load_pos_max);
-		print("load_pos_t_min: ", load_pos_t_min);
-		print("load_pos_t_max: ", load_pos_t_max);
+		#print("load_pos_t_min: ", load_pos_t_min);
+		#print("load_pos_t_max: ", load_pos_t_max);
 		update_map(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max);
 		loaded_pos_t_min = load_pos_t_min;
 		loaded_pos_t_max = load_pos_t_max;
