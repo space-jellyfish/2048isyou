@@ -264,23 +264,28 @@ func generate_cell(pos_t:Vector2i):
 		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.MEMBRANE, 0));
 		return;
 
-	#tile
+	# tile value
 	var n_tile:float = clamp(tile_noise.get_noise_2d(pos_t.x, pos_t.y), -1, 1); #[-1, 1]
 	var ssign:int = int(signf(n_tile));
 	n_tile = pow(absf(n_tile), 1); #[0, 1]; use power > 1 to bias towards 0
 	var power:int = GV.TILE_GEN_POW_MAX if (n_tile == 1.0) else int((GV.TILE_GEN_POW_MAX + 2) * n_tile) - 1;
 	var tile_id:int = GV.tile_val_to_id(power, ssign);
 	
-	#type
-	var type:int = GV.TypeId.REGULAR;
+	# tile type
+	var type_id:int = GV.TypeId.REGULAR;
 	var n_type:float = randf();
 	if n_type < GV.P_GEN_DUPLICATOR:
-		type = GV.TypeId.DUPLICATOR;
+		type_id = GV.TypeId.DUPLICATOR;
 	elif n_type < GV.P_GEN_HOSTILE:
-		type = GV.TypeId.HOSTILE;
+		type_id = GV.TypeId.HOSTILE;
 	
-	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(tile_id-1, type));
+	# tilemap
+	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(tile_id-1, type_id));
 	set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
+	
+	# entity
+	if type_id != GV.EntityId.NONE:
+		add_entity(type_id, pos_t, Entity.new(self, null, type_id, pos_t));
 
 func get_event_dir(event:InputEventKey) -> Vector2i:
 	if event.keycode in [KEY_W, KEY_UP]:
