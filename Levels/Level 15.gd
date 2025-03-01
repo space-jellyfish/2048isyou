@@ -7,14 +7,6 @@ var curr_search_id:int;
 func _ready():
 	super._ready();
 	
-	#init pathfinder
-	$Pathfinder.set_player_pos(initial_player_pos_t);
-	$Pathfinder.set_player_last_dir(Vector2i.ZERO);
-	$Pathfinder.set_tilemap($Cells);
-	$Pathfinder.set_tile_push_limits(GV.tile_push_limits);
-	$Pathfinder.generate_hash_keys();
-	$Pathfinder.init_sa_pool(2000);
-	
 	#connect sa_search_id_selector
 	game.sa_search_id_selector.item_selected.connect(_on_option_button_item_selected);
 

@@ -50,8 +50,6 @@ layer_1/tile_data = PackedInt32Array(1769474, 983041, 2, 65537, 1048577, 0, 1310
 layer_2/name = "nav"
 layer_2/enabled = false
 
-[node name="Pathfinder" type="Pathfinder" parent="."]
-
 [node name="TransitTiles" type="Node2D" parent="."]
 
 [node name="TrackingCam" parent="." instance=ExtResource("4_s2taw")]

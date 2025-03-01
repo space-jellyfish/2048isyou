@@ -5,13 +5,6 @@ var curr_goal_pos:Vector2i; #for testing
 
 func _ready():
 	super._ready();
-	
-	#init pathfinder
-	$Pathfinder.set_player_pos(initial_player_pos_t);
-	$Pathfinder.set_player_last_dir(Vector2i.ZERO);
-	$Pathfinder.set_tilemap($Cells);
-	$Pathfinder.set_tile_push_limits(GV.tile_push_limits);
-	$Pathfinder.generate_hash_keys();
 
 	#randomize();
 	#tile_noise.set_seed(2);
@@ -30,6 +23,11 @@ func _ready():
 	# init procgen
 	_on_tracking_cam_moved($TrackingCam.position);
 
+	# test duplicator world
+	$DuplicatorPathController.set_world(self);
+	var test_pos:Vector2i = $DuplicatorPathController.test_world();
+	print("test_pos: ", test_pos);
+	
 	#print($Cells.get_cell_source_id(0, Vector2i.ZERO)) #layer, coord; unnecessary since layer is same as source id
 	#print($Cells.get_cell_source_id(0, Vector2i(1, 0)))
 	#print($Cells.get_cell_atlas_coords(0, Vector2i.ZERO))
