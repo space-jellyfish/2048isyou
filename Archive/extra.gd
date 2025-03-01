@@ -1814,3 +1814,22 @@ func _on_camera_transition_started(target_pos:Vector2):
 	loaded_pos_t_max = GV.world_to_pos_t($TrackingCam.position + half_resolution + Vector2(GV.TILE_LOAD_BUFFER, GV.TILE_LOAD_BUFFER));
 	load_rect(loaded_pos_t_min, loaded_pos_t_max);
 '''
+
+'''
+	_on_target_entity_moved(); #to ensure target stays inside area
+
+# deprecated bc transition_step() requires return value to update immediately upon position change
+func is_in_area(pos:Vector2) -> bool:
+	var space_state = get_world_2d().direct_space_state
+	var params = PhysicsPointQueryParameters2D.new()
+	params.collide_with_areas = true;
+	params.collide_with_bodies = false;
+	params.collision_mask = (1 << (GV.CollisionId.TRACKING_CAM - 1));
+	params.position = pos;
+	var colliders_info:Array[Dictionary] = space_state.intersect_point(params);
+	
+	for collider_info in colliders_info:
+		if collider_info["collider"] == $Area2D:
+			return true;
+	return false;
+'''
