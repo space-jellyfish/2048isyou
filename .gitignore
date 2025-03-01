@@ -6,3 +6,4 @@
 **/build/*
 text/
 talks/
+**/godot-cpp/
