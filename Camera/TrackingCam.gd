@@ -3,6 +3,7 @@ extends Camera2D
 class_name TrackingCam
 
 signal transition_started;
+signal moved(pos:Vector2);
 var target_entity:Entity;
 
 @onready var world:World = get_parent();
@@ -27,7 +28,7 @@ func set_target_entity(target_entity:Entity, transition:bool):
 		if transition:
 			_on_target_entity_moved();
 		else:
-			position = target_entity.get_position();
+			set_position(target_entity.get_position());
 
 # transition if target_entity leaves area from zooming
 func set_zoom_and_area_scale(zoom_ratio:float):
@@ -72,5 +73,11 @@ func transition(target_entity_pos:Vector2, cardinal_only:bool):
 	var tween:Tween = create_tween();
 	tween.set_ease(Tween.EASE_OUT);
 	tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
-	tween.tween_property(self, "position", target_pos, GV.TRACKING_CAM_TRANSITION_TIME).set_trans(Tween.TRANS_QUINT);
-	transition_started.emit();
+	tween.set_trans(Tween.TRANS_QUINT);
+	tween.tween_method(set_position_with_signal, position, target_pos, GV.TRACKING_CAM_TRANSITION_TIME);
+	transition_started.emit(target_pos);
+
+func set_position_with_signal(pos:Vector2):
+	if pos != position:
+		moved.emit(pos);
+	set_position(pos);

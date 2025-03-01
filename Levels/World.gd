@@ -14,15 +14,13 @@ var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.pn
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
 
-var loaded_pos_t_min:Vector2i;
-var loaded_pos_t_max:Vector2i; #inclusive
-
-var resolution:Vector2;
-var half_resolution:Vector2;
-
 var entities:Dictionary; #Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
 var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[Entity, DONT_CARE]]
 var premove_callback_upcoming:bool = false;
+
+@export var procgen:bool = false;
+var loaded_pos_t_min:Vector2i = Vector2i.ZERO;
+var loaded_pos_t_max:Vector2i = -Vector2i.ONE; #inclusive
 
 #for enemy intel
 @export var initial_player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
@@ -49,20 +47,21 @@ func _ready():
 		#print("set initial SVID to ", GV.savepoint_id);
 		GV.level_initial_savepoint_ids[GV.current_level_index] = GV.savepoint_id;
 	
-	#init entities
+	# init entities
 	for entity_id in GV.EntityId.values():
 		entities[entity_id] = Dictionary();
 	
 	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t);
 	add_entity(GV.EntityId.PLAYER, initial_player_pos_t, player);
 	
-	#init entities_with_curr_frame_premoves
+	# init entities_with_curr_frame_premoves
 	for entity_id in GV.EntityId.values():
 		entities_with_curr_frame_premoves[entity_id] = Dictionary();
 	
-	#init trackingCam stuff
+	# init trackingCam stuff
 	$TrackingCam.set_target_entity(player, false);
 	$TrackingCam.set_zoom_and_area_scale(GV.VIEWPORT_RESOLUTION.x / GV.tracking_cam_resolution.x);
+	$TrackingCam.moved.connect(_on_tracking_cam_moved);
 
 func set_level_name():
 	if has_node("LevelName"):
@@ -211,24 +210,19 @@ func on_copy():
 	
 	return level_array;
 
-#use tilemap, don't unload manually
-func _on_camera_transition_started(target:Vector2, track_dir:Vector2i):
-	var temp_pos_t_min:Vector2i = loaded_pos_t_min;
-	var temp_pos_t_max:Vector2i = loaded_pos_t_max;
-	if track_dir.x:
-		var load_min_x:float = target.x - half_resolution.x - (GV.TILE_LOAD_BUFFER if track_dir.x < 0 else GV.TILE_UNLOAD_BUFFER);
-		var load_max_x:float = target.x + half_resolution.x + (GV.TILE_LOAD_BUFFER if track_dir.x > 0 else GV.TILE_UNLOAD_BUFFER);
-		temp_pos_t_min.x = GV.world_to_xt(load_min_x);
-		temp_pos_t_max.x = GV.world_to_xt(load_max_x);
-	if track_dir.y:
-		var load_min_y:float = target.y - half_resolution.y - (GV.TILE_LOAD_BUFFER if track_dir.y < 0 else GV.TILE_UNLOAD_BUFFER);
-		var load_max_y:float = target.y + half_resolution.y + (GV.TILE_LOAD_BUFFER if track_dir.y > 0 else GV.TILE_UNLOAD_BUFFER);
-		temp_pos_t_min.y = GV.world_to_xt(load_min_y);
-		temp_pos_t_max.y = GV.world_to_xt(load_max_y);
-	update_map(loaded_pos_t_min, loaded_pos_t_max, temp_pos_t_min, temp_pos_t_max);
-	loaded_pos_t_min = temp_pos_t_min;
-	loaded_pos_t_max = temp_pos_t_max;
-	
+func _on_tracking_cam_moved(pos:Vector2):
+	if procgen:
+		var load_pos_min:Vector2 = pos - GV.tracking_cam_resolution / 2 - GV.TILE_LOAD_BUFFER * Vector2.ONE;
+		var load_pos_max:Vector2 = pos + GV.tracking_cam_resolution / 2 + GV.TILE_LOAD_BUFFER * Vector2.ONE;
+		var load_pos_t_min:Vector2i = GV.world_to_pos_t(load_pos_min);
+		var load_pos_t_max:Vector2i = GV.world_to_pos_t(load_pos_max);
+		print("load_pos_t_min: ", load_pos_t_min);
+		print("load_pos_t_max: ", load_pos_t_max);
+		update_map(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max);
+		loaded_pos_t_min = load_pos_t_min;
+		loaded_pos_t_max = load_pos_t_max;
+
+# NOTE pos_t_max inclusive
 func update_map(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Vector2i, new_pos_t_max:Vector2i):
 	var overlap_min:Vector2i = Vector2i(maxi(old_pos_t_min.x, new_pos_t_min.x), maxi(old_pos_t_min.y, new_pos_t_min.y));
 	var overlap_max:Vector2i = Vector2i(mini(old_pos_t_max.x, new_pos_t_max.x), mini(old_pos_t_max.y, new_pos_t_max.y));
@@ -241,6 +235,7 @@ func update_map(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Ve
 		load_rect(Vector2i(overlap_max.x + 1, overlap_min.y), Vector2i(new_pos_t_max.x, overlap_max.y));
 		load_rect(Vector2i(new_pos_t_min.x, overlap_max.y + 1), new_pos_t_max);
 
+# NOTE pos_t_max inclusive
 func load_rect(pos_t_min:Vector2i, pos_t_max:Vector2i):
 	for ty in range(pos_t_min.y, pos_t_max.y+1):
 		for tx in range(pos_t_min.x, pos_t_max.x+1):
@@ -302,11 +297,11 @@ func update_last_input_premove(event:InputEventKey, action_id:int):
 	var dir:Vector2i = get_event_dir(event);
 	if dir != Vector2i.ZERO:
 		# check NAV ids
-		for y in range(-10, 11):
-			var s:String;
-			for x in range(-10, 11):
-				s += str(get_nav_id(Vector2i(x, y))) + '\t';
-			print(s)
+		#for y in range(-10, 11):
+			#var s:String;
+			#for x in range(-10, 11):
+				#s += str(get_nav_id(Vector2i(x, y))) + '\t';
+			#print(s)
 			
 		var premove = Premove.new(player, dir, action_id);
 		player.add_premove(premove);

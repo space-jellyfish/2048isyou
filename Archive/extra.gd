@@ -1764,3 +1764,53 @@ func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
 		tile.world.remove_nav_id(latest_pos_t, GV.NAV_TERMS[-dir]);
 		tile.world.add_nav_id(latest_pos_t + dir, GV.NavId.ALL);
 '''
+
+'''
+var resolution:Vector2;
+var half_resolution:Vector2;
+
+#use tilemap, don't unload manually
+func _on_camera_transition_started(target:Vector2, track_dir:Vector2i):
+	if procgen:
+		var temp_pos_t_min:Vector2i = loaded_pos_t_min;
+		var temp_pos_t_max:Vector2i = loaded_pos_t_max;
+		if track_dir.x:
+			var load_min_x:float = target.x - half_resolution.x - (GV.TILE_LOAD_BUFFER if track_dir.x < 0 else GV.TILE_UNLOAD_BUFFER);
+			var load_max_x:float = target.x + half_resolution.x + (GV.TILE_LOAD_BUFFER if track_dir.x > 0 else GV.TILE_UNLOAD_BUFFER);
+			temp_pos_t_min.x = GV.world_to_xt(load_min_x);
+			temp_pos_t_max.x = GV.world_to_xt(load_max_x);
+		if track_dir.y:
+			var load_min_y:float = target.y - half_resolution.y - (GV.TILE_LOAD_BUFFER if track_dir.y < 0 else GV.TILE_UNLOAD_BUFFER);
+			var load_max_y:float = target.y + half_resolution.y + (GV.TILE_LOAD_BUFFER if track_dir.y > 0 else GV.TILE_UNLOAD_BUFFER);
+			temp_pos_t_min.y = GV.world_to_xt(load_min_y);
+			temp_pos_t_max.y = GV.world_to_xt(load_max_y);
+		update_map(loaded_pos_t_min, loaded_pos_t_max, temp_pos_t_min, temp_pos_t_max);
+		loaded_pos_t_min = temp_pos_t_min;
+		loaded_pos_t_max = temp_pos_t_max;
+
+# NOTE there will be gap in generation if target_pos is too far from loaded rect
+func _on_camera_transition_started(target_pos:Vector2):
+	if procgen:
+		var temp_pos_t_min:Vector2i = loaded_pos_t_min;
+		var temp_pos_t_max:Vector2i = loaded_pos_t_max;
+		if track_dir.x:
+			var load_min_x:float = target_pos.x - GV.tracking_cam_resolution.x / 2 - GV.TILE_LOAD_BUFFER;
+			var load_max_x:float = target_pos.x + GV.tracking_cam_resolution.x / 2 + GV.TILE_LOAD_BUFFER;
+			temp_pos_t_min.x = GV.world_to_xt(load_min_x);
+			temp_pos_t_max.x = GV.world_to_xt(load_max_x);
+		if track_dir.y:
+			var load_min_y:float = target_pos.y - GV.tracking_cam_resolution.y / 2 - GV.TILE_LOAD_BUFFER;
+			var load_max_y:float = target_pos.y + GV.tracking_cam_resolution.y / 2 + GV.TILE_LOAD_BUFFER;
+			temp_pos_t_min.y = GV.world_to_xt(load_min_y);
+			temp_pos_t_max.y = GV.world_to_xt(load_max_y);
+		update_map(loaded_pos_t_min, loaded_pos_t_max, temp_pos_t_min, temp_pos_t_max);
+		loaded_pos_t_min = temp_pos_t_min;
+		loaded_pos_t_max = temp_pos_t_max;
+'''
+
+'''
+	#load cells
+	loaded_pos_t_min = GV.world_to_pos_t($TrackingCam.position - half_resolution - Vector2(GV.TILE_LOAD_BUFFER, GV.TILE_LOAD_BUFFER));
+	loaded_pos_t_max = GV.world_to_pos_t($TrackingCam.position + half_resolution + Vector2(GV.TILE_LOAD_BUFFER, GV.TILE_LOAD_BUFFER));
+	load_rect(loaded_pos_t_min, loaded_pos_t_max);
+'''
