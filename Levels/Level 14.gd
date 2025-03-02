@@ -24,10 +24,10 @@ func _ready():
 	_on_tracking_cam_moved($TrackingCam.position);
 
 	# test duplicator world
+	$DuplicatorPathController.set_gv(GV);
 	$DuplicatorPathController.set_world(self);
-	var test_pos:Vector2i = $DuplicatorPathController.test_world();
-	print("test_pos: ", test_pos);
-	
+	var test:float = $DuplicatorPathController.test_gv();
+	print(test);
 	#print($Cells.get_cell_source_id(0, Vector2i.ZERO)) #layer, coord; unnecessary since layer is same as source id
 	#print($Cells.get_cell_source_id(0, Vector2i(1, 0)))
 	#print($Cells.get_cell_atlas_coords(0, Vector2i.ZERO))
