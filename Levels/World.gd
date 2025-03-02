@@ -453,7 +453,9 @@ func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
 	return (nav_id & (GV.NAV_BIT_BLOCK << GV.dir_to_dir_id(dir))) == 0;
 
 # -1 if slide not possible
-func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i):
+# NOTE try_premove should not check NAV because a slide blocked in NAV can still succeed due to rounded corners
+# plus initiating the slide provides auditory fb for player
+func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool):
 	var curr_pos_t:Vector2i = src_pos_t;
 	var curr_tile_id:int = get_tile_id(src_pos_t, true);
 	var src_type_id:int = get_type_id(src_pos_t, true);
@@ -476,8 +478,9 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		curr_type_id = get_type_id(curr_pos_t, true);
 		var curr_back_id:int = get_back_id(curr_pos_t);
 		
-		if not is_compatible(prev_type_id, curr_back_id) or \
-			GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
+		if (check_back and not is_compatible(prev_type_id, curr_back_id)) or \
+		(check_nav and not is_navigatable(dir, get_nav_id(curr_pos_t))) or \
+		GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
 			return nearest_merge_push_count;
 		
 		#push/merge logic
@@ -525,13 +528,16 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	return Vector2i(atlas_x, atlas_y);
 
 #used for shift speed calculation
-func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i) -> int:
+func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool) -> int:
 	var max_distance:int = GV.max_shift_dists[get_type_id(src_pos_t, true)];
 	var next_pos_t:Vector2i = src_pos_t + dir;
 	var distance:int = 0;
 	var src_type_id:int = get_type_id(src_pos_t, true);
 
-	while distance < max_distance and is_compatible(src_type_id, get_back_id(next_pos_t)) and not is_tile(next_pos_t, true):
+	while distance < max_distance and \
+	(not check_back or is_compatible(src_type_id, get_back_id(next_pos_t))) and \
+	(not check_nav or is_navigatable(dir, get_nav_id(next_pos_t))) and \
+	not is_tile(next_pos_t, true):
 		distance += 1;
 		next_pos_t += dir;
 	return distance;
@@ -549,7 +555,7 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, is_splitt
 	if not is_tile(pos_t, true): # moving due to another entity
 		return false;
 	
-	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir);
+	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir, true, false);
 	if push_count != -1:
 		# start animation
 		animate_slide(pusher_entity.entity_id, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
@@ -595,7 +601,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i) -> bool:
 	if not is_tile(pos_t, true):
 		return false;
 	
-	var target_distance:int = get_shift_target_dist(pos_t, dir);
+	var target_distance:int = get_shift_target_dist(pos_t, dir, true, false);
 	if target_distance:
 		#update tile_id and player stats during animation
 		animate_shift(pusher_entity.entity_id, pos_t, dir, target_distance);
