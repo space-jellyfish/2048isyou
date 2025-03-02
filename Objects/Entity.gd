@@ -21,6 +21,8 @@ var entity_id:int;
 var pos_t:Vector2i;
 var premoves:Array[Premove];
 var is_busy:bool = false; #true if premoves are unable to be consumed
+# controls entity movement/behavior
+# path_controller functions should be multithreaded for performance
 var path_controller:RefCounted;
 
 

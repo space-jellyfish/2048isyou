@@ -1857,4 +1857,9 @@ func is_in_area(pos:Vector2) -> bool:
 	$Pathfinder.set_tile_push_limits(GV.tile_push_limits);
 	$Pathfinder.generate_hash_keys();
 	$Pathfinder.init_sa_pool(2000);
+
+	#print($Cells.get_cell_source_id(0, Vector2i.ZERO)) #layer, coord; unnecessary since layer is same as source id
+	#print($Cells.get_cell_source_id(0, Vector2i(1, 0)))
+	#print($Cells.get_cell_atlas_coords(0, Vector2i.ZERO))
+	#print($Cells.get_cell_atlas_coords(0, Vector2i(1, 0)))
 '''

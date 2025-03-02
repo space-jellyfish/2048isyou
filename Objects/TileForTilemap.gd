@@ -337,17 +337,19 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# snap position
 	if is_aligned:
 		position = GV.pos_t_to_world(pos_t);
-	
-	# get tile entity
-	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
-	var tile_entity:Entity = world.get_entity(tile_entity_id, self);
-	
+
 	# update transit_ids
 	if prev_transit_id == move_transit_id:
 		move_transit_id = GV.TransitId.NONE;
 	else:
 		assert(conversion_transit_id == prev_transit_id);
 		conversion_transit_id = GV.TransitId.NONE;
+	
+	# ================ START CRITICAL SECTION ================
+	world.layer_mutexes[GV.LayerId.TILE].lock();
+	# get tile entity
+	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
+	var tile_entity:Entity = world.get_entity(tile_entity_id, self);
 	
 	# remove self entity
 	if is_merging and not is_reversed and merger_tile.new_type_id in [merger_tile.old_type_id, GV.TypeId.REGULAR]:
@@ -362,10 +364,6 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		else:
 			tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
 	
-	# set self entity not busy
-	if tile_entity and prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
-		tile_entity.set_is_busy(false);
-	
 	# remove merger/splitter entity
 	# if governor and merger_tile have the same type, merger entity is kept
 	if is_merging and not is_reversed and merger_tile.old_type_id != merger_tile.new_type_id:
@@ -373,36 +371,12 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	if is_splitted and is_reversed:
 		world.remove_entity(splitter_tile.old_type_id, splitter_tile);
 	
-	# set splitter/merger entity not busy
-	if is_merging:
-		var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
-		if merger_tile_entity:
-			merger_tile_entity.set_is_busy(false);
-	if is_splitted and not is_reversed:
-		var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
-		if splitter_tile_entity:
-			splitter_tile_entity.set_is_busy(false);
-	
 	# update tilemap TILE layer
 	var is_poolable:bool = is_aligned and conversion_transit_id == GV.TransitId.NONE and move_transit_id == GV.TransitId.NONE;
 	if is_poolable:
 		if (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or (is_merging and is_reversed) or (not is_merging and prev_transit_id != GV.TransitId.SPLIT):
 			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
 			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
-			
-	# update tilemap NAV layer
-	if is_aligned and move_transit_id == GV.TransitId.NONE:
-		if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and was_aligned:
-			if is_reversed:
-				world.remove_nav_id(pos_t, GV.NAV_UNITS[-move_controller.dir]);
-				world.remove_nav_id(pos_t - move_controller.dir, GV.NavId.ALL);
-			else:
-				world.remove_nav_id(pos_t, GV.NavId.ALL);
-				world.remove_nav_id(pos_t - move_controller.dir, GV.NAV_UNITS[move_controller.dir]);
-			if is_merging:
-				world.remove_nav_id(merger_tile.pos_t, GV.NavId.ALL);
-			if is_splitted:
-				world.remove_nav_id(splitter_tile.pos_t, GV.NavId.ALL);
 	
 	# update tiles_in_transient and AltId TILE
 	if not is_reversed:
@@ -417,6 +391,36 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 				world.add_tile_in_transient(splitter_tile);
 				assert(world.get_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, false) == -Vector2i.ONE);
 				world.set_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, GV.TileSetSourceId.TILE, splitter_tile.atlas_coords, 1, false);
+	world.layer_mutexes[GV.LayerId.TILE].unlock();
+	# ================ END CRITICAL SECTION ================
+	
+	# set self entity not busy
+	if tile_entity and prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
+		tile_entity.set_is_busy(false);
+	
+	# set splitter/merger entity not busy
+	if is_merging:
+		var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
+		if merger_tile_entity:
+			merger_tile_entity.set_is_busy(false);
+	if is_splitted and not is_reversed:
+		var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
+		if splitter_tile_entity:
+			splitter_tile_entity.set_is_busy(false);
+			
+	# update tilemap NAV layer
+	if is_aligned and move_transit_id == GV.TransitId.NONE:
+		if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and was_aligned:
+			if is_reversed:
+				world.remove_nav_id(pos_t, GV.NAV_UNITS[-move_controller.dir]);
+				world.remove_nav_id(pos_t - move_controller.dir, GV.NavId.ALL);
+			else:
+				world.remove_nav_id(pos_t, GV.NavId.ALL);
+				world.remove_nav_id(pos_t - move_controller.dir, GV.NAV_UNITS[move_controller.dir]);
+			if is_merging:
+				world.remove_nav_id(merger_tile.pos_t, GV.NavId.ALL);
+			if is_splitted:
+				world.remove_nav_id(splitter_tile.pos_t, GV.NavId.ALL);
 	
 	# return to pool or update misc. properties to prepare for next transition
 	if is_poolable:

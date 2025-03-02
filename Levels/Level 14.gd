@@ -28,10 +28,6 @@ func _ready():
 	$DuplicatorPathController.set_world(self);
 	var test:float = $DuplicatorPathController.test_gv();
 	print(test);
-	#print($Cells.get_cell_source_id(0, Vector2i.ZERO)) #layer, coord; unnecessary since layer is same as source id
-	#print($Cells.get_cell_source_id(0, Vector2i(1, 0)))
-	#print($Cells.get_cell_atlas_coords(0, Vector2i.ZERO))
-	#print($Cells.get_cell_atlas_coords(0, Vector2i(1, 0)))
 
 func _input(event):
 	super._input(event);
