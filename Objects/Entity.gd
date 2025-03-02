@@ -18,7 +18,7 @@ signal moved;
 var world:World;
 var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
 var entity_id:int;
-var pos_t:Vector2i;
+var pos_t:Vector2i; # holds a garbage value if body is neither null nor transient tile
 var premoves:Array[Premove];
 var is_busy:bool = false; #true if premoves are unable to be consumed
 
@@ -171,3 +171,10 @@ func get_pos_t() -> Variant:
 		return null;
 	else:
 		return pos_t;
+
+# NOTE key can be pos_t when body != null
+func get_key() -> Variant:
+	# transient tile must be compared with body bc pos_t can hold garbage value
+	if not body or world.get_tile_in_transient(pos_t) == body:
+		return pos_t;
+	return body;
