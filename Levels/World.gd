@@ -14,7 +14,10 @@ var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.pn
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
 
-var entities:Dictionary; #Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
+# Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
+# secondary key is body if not a tile or is tile but not aligned, otherwise pos_t
+# NOTE secondary key is pos_t if tile is in transient
+var entities:Dictionary;
 var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[Entity, DONT_CARE]]
 var premove_callback_upcoming:bool = false;
 
