@@ -19,6 +19,7 @@ using namespace std;
 using namespace godot;
 
 
+// should be thread-safe
 class DuplicatorPathController : public RefCounted {
     GDCLASS(DuplicatorPathController, RefCounted);
 

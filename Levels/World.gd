@@ -42,6 +42,9 @@ var tile_pool:Array[TileForTilemap];
 # tiles should be removed from ~ upon starting move
 var tiles_in_transient:Dictionary; #Dictionary[pos_t, TileForTilemap]
 
+# mutexes
+var layer_mutexes:Array;
+
 
 func _ready():
 	set_level_name();
@@ -54,17 +57,22 @@ func _ready():
 	for entity_id in GV.EntityId.values():
 		entities[entity_id] = Dictionary();
 	
-	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t);
-	add_entity(GV.EntityId.PLAYER, initial_player_pos_t, player);
-	
 	# init entities_with_curr_frame_premoves
 	for entity_id in GV.EntityId.values():
 		entities_with_curr_frame_premoves[entity_id] = Dictionary();
+	
+	# init player
+	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t);
+	add_entity(GV.EntityId.PLAYER, initial_player_pos_t, player);
 	
 	# init trackingCam stuff
 	$TrackingCam.set_target_entity(player, false);
 	$TrackingCam.set_zoom_and_area_scale(GV.VIEWPORT_RESOLUTION.x / GV.tracking_cam_resolution.x);
 	$TrackingCam.moved.connect(_on_tracking_cam_moved);
+	
+	# init mutexes
+	for layer_id in GV.LayerId.values():
+		layer_mutexes.push_back(Mutex.new());
 
 func set_level_name():
 	if has_node("LevelName"):
@@ -176,7 +184,8 @@ func remove_tile_in_transient(tile:TileForTilemap):
 	tiles_in_transient.erase(tile.pos_t);
 
 func get_tile_in_transient(pos_t:Vector2i) -> TileForTilemap:
-	return tiles_in_transient.get(pos_t);
+	var tile:TileForTilemap = tiles_in_transient.get(pos_t); #Dictionary read is thread-safe
+	return tile;
 
 func get_transit_tile(pos_t:Vector2i, include_transient:bool, remove_transient:bool = true) -> TileForTilemap:
 	if include_transient:
@@ -185,6 +194,7 @@ func get_transit_tile(pos_t:Vector2i, include_transient:bool, remove_transient:b
 			if remove_transient:
 				remove_tile_in_transient(tile);
 			return tile;
+	
 	return get_pooled_tile(pos_t);
 
 func is_world_border(pos_t:Vector2i) -> bool:
@@ -253,9 +263,10 @@ func generate_cell(pos_t:Vector2i):
 		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.BORDER_SQUARE, 0));
 		return;
 	if pos_t == initial_player_pos_t:
+		# NOTE assume player entity initialization and player tile generation both happen on world ready, so no critical section needed here
 		set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(GV.TileId.ZERO - 1, GV.TypeId.PLAYER));
-		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
-		#set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.MEMBRANE, 0)); #spawn player in membrane
+		#set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.MEMBRANE, 0)); #spawn player in membrane (and mark as generated)
 		return;
 	
 	#back
@@ -283,12 +294,17 @@ func generate_cell(pos_t:Vector2i):
 		type_id = GV.TypeId.HOSTILE;
 	
 	# tilemap
-	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(tile_id-1, type_id));
 	set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
+	# ================ START CRITICAL SECTION ================
+	layer_mutexes[GV.LayerId.TILE].lock();
+	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(tile_id-1, type_id));
 	
 	# entity
 	if type_id != GV.EntityId.NONE:
 		add_entity(type_id, pos_t, Entity.new(self, null, type_id, pos_t));
+	
+	layer_mutexes[GV.LayerId.TILE].unlock();
+	# ================ END CRITICAL SECTION ================
 
 func get_event_dir(event:InputEventKey) -> Vector2i:
 	if event.keycode in [KEY_W, KEY_UP]:
@@ -327,20 +343,33 @@ func _input(event):
 		player.add_premove(Premove.new(player, Vector2i(-1,0), GV.ActionId.SPLIT))
 		#print(entities[0][Vector2i(1, 0)].is_busy)
 
+# NOTE for multithreading: sequential consistency is unnecessary for pathfinder, only data integrity matters
 func get_atlas_coords(layer_id:int, pos_t:Vector2i, include_transient:bool) -> Vector2i:
 	if include_transient and layer_id == GV.LayerId.TILE:
 		var tile:TileForTilemap = get_tile_in_transient(pos_t);
 		if tile:
-			return tile.atlas_coords;
-	return $Cells.get_cell_atlas_coords(layer_id, pos_t);
+			layer_mutexes[layer_id].lock();
+			var atlas_coords:Vector2i = tile.atlas_coords;
+			layer_mutexes[layer_id].unlock();
+			return atlas_coords;
+	
+	layer_mutexes[layer_id].lock();
+	var atlas_coords:Vector2i = $Cells.get_cell_atlas_coords(layer_id, pos_t);
+	layer_mutexes[layer_id].unlock();
+	return atlas_coords;
 
+# NOTE for multithreading: sequential consistency is unnecessary for pathfinder, only data integrity matters
 func set_atlas_coords(layer_id:int, pos_t:Vector2i, source_id:int, coords:Vector2i, alternative_id:int = 0, include_transient:bool = false):
 	if include_transient and layer_id == GV.LayerId.TILE and source_id == GV.TileSetSourceId.TILE:
 		var tile:TileForTilemap = get_tile_in_transient(pos_t);
 		if tile:
+			layer_mutexes[layer_id].lock();
 			tile.atlas_coords = coords;
+			layer_mutexes[layer_id].unlock();
 			return;
+	layer_mutexes[layer_id].lock();
 	$Cells.set_cell(layer_id, pos_t, source_id, coords, alternative_id);
+	layer_mutexes[layer_id].unlock();
 
 func add_nav_id(pos_t:Vector2i, nav_id:int):
 	#if nav_id == GV.NavId.ALL:
@@ -615,7 +644,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i) -> bool:
 func get_entity(entity_id:int, key:Variant):
 	return entities[entity_id].get(key);
 
-func get_aligned_tile_entity(entity_id:int, pos_t:Vector2i):
+func get_aligned_tile_entity(entity_id:int, pos_t:Vector2i) -> Entity:
 	var tile:TileForTilemap = get_tile_in_transient(pos_t);
 	if tile:
 		return get_entity(entity_id, tile);
@@ -643,31 +672,66 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	var is_merging:bool = is_tile(merge_pos_t, true);
 	
 	for dist_to_src in range(tile_push_count + 1):
-		# get atlas_coord and erase from tilemap
+		# get atlas_coords and erase from tilemap
 		var curr_pos_t:Vector2i = pos_t + dist_to_src * dir;
+		var curr_splitted:bool = (not dist_to_src and is_splitted);
+		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
+		
+		# ================ START CRITICAL SECTION ================
+		layer_mutexes[GV.LayerId.TILE].lock();
 		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t, true);
 		var curr_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
-		# add transit tile
-		var curr_splitted:bool = (not dist_to_src and is_splitted);
-		var curr_merging:bool = (dist_to_src == tile_push_count and is_merging);
+		# get sliding tile
 		# don't use transient tile if is_splitted, splitted tile should be fresh/unanimated
 		var curr_tile:TileForTilemap = get_transit_tile(curr_pos_t, not curr_splitted);
+		
+		# update entity
+		if curr_type_id != GV.EntityId.NONE:
+			var tile_entity:Entity = get_aligned_tile_entity(curr_type_id, curr_pos_t);
+			if tile_entity:
+				tile_entity.set_entity_id_and_body(curr_type_id, curr_tile);
+			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
+
+		# splitting tile stuff
+		var splitting_tile:TileForTilemap;
+		var splitter_atlas_coords:Vector2i;
+		if curr_splitted:
+			# find split atlas coords
+			var splitter_type_id:int = atlas_coords_to_type_id(curr_tile.atlas_coords);
+			splitter_type_id = splitter_type_id if GV.duplicate_upon_split[splitter_type_id] else GV.TypeId.REGULAR;
+			splitter_atlas_coords = Vector2i(curr_tile.atlas_coords.x, splitter_type_id);
+			
+			# get splitting tile
+			splitting_tile = get_transit_tile(pos_t, true);
+			
+			# add entity if duplicated
+			if splitter_type_id != GV.TypeId.REGULAR:
+				add_entity(splitter_type_id, splitting_tile, Entity.new(self, splitting_tile, splitter_type_id, Vector2i()));
+		
+		layer_mutexes[GV.LayerId.TILE].unlock();
+		# ================ END CRITICAL SECTION ================
+		
+		# non-critical splitting tile stuff
+		if curr_splitted:
+			# add splitting tile
+			splitting_tile.initialize_split(unsplit_atlas_coords, splitter_atlas_coords, curr_tile);
+			curr_tile.set_splitter_tile(splitting_tile);
+			if not splitting_tile.is_inside_tree():
+				$TransitTiles.add_child(splitting_tile);
+			else:
+				$TransitTiles.move_child(splitting_tile, -1);
+			
+			# play sound
+			splitting_tile.get_node("Audio/Split").play();
+		
+		# add sliding tile
 		curr_tile.initialize_slide(pusher_entity_id, dir, curr_atlas_coords, back_tile, curr_splitted, curr_merging);
 		if not curr_tile.is_inside_tree():
 			$TransitTiles.add_child(curr_tile);
 		else:
 			$TransitTiles.move_child(curr_tile, -1);
-		#$TransitTiles.call_deferred("add_child", curr_tile);
-		
-		# update entity
-		if curr_type_id != GV.EntityId.NONE:
-			var transient_tile:TileForTilemap = get_tile_in_transient(curr_pos_t);
-			var tile_entity:Entity = get_entity(curr_type_id, transient_tile if transient_tile else curr_pos_t);
-			if tile_entity:
-				tile_entity.set_entity_id_and_body(curr_type_id, curr_tile);
-			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
 		
 		# update back_tile
 		back_tile = curr_tile;
@@ -683,47 +747,18 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	while curr_tile.back_tile != null:
 		curr_tile.back_tile.front_tile = curr_tile;
 		curr_tile = curr_tile.back_tile;
-
-	# add splitting tile
-	if is_splitted:
-		# find split atlas coords
-		var splitter_type_id:int = atlas_coords_to_type_id(curr_tile.atlas_coords);
-		splitter_type_id = splitter_type_id if GV.duplicate_upon_split[splitter_type_id] else GV.TypeId.REGULAR;
-		var splitter_atlas_coords:Vector2i = Vector2i(curr_tile.atlas_coords.x, splitter_type_id);
-		
-		var splitting_tile:TileForTilemap = get_transit_tile(pos_t, true);
-		splitting_tile.initialize_split(unsplit_atlas_coords, splitter_atlas_coords, curr_tile);
-		curr_tile.set_splitter_tile(splitting_tile);
-		if not splitting_tile.is_inside_tree():
-			$TransitTiles.add_child(splitting_tile);
-		else:
-			$TransitTiles.move_child(splitting_tile, -1);
-		#$TransitTiles.call_deferred("add_child", splitting_tile);
-		
-		# add entity if duplicated
-		if splitter_type_id != GV.TypeId.REGULAR:
-			add_entity(splitter_type_id, splitting_tile, Entity.new(self, splitting_tile, splitter_type_id, Vector2i()));
-		
-		# play sound
-		splitting_tile.get_node("Audio/Split").play();
 	
 	# add merging tile (without starting the animation)
 	if is_merging:
+		# ================ START CRITICAL SECTION ================
+		layer_mutexes[GV.LayerId.TILE].lock();
 		# get atlas_coords and erase from tilemap
 		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t, true);
 		var old_type_id:int = atlas_coords_to_type_id(old_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
-		# add transit_tile
-		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
+		# get merging tile
 		var merging_tile:TileForTilemap = get_transit_tile(merge_pos_t, true);
-		merging_tile.initialize_merge(old_atlas_coords, new_atlas_coords, back_tile);
-		back_tile.set_merger_tile(merging_tile);
-		if not merging_tile.is_inside_tree():
-			$TransitTiles.add_child(merging_tile);
-		else:
-			$TransitTiles.move_child(merging_tile, -1);
-		#$TransitTiles.call_deferred("add_child", merging_tile);
 		
 		# update entity
 		if old_type_id != GV.EntityId.NONE:
@@ -731,29 +766,47 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 			if tile_entity:
 				tile_entity.set_entity_id_and_body(old_type_id, merging_tile);
 		
+		layer_mutexes[GV.LayerId.TILE].unlock();
+		# ================ END CRITICAL SECTION ================
+		
+		# add merging tile
+		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
+		merging_tile.initialize_merge(old_atlas_coords, new_atlas_coords, back_tile);
+		back_tile.set_merger_tile(merging_tile);
+		if not merging_tile.is_inside_tree():
+			$TransitTiles.add_child(merging_tile);
+		else:
+			$TransitTiles.move_child(merging_tile, -1);
+		
 		# play sound
 		merging_tile.get_node("Audio/Combine").play();
 
 func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
-	#get atlas_coords and erase from tilemap
+	# ================ START CRITICAL SECTION ================
+	layer_mutexes[GV.LayerId.TILE].lock();
+	# get atlas_coords and erase from tilemap
 	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, true);
 	var type_id:int = atlas_coords_to_type_id(atlas_coords);
 	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 	
-	#add transit_tile
+	# get shifting tile
 	var tile:TileForTilemap = get_transit_tile(pos_t, true);
+	
+	# update entity
+	if type_id != GV.EntityId.NONE:
+		var tile_entity:Entity = get_entity(type_id, pos_t);
+		if tile_entity:
+			tile_entity.set_entity_id_and_body(type_id, tile);
+	
+	layer_mutexes[GV.LayerId.TILE].unlock();
+	# ================ END CRITICAL SECTION ================
+	
+	# add shifting tile
 	tile.initialize_shift(dir, target_dist, atlas_coords);
 	if not tile.is_inside_tree():
 		$TransitTiles.add_child(tile);
 	else:
 		$TransitTiles.move_child(tile, -1);
-	#$TransitTiles.call_deferred("add_child", tile);
 	
-	#update entity
-	if type_id != GV.EntityId.NONE:
-		var tile_entity:Entity = get_entity(type_id, pos_t);
-		if tile_entity:
-			tile_entity.set_entity_id_and_body(type_id, tile);
-
 	#start audio
 	tile.get_node("Audio/Shift").play();

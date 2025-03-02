@@ -443,6 +443,7 @@ var move_sync:Dictionary = {
 # in seconds
 # NOTE use 0 to let entity try premoves as fast as *physically* possible, as determined by TILE_WIDTH and TILE_SLIDE_SPEED
 # NOTE extend to use Vector2i(entity_id, action_id) as key if necessary
+# NOTE phase should be delayed if ThreadPool couldn't finish pathfinding on time
 var move_cooldowns:Dictionary = {
 	EntityId.PLAYER : 0,
 	EntityId.DUPLICATOR : 14,
