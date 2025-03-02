@@ -10,6 +10,7 @@
 #endif
 
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include "OpenClosedList.h"
@@ -18,12 +19,17 @@ using namespace std;
 using namespace godot;
 
 
-class DuplicatorPathController : public Node {
-    GDCLASS(DuplicatorPathController, Node);
+class DuplicatorPathController : public RefCounted {
+    GDCLASS(DuplicatorPathController, RefCounted);
 
 private:
+    static const int DANGER_LV_MAX = 2;
+
     Node* gv = nullptr;
     Node2D* world = nullptr;
+
+    int danger_lv = 0;
+    Vector2i danger_escape_dir = Vector2i(1, 0);
 
 protected:
 	static void _bind_methods();
@@ -34,7 +40,8 @@ public:
     void set_world(Node2D* w);
     Node2D* get_world();
 
-    float test_gv();
+    void update_danger(Vector2i pos_t);
+    Vector3i get_action(Vector2i pos_t);
 };
 
 #endif

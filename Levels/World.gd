@@ -14,7 +14,10 @@ var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.pn
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
 
-var entities:Dictionary; #Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
+# Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
+# secondary key is body if it exists and pos_t otherwise
+# NOTE using pos_t (as secondary key) doesn't work for an aligned tile if it's in transient
+var entities:Dictionary;
 var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[Entity, DONT_CARE]]
 var premove_callback_upcoming:bool = false;
 
@@ -611,6 +614,12 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i) -> bool:
 
 func get_entity(entity_id:int, key:Variant):
 	return entities[entity_id].get(key);
+
+func get_aligned_tile_entity(entity_id:int, pos_t:Vector2i):
+	var tile:TileForTilemap = get_tile_in_transient(pos_t);
+	if tile:
+		return get_entity(entity_id, tile);
+	return get_entity(entity_id, pos_t);
 
 func remove_entity(entity_id:int, key:Variant):
 	entities[entity_id].erase(key);

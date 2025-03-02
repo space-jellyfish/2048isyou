@@ -21,6 +21,7 @@ var entity_id:int;
 var pos_t:Vector2i;
 var premoves:Array[Premove];
 var is_busy:bool = false; #true if premoves are unable to be consumed
+var path_controller:RefCounted;
 
 
 func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
