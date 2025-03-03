@@ -84,7 +84,7 @@ Press Ctrl/Cmd + P to spend points to view current puzzle's official solution.
   - AStar
   - IDAStar
   - Jump Point Search (in progress)
-- Zobrist Hashing
+  - Zobrist Hashing
 
 ## Installation
 
