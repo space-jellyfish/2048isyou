@@ -1742,7 +1742,7 @@ func dir_id_to_nav_id(dir_id:int) -> int:
 func dir_to_nav_id(dir:Vector2i) -> int:
 	return dir_id_to_nav_id(dir_to_dir_id(dir));
 
-func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
+func is_navigable(dir:Vector2i, nav_id:int) -> bool:
 	var dir_id:int = GV.dir_to_dir_id(dir);
 	assert(dir_id in GV.DirectionId.values());
 	
