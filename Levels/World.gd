@@ -481,7 +481,7 @@ func is_compatible(type_id:int, back_id:int) -> bool:
 	return type_id in [GV.TypeId.PLAYER, GV.TypeId.REGULAR];
 
 # dir is obstructed if NavId & (NAV_BIT_BLOCK << DirectionId) != 0
-func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
+func is_navigable(dir:Vector2i, nav_id:int) -> bool:
 	return (nav_id & (GV.NAV_BIT_BLOCK << GV.dir_to_dir_id(dir))) == 0;
 
 # -1 if slide not possible
@@ -490,8 +490,7 @@ func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
 func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool):
 	var curr_pos_t:Vector2i = src_pos_t;
 	var curr_tile_id:int = get_tile_id(src_pos_t, false);
-	var src_type_id:int = get_type_id(src_pos_t, false);
-	var curr_type_id:int = src_type_id;
+	var curr_type_id:int = get_type_id(src_pos_t, false);
 	var push_count:int = 0;
 	var nearest_merge_push_count:int = -1;
 	
@@ -499,11 +498,11 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 	# NOTE no need to check pusher compatibility with src_back_id since pusher couldn't have collided if incompatible (tile collision_shape is scaled)
 	var pusher_pos_t:Variant = pusher_entity.get_pos_t();
 	if pusher_pos_t != src_pos_t:
-		if GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[src_type_id]:
+		if GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
 			return nearest_merge_push_count;
 		push_count += 1;
 	
-	while push_count <= GV.tile_push_limits[src_type_id]:
+	while push_count <= GV.tile_push_limits[pusher_entity.entity_id]:
 		#check for obstruction
 		var prev_type_id:int = curr_type_id;
 		curr_pos_t += dir;
@@ -511,7 +510,7 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		var curr_back_id:int = get_back_id(curr_pos_t);
 		
 		if (check_back and not is_compatible(prev_type_id, curr_back_id)) or \
-		(check_nav and not is_navigatable(dir, get_nav_id(curr_pos_t))) or \
+		(check_nav and not is_navigable(dir, get_nav_id(curr_pos_t))) or \
 		GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
 			return nearest_merge_push_count;
 		
@@ -527,7 +526,7 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 					return push_count; #bubble
 				return nearest_merge_push_count;
 		
-		if push_count == GV.tile_push_limits[src_type_id]:
+		if push_count == GV.tile_push_limits[pusher_entity.entity_id]:
 			return nearest_merge_push_count;
 		push_count += 1;
 	return -1;
@@ -568,7 +567,7 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, ch
 
 	while distance < max_distance and \
 	(not check_back or is_compatible(src_type_id, get_back_id(next_pos_t))) and \
-	(not check_nav or is_navigatable(dir, get_nav_id(next_pos_t))) and \
+	(not check_nav or is_navigable(dir, get_nav_id(next_pos_t))) and \
 	not is_tile(next_pos_t, false):
 		distance += 1;
 		next_pos_t += dir;
