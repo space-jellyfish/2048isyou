@@ -699,9 +699,9 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var splitter_atlas_coords:Vector2i;
 		if curr_splitted:
 			# find split atlas coords
-			var splitter_type_id:int = atlas_coords_to_type_id(curr_tile.atlas_coords);
+			var splitter_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 			splitter_type_id = splitter_type_id if GV.duplicate_upon_split[splitter_type_id] else GV.TypeId.REGULAR;
-			splitter_atlas_coords = Vector2i(curr_tile.atlas_coords.x, splitter_type_id);
+			splitter_atlas_coords = Vector2i(curr_atlas_coords.x, splitter_type_id);
 			
 			# get splitting tile
 			splitting_tile = get_transit_tile(pos_t, true);
@@ -712,6 +712,18 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		layer_mutexes[GV.LayerId.TILE].unlock();
 		# ================ END CRITICAL SECTION ================
+		
+		# non-critical sliding tile stuff
+		curr_tile.initialize_slide(pusher_entity_id, dir, curr_atlas_coords, back_tile, curr_splitted, curr_merging);
+		if not curr_tile.is_inside_tree():
+			$TransitTiles.add_child(curr_tile);
+		else:
+			$TransitTiles.move_child(curr_tile, -1);
+
+		# play sound
+		# NOTE attach split/merge sounds to split/merge tiles
+		if not dist_to_src and not is_splitted:
+			curr_tile.get_node("Audio/Slide").play();
 		
 		# non-critical splitting tile stuff
 		if curr_splitted:
@@ -726,20 +738,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 			# play sound
 			splitting_tile.get_node("Audio/Split").play();
 		
-		# add sliding tile
-		curr_tile.initialize_slide(pusher_entity_id, dir, curr_atlas_coords, back_tile, curr_splitted, curr_merging);
-		if not curr_tile.is_inside_tree():
-			$TransitTiles.add_child(curr_tile);
-		else:
-			$TransitTiles.move_child(curr_tile, -1);
-		
 		# update back_tile
 		back_tile = curr_tile;
-		
-		# play sound
-		# NOTE attach split/merge sounds to split/merge tiles
-		if not dist_to_src and not is_splitted:
-			curr_tile.get_node("Audio/Slide").play();
 	
 	# init front_tiles and add slide tiles to tree
 	# add frontmost tiles first so chain moves in sync every frame? NAH, collision uses positions from previous frame

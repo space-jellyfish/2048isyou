@@ -81,9 +81,6 @@ func try_premove(premove:Premove):
 		if not is_roaming():
 			set_is_busy(true);
 		
-		match entity_id:
-			GV.EntityId.PLAYER:
-				world.get_node("Pathfinder").set_player_last_dir(premove.dir);
 	else:
 		print("premoves cleared")
 		clear_premoves();
@@ -130,12 +127,6 @@ func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
 	
 	#update dictionary keys
 	change_keys(self.entity_id, entity_id, old_key, pos_t);
-
-	#update Pathfinder.player_pos_t
-	if entity_id == GV.EntityId.PLAYER:
-		if self.pos_t != pos_t:
-			world.get_node("Pathfinder").rrd_clear_iad();
-		world.get_node("Pathfinder").set_player_pos(pos_t);
 	
 	#emit moved signal
 	var old_pos:Vector2 = get_position();
