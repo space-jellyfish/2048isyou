@@ -1863,3 +1863,15 @@ func is_in_area(pos:Vector2) -> bool:
 	#print($Cells.get_cell_atlas_coords(0, Vector2i.ZERO))
 	#print($Cells.get_cell_atlas_coords(0, Vector2i(1, 0)))
 '''
+
+'''
+		match entity_id:
+			GV.EntityId.PLAYER:
+				world.get_node("Pathfinder").set_player_last_dir(premove.dir);
+
+	#update Pathfinder.player_pos_t
+	if entity_id == GV.EntityId.PLAYER:
+		if self.pos_t != pos_t:
+			world.get_node("Pathfinder").rrd_clear_iad();
+		world.get_node("Pathfinder").set_player_pos(pos_t);
+'''
