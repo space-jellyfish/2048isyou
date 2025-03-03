@@ -84,6 +84,7 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
 
     // escape has highest priority
     if (danger_lv) {
-        // check if 
+        // check if escape_dir is available
+        if ()
     }
 }
