@@ -1,3 +1,3 @@
-extends Pathfinder
-
-@onready var game:Node2D = $"root/Game";
+#extends Pathfinder
+#
+#@onready var game:Node2D = $"/root/Game";

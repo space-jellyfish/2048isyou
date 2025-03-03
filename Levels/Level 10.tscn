@@ -3,9 +3,9 @@
 [ext_resource type="Script" path="res://Levels/Level 10.gd" id="1_g4a75"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_krwqn"]
 [ext_resource type="TileSet" uid="uid://doeyofpqxc1ic" path="res://Tilesets/wall_set.tres" id="3_xyo2m"]
-[ext_resource type="PackedScene" uid="uid://drayn2lsacylt" path="res://Objects/Freedom.tscn" id="4_q8v3e"]
-[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Savepoints/Goal_1x2_Concave.tscn" id="6_sy5ff"]
-[ext_resource type="PackedScene" uid="uid://loay1bssxd25" path="res://Savepoints/Savepoint_1x1_Level.tscn" id="7_jyyit"]
+[ext_resource type="PackedScene" path="res://Objects/LevelPeripheryCuller.tscn" id="4_q8v3e"]
+[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Archive/Savepoints/Goal_1x2_Concave.tscn" id="6_sy5ff"]
+[ext_resource type="PackedScene" uid="uid://loay1bssxd25" path="res://Archive/Savepoints/Savepoint_1x1_Level.tscn" id="7_jyyit"]
 [ext_resource type="PackedScene" uid="uid://bs18ouhqw13ql" path="res://Enemy/Baddie 2.tscn" id="7_v6r6u"]
 [ext_resource type="PackedScene" uid="uid://ccfedk60ha7ud" path="res://Enemy/Baddie 1.tscn" id="8_genkh"]
 
@@ -46,7 +46,7 @@ layer_0/tile_data = PackedInt32Array(0, 2, 0, 3, 2, 0, 4, 2, 0, 5, 2, 0, 6, 2, 0
 
 [node name="Freedom" parent="." instance=ExtResource("4_q8v3e")]
 
-[node name="ScoreTiles" type="Node2D" parent="."]
+[node name="Tiles" type="Node2D" parent="."]
 
 [node name="SavePoints" type="Node2D" parent="."]
 

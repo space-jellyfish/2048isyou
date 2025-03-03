@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://Levels/Level 12.gd" id="1_qjfa5"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_mvoie"]
-[ext_resource type="Script" path="res://Camera/TrackingCamLevel.gd" id="3_yelvu"]
+[ext_resource type="Script" path="res://Archive/TrackingCamOldForLevel.gd" id="3_yelvu"]
 [ext_resource type="TileSet" uid="uid://doeyofpqxc1ic" path="res://Tilesets/wall_set.tres" id="4_5jc0c"]
 
 [node name="Level 12" type="Node2D"]
@@ -45,7 +45,7 @@ script = ExtResource("3_yelvu")
 tile_set = ExtResource("4_5jc0c")
 format = 2
 
-[node name="ScoreTiles" type="Node2D" parent="."]
+[node name="Tiles" type="Node2D" parent="."]
 
 [node name="SavePoints" type="Node2D" parent="."]
 

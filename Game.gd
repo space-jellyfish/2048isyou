@@ -2,21 +2,18 @@ extends Node2D
 
 @onready var GV:Node = $"/root/GV";
 
+@onready var main_theme:Theme = load("res://Themes/main_theme.tres");
 @onready var fader:AnimationPlayer = $"Overlay/AnimationPlayer";
 @onready var right_sidebar:VBoxContainer = $"GUI/HBoxContainer/RightSideBar";
 @onready var mode_label:Label = right_sidebar.get_node("MoveMode");
 @onready var sa_search_id_selector:OptionButton = $GUI/Control/SASearchIdSelector;
-
-@onready var combine_sound = $"Audio/Combine";
-@onready var slide_sound = $"Audio/Slide";
-@onready var split_sound = $"Audio/Split";
-@onready var shift_sound = $"Audio/Shift";
 
 var current_level:Node2D;
 var current_level_name:Label;
 var levels = [];
 var level_saves = [];
 var next_level_index:int;
+var messages_shown:Array[bool];
 
 
 func _ready():
@@ -28,16 +25,17 @@ func _ready():
 	add_level(GV.current_level_index);
 	
 	#init mode label
-	change_move_mode(GV.player_snap);
+	change_move_mode(GV.snap_mode);
 
 	#init dropdown button
 	for search_id in GV.SASearchId.SEARCH_END:
 		sa_search_id_selector.add_item(GV.SASearchId.keys()[search_id]);
 	
-	#generate hash numbers
-	#$Pathfinder.generate_hash_numbers(GV.RESOLUTION_T);
+	#init messages_shown
+	messages_shown.resize(GV.MessageId.size());
+	messages_shown.fill(false);
 	
-	#testing
+	get_viewport().set_as_audio_listener_2d(true);
 
 signal toggle_game_paused(is_paused : bool)
 
@@ -51,13 +49,13 @@ var game_paused : bool = false:
 
 func _input(event):
 	if event.is_action_pressed("change_move_mode") and GV.abilities["move_mode"]:
-		change_move_mode(not GV.player_snap);
+		change_move_mode(not GV.snap_mode);
 		
 		#update player(s) state
 		for player in current_level.players:
 			if player.get_state() not in ["merging1", "merging2", "combining", "splitting"]:
 				var next_state;
-				if GV.player_snap:
+				if GV.snap_mode:
 					next_state = "idle";
 					#update player pos_t
 					player.pos_t = GV.world_to_pos_t(player.position);
@@ -114,19 +112,19 @@ func add_level(n):
 	if current_level is Level:
 		var player_saved = current_level.player_saved;
 		if is_instance_valid(player_saved):
-			current_level.get_node("ScoreTiles").remove_child(current_level.player_saved);
+			current_level.get_node("Tiles").remove_child(current_level.player_saved);
 			player_saved.free();
 	
 	#migrate old snapshot locations
 	if GV.reverting and GV.current_level_from_save:
-		var scoretiles = current_level.get_node("ScoreTiles");
+		var tiles = current_level.get_node("Tiles");
 		var baddies = current_level.get_node("Baddies");
 		var tiles_snapshot_locations = GV.current_savepoint_tiles_snapshot_locations.pop_back();
 		var tiles_snapshot_locations_new = GV.current_savepoint_tiles_snapshot_locations_new.pop_back();
 		var baddies_snapshot_locations = GV.current_savepoint_baddies_snapshot_locations.pop_back();
 		
-		for tile_itr in scoretiles.get_child_count():
-			var tile = scoretiles.get_child(tile_itr);
+		for tile_itr in tiles.get_child_count():
+			var tile = tiles.get_child(tile_itr);
 			tile.snapshot_locations = tiles_snapshot_locations[tile_itr];
 			tile.snapshot_locations_new = tiles_snapshot_locations_new[tile_itr];
 		for baddie_itr in baddies.get_child_count():
@@ -165,9 +163,9 @@ func change_level(n):
 		GV.current_savepoint_baddies_snapshot_locations.clear();
 		
 		#clear snapshot locations
-		for scoretile in current_level.scoretiles.get_children():
-			scoretile.snapshot_locations.clear();
-			scoretile.snapshot_locations_new.clear();
+		for tile in current_level.tiles.get_children():
+			tile.snapshot_locations.clear();
+			tile.snapshot_locations_new.clear();
 		for baddie in current_level.baddies.get_children():
 			baddie.snapshot_locations.clear();
 
@@ -195,7 +193,7 @@ func _on_animation_player_animation_finished(anim_name):
 			
 
 func change_move_mode(snap):
-	GV.player_snap = snap;
+	GV.snap_mode = snap;
 	
 	#update label
 	var s:String = "Mode: ";
@@ -229,3 +227,29 @@ func save_level(savepoint_id):
 	level_saves[GV.current_level_index] = packed_level;
 	if savepoint_id != -1:
 		GV.current_savepoint_saves.push_back(packed_level);
+
+func show_message(message_id:int):
+	#check if message is already shown
+	if messages_shown[message_id]:
+		return;
+	
+	#add error msg
+	var label:Label = Label.new();
+	label.theme = main_theme;
+	label.text = GV.messages[message_id];
+	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+	right_sidebar.add_child(label);
+	
+	#play fade-out animation and free label
+	var tween = create_tween();
+	tween.set_ease(Tween.EASE_IN);
+	tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
+	tween.tween_property(label, "modulate:a", 0, GV.ERROR_MESSAGE_FADE_TIME).set_trans(Tween.TRANS_EXPO);
+	tween.finished.connect(_on_error_label_faded, label, message_id);
+	
+	#update messages_shown
+	messages_shown[message_id] = true;
+
+func _on_error_label_faded(label:Label, message_id:int):
+	label.queue_free();
+	messages_shown[message_id] = false;

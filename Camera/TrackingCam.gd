@@ -1,99 +1,92 @@
+# trigger pan when player exits central area
 extends Camera2D
 class_name TrackingCam
 
-signal transition_started(target:Vector2, track_dir:Vector2i);
+signal transition_started;
+signal transition_finished;
+signal moved(pos:Vector2);
+var target_entity:Entity;
+var pos_tween:Tween;
 
-@onready var game:Node2D = $"/root/Game";
-@onready var level:Node2D = game.current_level;
-
-@export var max_rx:float = 0.3125; #ratio between dx and level width to make camera move
-@export var max_ry:float = 0.25;
-
-var track_pos:Vector2;
-var track_dir:Vector2i;
-var clamped_track_dir:Vector2i; #track_dir but only if target is clamped
-
-var active:bool;
-var max_dx:float;
-var max_dy:float;
-
-var tween:Tween;
-var target:Vector2;
-var min_pos:Vector2;
-var max_pos:Vector2;
+@onready var world:World = get_parent();
+@onready var area_size:Vector2 = $Area2D/CollisionRect.shape.size; #after zooming
 
 
-func _ready():
-	active = true;
-	level.action_finished.connect(_on_action_finished);
+# if transition true, transition iff position of new target_entity is outside area
+# otherwise jump to position of new target_entity
+func set_target_entity(target_entity:Entity, transition:bool):
+	#connect/disconnect target_entity.moved
+	if self.target_entity:
+		self.target_entity.moved.disconnect(_on_target_entity_moved);
+	if target_entity:
+		target_entity.moved.connect(_on_target_entity_moved);
 	
-	#set zoom
-	zoom.x = minf(GV.RESOLUTION.x / level.resolution.x, GV.RESOLUTION.y / level.resolution.y);
-	zoom.y = zoom.x;
+	#set
+	self.target_entity = target_entity;
 	
-	#find max coord offsets from center of screen
-	max_dx = max_rx * level.resolution.x;
-	max_dy = max_ry * level.resolution.y;
+	#update position
+	if target_entity:
+		if transition:
+			_on_target_entity_moved();
+		else:
+			set_position(target_entity.get_position());
+
+# transition if target_entity leaves area from zooming
+func set_zoom_and_area_scale(zoom_ratio:float):
+	set_zoom(zoom_ratio * Vector2.ONE);
+	$Area2D.scale = Vector2.ONE / get_zoom(); #this performs element-wise division
+	area_size = $Area2D/CollisionRect.shape.size / zoom_ratio;
 	
-	#find position limits
-	min_pos = Vector2(level.min_pos.x + level.resolution.x/2, level.min_pos.y + level.resolution.y/2);
-	max_pos = Vector2(level.max_pos.x - level.resolution.x/2, level.max_pos.y - level.resolution.y/2);
+	if target_entity:
+		_on_target_entity_moved();
 
-func avg_player_pos() -> Vector2:
-	return Vector2.ZERO; #override in child class
+func is_in_area(pos:Vector2) -> bool:
+	var offset:Vector2 = (pos - position).abs();
+	return offset.x <= area_size.x / 2 and offset.y <= area_size.y / 2;
 
-func _on_action_finished():
-	if active:
-		#update track_pos
-		track_pos = avg_player_pos();
-		
-		#figure out whether to move
-		#if tracking towards clamped target, don't restart track in that direction
-		var dx = track_pos.x - position.x;
-		var dy = track_pos.y - position.y;
-		var track:bool = false;
-		track_dir = Vector2i.ZERO;
-		if (dx >= max_dx and !GV.is_approx_equal(position.x, max_pos.x, 0.005) and clamped_track_dir.x != 1):
-			track_dir.x = 1;
-			track = true;
-		elif (dx <= -max_dx and !GV.is_approx_equal(position.x, min_pos.x, 0.005) and clamped_track_dir.x != -1):
-			track_dir.x = -1;
-			track = true;
-		if (dy >= max_dy and !GV.is_approx_equal(position.y, max_pos.y, 0.005) and clamped_track_dir.y != 1):
-			track_dir.y = 1;
-			track = true;
-		elif (dy <= -max_dy and !GV.is_approx_equal(position.y, min_pos.y, 0.005) and clamped_track_dir.y != -1):
-			track_dir.y = -1;
-			track = true;
-		
-		if track:
-			var track_rx:float = GV.TRACKING_CAM_LEAD_RATIO if track_dir.x else GV.TRACKING_CAM_SLACK_RATIO;
-			var track_ry:float = GV.TRACKING_CAM_LEAD_RATIO if track_dir.y else GV.TRACKING_CAM_SLACK_RATIO;
-			target.x = position.x + track_rx * (track_pos.x - position.x);
-			target.y = position.y + track_ry * (track_pos.y - position.y);
-			
-			#target = target.clamp(min_pos, max_pos);
-			#clamp target, set clamped_track_dir
-			clamped_track_dir = Vector2i.ZERO;
-			if target.x <= min_pos.x:
-				target.x = min_pos.x;
-				clamped_track_dir.x = -1;
-			elif target.x >= max_pos.x:
-				target.x = max_pos.x;
-				clamped_track_dir.x = 1;
-			if target.y <= min_pos.y:
-				target.y = min_pos.y;
-				clamped_track_dir.y = -1;
-			elif target.y >= max_pos.y:
-				target.y = max_pos.y;
-				clamped_track_dir.y = 1;
-			
-			tween = create_tween();
-			tween.set_ease(Tween.EASE_OUT);
-			tween.finished.connect(_on_tween_transitioned);
-			tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
-			tween.tween_property(self, "position", target, GV.TRACKING_CAM_TRANSITION_TIME).set_trans(Tween.TRANS_QUINT);
-			transition_started.emit(target, track_dir);
+# transition if target_entity is outside area
+func _on_target_entity_moved():
+	var target_entity_pos:Vector2 = target_entity.get_position();
+	if not is_in_area(target_entity_pos):
+		transition(target_entity_pos, not target_entity.is_roaming());
 
-func _on_tween_transitioned():
-	clamped_track_dir = Vector2i.ZERO;
+# assume transition has been triggered (target_entity_pos is outside area)
+func transition(target_entity_pos:Vector2, cardinal_only:bool):
+	var target_entity_offset:Vector2 = target_entity_pos - position;
+	var target_pos:Vector2;
+	
+	if cardinal_only:
+		# only track the axes on which target_entity is outside area
+		var tracked_axes:Vector2i = Vector2i(abs(target_entity_offset.x) > area_size.x / 2, abs(target_entity_offset.y) > area_size.y / 2);
+		target_pos = position + GV.TRACKING_CAM_LEAD_RATIO * target_entity_offset * Vector2(tracked_axes);
+	else:
+		# track both axes (diagonally)
+		target_pos = position + GV.TRACKING_CAM_LEAD_RATIO * target_entity_offset;
+	
+	if pos_tween:
+		pos_tween.kill();
+	pos_tween = create_tween();
+	pos_tween.set_ease(Tween.EASE_OUT);
+	pos_tween.set_trans(Tween.TRANS_QUINT);
+	pos_tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
+	pos_tween.tween_method(transition_step, position, target_pos, GV.TRACKING_CAM_TRANSITION_TIME);
+	transition_started.emit(target_pos);
+	pos_tween.finished.connect(_on_pos_tween_finished);
+
+func transition_step(pos:Vector2):
+	var old_pos:Vector2 = position;
+	
+	# stop pos_tween and don't update if position = pos causes player to be outside area
+	if is_in_area(target_entity.get_position()):
+		set_position(pos);
+		if not is_in_area(target_entity.get_position()):
+			set_position(old_pos);
+			pos_tween.kill();
+	else:
+		set_position(pos);
+	
+	if position != old_pos:
+		moved.emit(position);
+
+func _on_pos_tween_finished():
+	transition_finished.emit();
