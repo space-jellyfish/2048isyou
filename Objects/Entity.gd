@@ -63,11 +63,11 @@ func try_curr_frame_premoves():
 func try_premove(premove:Premove):
 	var initiated:bool = false;
 	if premove.action_id == GV.ActionId.SLIDE:
-		initiated = world.try_slide(self, premove.tile_entity, premove.dir);
+		initiated = world.try_slide(self, premove.tile_entity, premove.dir, false);
 	elif premove.action_id == GV.ActionId.SPLIT:
-		initiated = world.try_split(self, premove.tile_entity, premove.dir);
+		initiated = world.try_split(self, premove.tile_entity, premove.dir, false);
 	elif premove.action_id == GV.ActionId.SHIFT:
-		initiated = world.try_shift(self, premove.tile_entity, premove.dir);
+		initiated = world.try_shift(self, premove.tile_entity, premove.dir, false);
 	
 	if initiated:
 		# animation should be started from action_func
