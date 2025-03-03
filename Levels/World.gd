@@ -489,8 +489,8 @@ func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
 # plus initiating the slide provides auditory fb for player
 func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool):
 	var curr_pos_t:Vector2i = src_pos_t;
-	var curr_tile_id:int = get_tile_id(src_pos_t, true);
-	var src_type_id:int = get_type_id(src_pos_t, true);
+	var curr_tile_id:int = get_tile_id(src_pos_t, false);
+	var src_type_id:int = get_type_id(src_pos_t, false);
 	var curr_type_id:int = src_type_id;
 	var push_count:int = 0;
 	var nearest_merge_push_count:int = -1;
@@ -507,7 +507,7 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		#check for obstruction
 		var prev_type_id:int = curr_type_id;
 		curr_pos_t += dir;
-		curr_type_id = get_type_id(curr_pos_t, true);
+		curr_type_id = get_type_id(curr_pos_t, false);
 		var curr_back_id:int = get_back_id(curr_pos_t);
 		
 		if (check_back and not is_compatible(prev_type_id, curr_back_id)) or \
@@ -517,7 +517,7 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		
 		#push/merge logic
 		var prev_tile_id:int = curr_tile_id;
-		curr_tile_id = get_tile_id(curr_pos_t, true);
+		curr_tile_id = get_tile_id(curr_pos_t, false);
 		
 		if is_ids_mergeable(prev_tile_id, curr_tile_id):
 			if nearest_merge_push_count == -1:
@@ -561,15 +561,15 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 
 #used for shift speed calculation
 func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool) -> int:
-	var max_distance:int = GV.max_shift_dists[get_type_id(src_pos_t, true)];
+	var src_type_id:int = get_type_id(src_pos_t, false);
+	var max_distance:int = GV.max_shift_dists[src_type_id];
 	var next_pos_t:Vector2i = src_pos_t + dir;
 	var distance:int = 0;
-	var src_type_id:int = get_type_id(src_pos_t, true);
 
 	while distance < max_distance and \
 	(not check_back or is_compatible(src_type_id, get_back_id(next_pos_t))) and \
 	(not check_nav or is_navigatable(dir, get_nav_id(next_pos_t))) and \
-	not is_tile(next_pos_t, true):
+	not is_tile(next_pos_t, false):
 		distance += 1;
 		next_pos_t += dir;
 	return distance;
@@ -585,7 +585,7 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 			tile.initialize_slide(pusher_entity.entity_id, dir, tile.atlas_coords, null, false, false);
 		return true;
 	
-	if not is_tile(pos_t, true): # moving due to another entity
+	if not is_tile(pos_t, false): # moving due to another entity
 		return false;
 	
 	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir, true, false);
@@ -605,11 +605,11 @@ func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 			game.show_message(GV.MessageId.SPLIT_NA);
 		return false;
 	
-	if not is_tile(pos_t, true):
+	if not is_tile(pos_t, false):
 		return false;
 	
 	#check if split possible
-	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, true);
+	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, false);
 	var splitted_coords:Vector2i = get_splitted_tile_atlas_coords(src_coords);
 	if splitted_coords == -Vector2i.ONE:
 		return false;
@@ -634,7 +634,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 			game.show_message(GV.MessageId.SHIFT_NA);
 		return false;
 	
-	if not is_tile(pos_t, true):
+	if not is_tile(pos_t, false):
 		return false;
 	
 	var target_distance:int = get_shift_target_dist(pos_t, dir, true, false);
@@ -674,7 +674,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
 	var merge_pos_t:Vector2i = pos_t + (tile_push_count + 1) * dir;
-	var is_merging:bool = is_tile(merge_pos_t, true);
+	var is_merging:bool = is_tile(merge_pos_t, false);
 	
 	for dist_to_src in range(tile_push_count + 1):
 		# get atlas_coords and erase from tilemap
@@ -684,7 +684,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# ================ START CRITICAL SECTION ================
 		layer_mutexes[GV.LayerId.TILE].lock();
-		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t, true);
+		curr_atlas_coords = get_atlas_coords(GV.LayerId.TILE, curr_pos_t, false);
 		var curr_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
@@ -758,7 +758,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		# ================ START CRITICAL SECTION ================
 		layer_mutexes[GV.LayerId.TILE].lock();
 		# get atlas_coords and erase from tilemap
-		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t, true);
+		var old_atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, merge_pos_t, false);
 		var old_type_id:int = atlas_coords_to_type_id(old_atlas_coords);
 		set_atlas_coords(GV.LayerId.TILE, merge_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
@@ -790,7 +790,7 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	# ================ START CRITICAL SECTION ================
 	layer_mutexes[GV.LayerId.TILE].lock();
 	# get atlas_coords and erase from tilemap
-	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, true);
+	var atlas_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t, false);
 	var type_id:int = atlas_coords_to_type_id(atlas_coords);
 	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 	
