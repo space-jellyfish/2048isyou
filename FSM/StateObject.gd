@@ -32,4 +32,3 @@ func changeParentState():
 
 func handleInput(_event):
 	pass
-

@@ -31,7 +31,7 @@ func _physics_process(delta):
 			if collider.is_in_group("player"):
 				collider.die();
 			
-			elif collider is ScoreTile and chasing:
+			elif collider is TileForFSM and chasing:
 				var wall = game.current_level.get_node("Walls")
 				print(collider.position)
 				print(wall.local_to_map(collider.position))

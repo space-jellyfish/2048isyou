@@ -19,8 +19,8 @@ var combinations:Array[Array] = [[1]];
 
 #size-related stuff
 const TILE_WIDTH:float = 40; #px
-const RESOLUTION:Vector2 = Vector2(1600, 1200);
-const RESOLUTION_T:Vector2i = Vector2i(RESOLUTION/TILE_WIDTH);
+const VIEWPORT_RESOLUTION:Vector2 = Vector2(1600, 1200);
+var tracking_cam_resolution:Vector2 = Vector2(800, 600);
 const BORDER_DISTANCE_T:int = 120; #128; #2000000000;
 const BORDER_MIN_POS_T:Vector2i = -Vector2i(BORDER_DISTANCE_T, BORDER_DISTANCE_T);
 const BORDER_MAX_POS_T:Vector2i = Vector2i(BORDER_DISTANCE_T, BORDER_DISTANCE_T);
@@ -28,8 +28,8 @@ const WORLD_MIN_POS_T:Vector2i = BORDER_MIN_POS_T + Vector2i.ONE; #leave gap for
 const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
-const LEVEL_COUNT:int = 16;
-var current_level_index:int = 15;
+const LEVEL_COUNT:int = 17;
+var current_level_index:int = 14;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
@@ -42,13 +42,8 @@ const TILE_GEN_POW_MAX:int = 11;
 const TILE_VALUE_COUNT:int = 2 * TILE_POW_MAX + 3;
 const TILE_LOAD_BUFFER:float = 8 * TILE_WIDTH;
 const TILE_UNLOAD_BUFFER:float = 8 * TILE_WIDTH;
-const P_GEN_INVINCIBLE:float = 0.0005;
+const P_GEN_DUPLICATOR:float = 0.0005;
 const P_GEN_HOSTILE:float = 0.005;
-
-#pathfinder-related stuff
-#var level_hash_numbers:Array = [];
-#var x_hash_numbers:Array = [];
-#var y_hash_numbers:Array = [];
 
 #save-related stuff
 #note non-export variables are not saved in packed scene
@@ -73,25 +68,26 @@ var level_initial_savepoint_ids:Array[int] = []; #id of goal where player first 
 var level_initial_player_powers:Array[int] = [];
 var level_initial_player_ssigns:Array[int] = [];
 
+const ERROR_MESSAGE_FADE_TIME:float = 2;
 const FADER_SPEED_SCALE_MAJOR:float = 1;
 const FADER_SPEED_SCALE_MINOR:float = 1.2;
 const LEVEL_NAME_FADE_IN_TIME:float = 1.6;
 const LEVEL_NAME_DISPLAY_TIME:float = 3;
 const LEVEL_NAME_FADE_OUT_TIME:float = 1.2;
 
-const TRACKING_CAM_LEAD_RATIO:float = 1.35; #target = pos + ratio * (track_pos - pos)
+const TRACKING_CAM_LEAD_RATIO:float = 1.24; #target = pos + ratio * (track_pos - pos)
 const TRACKING_CAM_SLACK_RATIO:float = 0.15; #0.25; #ratio applied to slack (tracking movement along the non-trigger axis)
 const TRACKING_CAM_TRANSITION_TIME:float = 1.28;
 const PLAYER_SPAWN_INVINCIBILITY_TIME:float = 0.25;
 
+const SNAP_TOLERANCE:float = 0.1; #epsilon; in px
+const COLLISION_TEST_DISTANCE:float = 0.4;
 const PLAYER_COLLIDER_SCALE:float = 0.98;
-const PLAYER_SNAP_RANGE:float = TILE_WIDTH * (1 - PLAYER_COLLIDER_SCALE);
 const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;
-const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
-const TILE_SLIDE_SPEED:float = 320;
-const COMBINING_MERGE_RATIO:float = 1/2.7;
+#const PLAYER_SPEED_RATIO:float = 0.9; #must be less than 1 so tile solidifies before premove
+const TILE_SLIDE_SPEED:float = 256; #288; #320
 
 const SNAP_FRAME_COUNT:int = 1;
 const COMBINING_FRAME_COUNT:int = 6; #9; #1;
@@ -109,46 +105,114 @@ const UNDO_REPEAT_DELAY_FMIN:int = 14;
 
 const PREMOVE_STREAK_END_DELAY = 6; #must >= MOVE_REPEAT_DELAY_F0 - slide frame count
 
-enum InputType {
-	MOVE=0,
-	UNDO
-}
+const TILE_SHEET_HFRAMES = 31;
+const TILE_SHEET_VFRAMES = 6;
 
-enum ScaleAnim {
-	DUANG=0,
-	DWING
-};
-
-const DUANG_START_MODULATE:float = 0; #0.2;
+const DUANG_TRIGGER_RATIO:float = 1/2.7;
+const DUANG_TRIGGER_SEPARATION:float = (1 - DUANG_TRIGGER_RATIO) * TILE_WIDTH;
 const DUANG_START_ANGLE:float = 1;
 const DUANG_FACTOR:float = 1/sin(DUANG_START_ANGLE);
 const DUANG_END_ANGLE:float = PI - DUANG_START_ANGLE;
-const DUANG_SPEED:float = 0.1;
-const DUANG_FADE_SPEED:float = 0.07;
+const DUANG_SPEED:float = 0.09; #0.1;
+const DUANG_FADE_SPEED:float = DUANG_SPEED / (DUANG_END_ANGLE - DUANG_START_ANGLE);
 
-const FADE_START_ANGLE:float = 1;
 const DWING_START_ANGLE:float = 1;
 const DWING_FACTOR:float = sin(DWING_START_ANGLE);
 const DWING_END_ANGLE:float = PI - DWING_START_ANGLE;
-const DWING_SPEED:float = 0.1;
-const DWING_FADE_SPEED:float = 0.07;
+const DWING_SPEED:float = 0.09; #0.1;
+const DWING_FADE_SPEED:float = DWING_SPEED / (DWING_END_ANGLE - DWING_START_ANGLE);
 
-const SHIFT_RAY_LENGTH:float = RESOLUTION.x;
-const SHIFT_TIME:float = 6; #in frames
-const SHIFT_LERP_WEIGHT:float = 0.6;
-var SHIFT_LERP_WEIGHT_TOTAL:float = 0;
+const SHIFT_TIME:float = 9; #in frames
+const SHIFT_LERP_WEIGHT:float = 0.59;
+const SHIFT_SPEED_MIN:float = TILE_SLIDE_SPEED;
+const SHIFT_BOUNCE_DECELERATION:float = 0.85;
+var SHIFT_LERP_WEIGHT_TOTAL:float = 0; # NOTE capitalized since these are technically constants, they just require some calculation
 var SHIFT_DISTANCE_TO_MAX_SPEED:float;
 
-var player_snap:bool = true; #move mode
+var snap_mode:bool = true; #move mode
 
-const directions = {
-	"left" : Vector2i(-1, 0),
-	"right" : Vector2i(1, 0),
-	"up" : Vector2i(0, -1),
-	"down" : Vector2i(0, 1),
+enum InputType {
+	MOVE,
+	UNDO,
+	MODE, #toggle move mode
+}
+
+#animation-related stuff
+enum ConversionAnimatorType {
+	SCALE, #dwing, duang
+	DUANG_FADE, #in, out
+	DWING_FADE, #in, out
+}
+
+enum ConversionAnimatorId {
+	DWING = (ConversionAnimatorType.SCALE << 1), #temp shrink upon split
+	DUANG = (ConversionAnimatorType.SCALE << 1) + 1, #temp expand upon merge
+	DUANG_FADE_IN = (ConversionAnimatorType.DUANG_FADE << 1),
+	DUANG_FADE_OUT = (ConversionAnimatorType.DUANG_FADE << 1) + 1,
+	DWING_FADE_IN = (ConversionAnimatorType.DWING_FADE << 1),
+	DWING_FADE_OUT = (ConversionAnimatorType.DWING_FADE << 1) + 1,
+}
+
+enum ActionId {
+	SLIDE,
+	SPLIT,
+	SHIFT,
+}
+
+enum TransitId {
+	NONE,
+	ROAM,
+	SLIDE, # uniform speed
+	SPLIT,
+	SHIFT, # accelerates to cover shift dist in same time as a slide
+	MERGE,
+}
+
+# z_index
+enum ZId {
+	BACKGROUND = -10,
+	HIDDEN_LABEL = -9,
+	SAVE_OR_GOAL = -1,
+	DEFAULT = 0, # walls, stationary tiles, non-converting moving tiles
+	SPLITTING_NEW = 1,
+	SPLITTING_OLD = 2,
+	COMBINING_NEW_MOVING = 3,
+	COMBINING_OLD_MOVING = 4,
+	COMBINING_NEW = 5,
+	COMBINING_OLD = 6,
+	LEVEL_NAME = 10,
+}
+
+# layer, (mask)
+enum CollisionId {
+	DEFAULT = 1, # walls, non-converting tiles, squid (tiles, squid)
+	MEMBRANE, # membrane, (non-player tiles, squid)
+	SAVE_OR_GOAL, # savepoint/goal, (hostile tiles, squid)
+	TRACKING_CAM, # player, tracking_cam ()
+}
+
+enum TrackingCamTriggerMode {
+	LEAVE_AREA,
+	FINISH_ACTION,
+}
+var tracking_cam_trigger_mode:int = TrackingCamTriggerMode.LEAVE_AREA;
+
+# NOTE order matters! equal to 1.5x - .5y + 1.5
+enum DirectionId {
+	LEFT,
+	DOWN,
+	UP,
+	RIGHT,
+}
+
+const DIRECTIONS:Dictionary = {
+	DirectionId.LEFT : Vector2i(-1, 0),
+	DirectionId.DOWN : Vector2i(0, 1),
+	DirectionId.UP : Vector2i(0, -1),
+	DirectionId.RIGHT : Vector2i(1, 0),
 };
 
-var abilities = {
+var abilities:Dictionary = {
 	"home" : true,
 	"restart" : true,
 	"move_mode" : true,
@@ -167,10 +231,11 @@ enum TileId { #5 bits
 
 enum TypeId { #3 bits
 	PLAYER = 0,
-	INVINCIBLE,
+	DUPLICATOR,
 	HOSTILE,
 	VOID,
 	REGULAR,
+	SQUID,
 }
 
 enum BackId { #8 bits
@@ -183,24 +248,228 @@ enum BackId { #8 bits
 	RED_WALL,
 	SAVEPOINT,
 	GOAL,
+	BOARD_FRAME,
 }
 
 const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
 const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
-const T_ENEMY:Array = [TypeId.INVINCIBLE, TypeId.HOSTILE, TypeId.VOID];
+const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
+const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
+const T_ENEMY_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
 
-enum LayerId {
-	BACK,
-	TILE
+# NOTE TypeId should be usable as EntityId without conversion
+enum EntityId {
+	PLAYER, #for simplicity, player priorities/push_weight/tpl are the same when roaming
+	DUPLICATOR,
+	HOSTILE,
+	VOID,
+	NONE, #TypeId.REGULAR
+	SQUID_BODY,
+	SQUID_CLUB,
+	STP_SPAWNING,
+	STP_SPAWNED,
+	SNAKE,
 }
 
-enum ColorId {
-	ALL = 4,
-	RED = 29,
-	BLUE = 30,
-	BLACK = 31,
-	GRAY = 32,
+enum TileSetSourceId {
+	BACK,
+	TILE,
+	NAV,
+}
+
+# NOTE each TileMapLayer can only store one tile per cell; to allow tiles to overlap back cells, both TILE/BACK are necessary
+enum LayerId {
+	BACK,
+	TILE,
+	# only for pathfinder precise state, enabled=false is okay
+	# NOTE use new TileMapLayer instead of {BACK with alt_id=1} or {TILE with source_id = LayerId.BACK} since this is more intuitive and flexible
+	# NOTE pathfinder should check both BACK and NAV layers for compatibility
+	NAV,
+}
+
+# dir is obstructed if NavId & (NAV_BIT_BLOCK << DirectionId) != 0
+# each NAV_DIR_BITLEN-bit block stores refcount for directional barrier
+# assume refcount can go as high as NAV_REFCOUNT_MAX
+const NAV_REFCOUNT_MAX:int = 4; #one tile approaching per side (this is possible since corners are rounded)
+const NAV_DIR_BITLEN:int = 3; #should be long enough to store max refcount
+const NAV_BIT_BLOCK:int = (1 << NAV_DIR_BITLEN) - 1;
+enum NavId {
+	NONE = 0,
+	LEFT = (1 << (DirectionId.LEFT * NAV_DIR_BITLEN)),
+	DOWN = (1 << (DirectionId.DOWN * NAV_DIR_BITLEN)),
+	UP = (1 << (DirectionId.UP * NAV_DIR_BITLEN)),
+	RIGHT = (1 << (DirectionId.RIGHT * NAV_DIR_BITLEN)),
+	ALL = LEFT + DOWN + UP + RIGHT,
+}
+
+const NAV_TERMS:Dictionary = {
+	DIRECTIONS[DirectionId.LEFT] : NavId.LEFT,
+	DIRECTIONS[DirectionId.DOWN] : NavId.DOWN,
+	DIRECTIONS[DirectionId.UP] : NavId.UP,
+	DIRECTIONS[DirectionId.RIGHT] : NavId.RIGHT,
+}
+
+const NAV_UNITS:Dictionary = {
+	DIRECTIONS[DirectionId.LEFT]  : NavId.ALL - NavId.LEFT,
+	DIRECTIONS[DirectionId.DOWN]  : NavId.ALL - NavId.DOWN,
+	DIRECTIONS[DirectionId.UP]    : NavId.ALL - NavId.UP,
+	DIRECTIONS[DirectionId.RIGHT] : NavId.ALL - NavId.RIGHT,
+}
+
+#player tile_push_limit does not change when roaming
+var tile_push_limits:Dictionary = {
+	EntityId.PLAYER : 2,
+	EntityId.DUPLICATOR : 1,
+	EntityId.HOSTILE : 1,
+	EntityId.VOID : 3,
+	EntityId.NONE : 0,
+	EntityId.SQUID_BODY : 0,
+	EntityId.SQUID_CLUB : 6,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 2,
+	EntityId.SNAKE : 4,
 };
+
+var duplicate_upon_split:Dictionary = {
+	TypeId.PLAYER : false,
+	TypeId.DUPLICATOR : true,
+	TypeId.HOSTILE : false,
+	TypeId.VOID : false,
+	TypeId.REGULAR : false,
+	TypeId.SQUID : false,
+}
+
+var merge_priorities:Dictionary = {
+	-1 : -1,
+	TypeId.REGULAR : 0,
+	TypeId.PLAYER : 1,
+	TypeId.HOSTILE : 2,
+	TypeId.DUPLICATOR : 3,
+	TypeId.VOID : 4,
+	TypeId.SQUID : 5,
+}
+
+#push is possible if pusher push_weight >= pushed slide_weight
+var slide_weights:Dictionary = {
+	EntityId.PLAYER : 3, #INT64_MAX when roaming, but doesn't matter since only SQUID_CLUB can push player
+	EntityId.DUPLICATOR : 1,
+	EntityId.HOSTILE : 2,
+	EntityId.VOID : 0,
+	EntityId.NONE : 0,
+	EntityId.SQUID_BODY : 0,
+	EntityId.SQUID_CLUB : INT64_MAX,
+	EntityId.STP_SPAWNING : INT64_MAX,
+	EntityId.STP_SPAWNED : INT64_MAX,
+	EntityId.SNAKE : INT64_MAX,
+}
+
+#-1 if entity cannot push anything
+var push_weights:Dictionary = {
+	EntityId.PLAYER : 2,
+	EntityId.DUPLICATOR : 1,
+	EntityId.HOSTILE : 1,
+	EntityId.VOID : 2,
+	EntityId.NONE : -1,
+	EntityId.SQUID_BODY : -1,
+	EntityId.SQUID_CLUB : 3,
+	EntityId.STP_SPAWNING : -1,
+	EntityId.STP_SPAWNED : 2,
+	EntityId.SNAKE : 2,
+}
+
+# (slide collision) arbitration modes
+# use MIDPOINT to prevent higher priority entities from bullying lower priority entities by camping a cell
+enum SlideArbitrationMode {
+	MIDPOINT, # lower remaining_dist continues, higher move_priority continues if remaining_dist equal, both bounce if move_priority equal
+	ENTITY, # higher move_priority continues, lower remaining_dist continues if move_priority equal, both bounce if remaining_dist equal 
+}
+
+# for tiebreaking when two slides collide at midpoint
+# id of entity that initiated move is used, not EntityId of moving tile
+var slide_priorities:Dictionary = {
+	EntityId.PLAYER : 8,
+	EntityId.DUPLICATOR : 3,
+	EntityId.HOSTILE : 4,
+	EntityId.VOID : 5,
+	EntityId.NONE : -1,
+	EntityId.SQUID_BODY : 2,
+	EntityId.SQUID_CLUB : 1,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 7,
+	EntityId.SNAKE : 6,
+}
+
+# for tiebreaking if 2+ entities have premoves queued (represents 'reaction time' of entity)
+# enemies have higher priority so player cannot use premoving to cross enemy-protected cells
+# roaming entities should use the premove system instead of initiating moves in the middle of physics frame
+var premove_priorities:Dictionary = {
+	EntityId.PLAYER : 3,
+	EntityId.DUPLICATOR : 5,
+	EntityId.HOSTILE : 4,
+	EntityId.VOID : 6,
+	EntityId.NONE : -1,
+	EntityId.SQUID_BODY : 2,
+	EntityId.SQUID_CLUB : 1,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 8,
+	EntityId.SNAKE : 7,
+	#snake continuity at 90deg turns (if snake is composed of tiles)?
+}
+var ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:Array;
+
+var max_shift_dists:Dictionary = {
+	TypeId.PLAYER : 4,
+	TypeId.DUPLICATOR : 0,
+	TypeId.HOSTILE : 0,
+	TypeId.VOID : 6,
+	TypeId.REGULAR : 0,
+	TypeId.SQUID : 8,
+}
+
+# whether all instances of entity should move in sync
+var move_sync:Dictionary = {
+	EntityId.PLAYER : false,
+	EntityId.DUPLICATOR : false,
+	EntityId.HOSTILE : false,
+	EntityId.VOID : false,
+	EntityId.NONE : false,
+	EntityId.SQUID_BODY : false,
+	EntityId.SQUID_CLUB : false,
+	EntityId.STP_SPAWNING : false,
+	EntityId.STP_SPAWNED : false,
+	EntityId.SNAKE : false,
+}
+
+# in seconds
+# NOTE use 0 to let entity try premoves as fast as *physically* possible, as determined by TILE_WIDTH and TILE_SLIDE_SPEED
+# NOTE extend to use Vector2i(entity_id, action_id) as key if necessary
+# NOTE phase should be delayed if ThreadPool couldn't finish pathfinding on time
+var move_cooldowns:Dictionary = {
+	EntityId.PLAYER : 0,
+	EntityId.DUPLICATOR : 14,
+	EntityId.HOSTILE : 0.8,
+	EntityId.VOID : 0.5,
+	EntityId.NONE : 0,
+	EntityId.SQUID_BODY : 1,
+	EntityId.SQUID_CLUB : 0,
+	EntityId.STP_SPAWNING : 2.8, #should accelerate
+	EntityId.STP_SPAWNED : 0,
+	EntityId.SNAKE : 0, #speed should oscillate for realistic movement
+}
+
+# max random deviation from premove_interval, in seconds
+var move_cooldown_deviations:Dictionary = {
+	EntityId.PLAYER : 0,
+	EntityId.DUPLICATOR : 3,
+	EntityId.HOSTILE : 0,
+	EntityId.VOID : 0,
+	EntityId.NONE : 0,
+	EntityId.SQUID_BODY : 0.1,
+	EntityId.SQUID_CLUB : 0,
+	EntityId.STP_SPAWNING : 0,
+	EntityId.STP_SPAWNED : 0,
+	EntityId.SNAKE : 0,
+}
 
 enum SASearchId {
 	DIJKSTRA,
@@ -236,44 +505,38 @@ enum SASearchId {
 	SEARCH_END,
 };
 
-var tile_push_limits:Dictionary = {
-	TypeId.PLAYER : 1,
-	TypeId.INVINCIBLE : 1,
-	TypeId.HOSTILE : 1,
-	TypeId.VOID : 1,
-	TypeId.REGULAR : 0,
-};
+enum MessageId {
+	SLIDE_MODE_NA,
+	SNAP_MODE_NA,
+	SPLIT_NA,
+	SLIDE_NA,
+	SHIFT_NA,
+}
 
-#const PHYSICS_ENABLER_SHAPE:RectangleShape2D = preload("res://Objects/PhysicsEnablerShape.tres");
-const PHYSICS_ENABLER_BASE_SIZE:Vector2 = Vector2(144, 144); #px, px; at tile_push_limit = 0
+var messages:Dictionary = {
+	MessageId.SLIDE_MODE_NA : "Slide mode is not available.",
+	MessageId.SNAP_MODE_NA : "Snap mode is not available.",
+	MessageId.SPLIT_NA : "Splitting is not available.",
+	MessageId.SLIDE_NA : "Sliding is not available.",
+	MessageId.SHIFT_NA : "Shifting is not available.",
+}
 
 
-func _ready():
-	level_scores.resize(LEVEL_COUNT);
-	level_scores.fill(0);
-	level_last_savepoint_ids.resize(LEVEL_COUNT);
-	level_last_savepoint_ids.fill(-1);
-	level_initial_savepoint_ids.resize(LEVEL_COUNT);
-	level_initial_player_powers.resize(LEVEL_COUNT);
-	level_initial_player_ssigns.resize(LEVEL_COUNT);
+func dir_to_dir_id(dir:Vector2i) -> int:
+	return 1.5 * dir.x - 0.5 * dir.y + 1.5;
+
+func world_to_pos_t(pos:Vector2) -> Vector2i:
+	return (pos / TILE_WIDTH).floor();
+
+func pos_t_to_world(pos_t:Vector2i) -> Vector2:
+	return (Vector2(pos_t) + Vector2(0.5, 0.5)) * TILE_WIDTH;
+
+func world_to_xt(x:float) -> int:
+	return floori(x / TILE_WIDTH);
+
+func xt_to_world(x:int) -> float:
+	return (x + 0.5) * TILE_WIDTH;
 	
-	#calculate shift parameter
-	for frame in range(1, SHIFT_TIME+1):
-		var term_sign = 1;
-		for term in range(1, frame+1):
-			SHIFT_LERP_WEIGHT_TOTAL += term_sign * combinations_dp(frame, term) * pow(SHIFT_LERP_WEIGHT, term);
-			term_sign *= -1;
-	SHIFT_DISTANCE_TO_MAX_SPEED = 60 / SHIFT_LERP_WEIGHT_TOTAL;
-	
-#	#init physics enabler size
-#	set_tile_push_limit(abilities["tile_push_limit"]);
-#
-#	#scale shapecasts (bc inspector can't handle precise floats)
-#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
-#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
-#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
-#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;
-
 func same_sign_inclusive(a, b) -> bool:
 	if a == 0:
 		return true;
@@ -328,22 +591,11 @@ func combinations_dp(n, k) -> int:
 	combinations[n][k] = ans;
 	return ans;
 
-func world_to_pos_t(pos:Vector2) -> Vector2i:
-	return (pos / TILE_WIDTH).floor();
-
-func pos_t_to_world(pos_t:Vector2i) -> Vector2:
-	return (Vector2(pos_t) + Vector2(0.5, 0.5)) * TILE_WIDTH;
-
-func world_to_xt(x:float) -> int:
-	return floori(x / TILE_WIDTH);
-
-func xt_to_world(x:int) -> float:
-	return (x + 0.5) * TILE_WIDTH;
-
 #doesn't do ZERO->EMPTY optimization
 func tile_val_to_id(power:int, ssign:int) -> int:
 	return (power + 1) * ssign + TileId.ZERO;
 
+# ssign should be 1 for TileId.ZERO (required by is_vals_mergeable())
 func id_to_tile_val(id:int):
 	if id == TileId.ZERO:
 		return Vector2i(-1, 1);
@@ -355,9 +607,38 @@ func is_approx_equal(a:float, b:float, tolerance:float) -> bool:
 		return true;
 	return false;
 
-#func set_tile_push_limit(_tile_push_limit):
-#	abilities["tile_push_limit"] = _tile_push_limit;
+func get_animator_type(animator_id:int) -> int:
+	return animator_id >> 1;
+
+
+func _ready():
+	#TODO remove these
+	level_scores.resize(LEVEL_COUNT);
+	level_scores.fill(0);
+	level_last_savepoint_ids.resize(LEVEL_COUNT);
+	level_last_savepoint_ids.fill(-1);
+	level_initial_savepoint_ids.resize(LEVEL_COUNT);
+	level_initial_player_powers.resize(LEVEL_COUNT);
+	level_initial_player_ssigns.resize(LEVEL_COUNT);
+	
+	#calculate shift parameter
+	for frame in range(1, SHIFT_TIME+1):
+		var term_sign = 1;
+		for term in range(1, frame+1):
+			SHIFT_LERP_WEIGHT_TOTAL += term_sign * combinations_dp(frame, term) * pow(SHIFT_LERP_WEIGHT, term);
+			term_sign *= -1;
+	SHIFT_DISTANCE_TO_MAX_SPEED = 60 / SHIFT_LERP_WEIGHT_TOTAL;
+	assert(SHIFT_DISTANCE_TO_MAX_SPEED >= TILE_SLIDE_SPEED / TILE_WIDTH);
+	
+	#fill sorted entity_id lists
+	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY = premove_priorities.keys();
+	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY.sort_custom(func(a, b): return premove_priorities[a] > premove_priorities[b]);
+	
+#	#init physics enabler size
+#	set_tile_push_limit(abilities["tile_push_limit"]);
 #
-#	#change physicsEnabler size
-#	var size:Vector2 = PHYSICS_ENABLER_BASE_SIZE + abilities["tile_push_limit"] * 2 * GV.TILE_WIDTH * Vector2.ONE;
-#	PHYSICS_ENABLER_SHAPE.set_size(size);
+#	#scale shapecasts (bc inspector can't handle precise floats)
+#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
+#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
+#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
+#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;

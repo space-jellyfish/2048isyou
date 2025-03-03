@@ -37,5 +37,3 @@ func _process(delta):
 func _input(event):
 	if curState != null:
 		curState.handleInput(event)
-
-

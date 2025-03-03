@@ -4,9 +4,9 @@
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_3fj3s"]
 [ext_resource type="Script" path="res://Levels/Button.gd" id="3_uu2u2"]
 [ext_resource type="TileSet" uid="uid://doeyofpqxc1ic" path="res://Tilesets/wall_set.tres" id="3_y3btf"]
-[ext_resource type="PackedScene" uid="uid://drayn2lsacylt" path="res://Objects/Freedom.tscn" id="4_20i30"]
-[ext_resource type="PackedScene" uid="uid://bs5pnnv5k17ao" path="res://Objects/ScoreTile.tscn" id="5_mucte"]
-[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Savepoints/Goal_1x2_Concave.tscn" id="6_dswkw"]
+[ext_resource type="PackedScene" path="res://Objects/LevelPeripheryCuller.tscn" id="4_20i30"]
+[ext_resource type="PackedScene" path="res://Objects/TileForFSM.tscn" id="5_mucte"]
+[ext_resource type="PackedScene" uid="uid://dhpuql3q1weiw" path="res://Archive/Savepoints/Goal_1x2_Concave.tscn" id="6_dswkw"]
 
 [node name="Level 8" type="Node2D"]
 process_mode = 1
@@ -57,27 +57,27 @@ layer_0/tile_data = PackedInt32Array(0, 2, 0, 3, 2, 0, 4, 2, 0, 5, 2, 0, 6, 2, 0
 
 [node name="Freedom" parent="." instance=ExtResource("4_20i30")]
 
-[node name="ScoreTiles" type="Node2D" parent="."]
+[node name="Tiles" type="Node2D" parent="."]
 
-[node name="ScoreTile" parent="ScoreTiles" instance=ExtResource("5_mucte")]
+[node name="Tile" parent="Tiles" instance=ExtResource("5_mucte")]
 position = Vector2(940, 660)
 power = 2
 
-[node name="ScoreTile2" parent="ScoreTiles" instance=ExtResource("5_mucte")]
+[node name="Tile2" parent="Tiles" instance=ExtResource("5_mucte")]
 position = Vector2(980, 580)
 power = 2
 
-[node name="ScoreTile4" parent="ScoreTiles" instance=ExtResource("5_mucte")]
+[node name="Tile3" parent="Tiles" instance=ExtResource("5_mucte")]
 position = Vector2(980, 620)
 power = 2
 
-[node name="ScoreTile5" parent="ScoreTiles" instance=ExtResource("5_mucte")]
+[node name="Tile4" parent="Tiles" instance=ExtResource("5_mucte")]
 position = Vector2(980, 660)
 
-[node name="ScoreTile6" parent="ScoreTiles" instance=ExtResource("5_mucte")]
+[node name="Tile5" parent="Tiles" instance=ExtResource("5_mucte")]
 position = Vector2(980, 700)
 
-[node name="ScoreTile3" parent="ScoreTiles" instance=ExtResource("5_mucte")]
+[node name="Tile6" parent="Tiles" instance=ExtResource("5_mucte")]
 position = Vector2(1020, 620)
 power = -1
 

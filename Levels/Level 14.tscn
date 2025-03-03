@@ -2,12 +2,13 @@
 
 [ext_resource type="Script" path="res://Levels/Level 14.gd" id="1_40yuo"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_yeoy2"]
+[ext_resource type="PackedScene" uid="uid://cxvw7i8bgukix" path="res://Camera/TrackingCam.tscn" id="4_6gyhg"]
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="4_34x2b"]
-[ext_resource type="Script" path="res://Camera/TrackingCamWorld.gd" id="4_hn5kj"]
 
 [node name="Level 14" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_40yuo")
+procgen = true
 
 [node name="LevelName" type="Label" parent="."]
 modulate = Color(1, 1, 1, 0)
@@ -29,22 +30,27 @@ text = "Shallow Drive"
 
 [node name="ParallaxBackground" type="ParallaxBackground" parent="."]
 
-[node name="Background" type="ColorRect" parent="ParallaxBackground"]
+[node name="ParallaxLayer" type="ParallaxLayer" parent="ParallaxBackground"]
+motion_mirroring = Vector2(1600, 1200)
+
+[node name="Background" type="ColorRect" parent="ParallaxBackground/ParallaxLayer"]
 z_index = -10
 offset_right = 1600.0
 offset_bottom = 1200.0
 color = Color(0.666667, 0.666667, 0.666667, 1)
 metadata/_edit_lock_ = true
 
-[node name="TrackingCam" type="Camera2D" parent="."]
-script = ExtResource("4_hn5kj")
-
 [node name="Cells" type="TileMap" parent="." groups=["wall"]]
 tile_set = ExtResource("4_34x2b")
 format = 2
 layer_0/name = "back"
+layer_0/z_index = -2
 layer_1/name = "tile"
-layer_1/z_index = 1
-layer_1/tile_data = PackedInt32Array()
+layer_2/name = "nav"
+layer_2/enabled = false
 
-[node name="Pathfinder" type="Pathfinder" parent="."]
+[node name="TransitTiles" type="Node2D" parent="."]
+
+[node name="TrackingCam" parent="." instance=ExtResource("4_6gyhg")]
+
+[node name="DuplicatorPathController" type="DuplicatorPathController" parent="."]
