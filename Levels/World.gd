@@ -566,7 +566,7 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	var merged_tile_id:int = get_merged_tile_id(tile_id1, tile_id2);
 	var merged_type_id:int = type_id1 if is_type_preserved(type_id1, type_id2) else type_id2;
 	
-	# hostile death
+	# enemy death
 	if merged_tile_id == GV.TileId.ZERO and merged_type_id in GV.T_ENEMY_KILLABLE_BY_ZEROING:
 		merged_type_id = GV.TypeId.REGULAR;
 	
