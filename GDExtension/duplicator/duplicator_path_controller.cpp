@@ -1,7 +1,7 @@
 #include <godot_cpp/variant/vector2i.hpp>
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/mutex.hpp>
-#include "duplicator.h"
+#include "duplicator_path_controller.h"
 
 using namespace std;
 using namespace godot;
@@ -85,6 +85,6 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
     // escape has highest priority
     if (danger_lv) {
         // check if escape_dir is available
-        if ()
+        if (world->call("try_slide"))
     }
 }

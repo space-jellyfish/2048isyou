@@ -321,8 +321,8 @@ func build_tile(tile:TileForFSM, pos_t:Vector2i):
 	var n_tile:float = tile_noise.get_noise_2d(pos_t.x, pos_t.y); #[-1, 1]
 	tile.ssign = int(signf(n_tile));
 	n_tile = pow(absf(n_tile), 1); #use this step to bias toward/away from 0
-	tile.power = GV.TILE_GEN_POW_MAX if (n_tile == 1.0) else int((GV.TILE_GEN_POW_MAX + 2) * n_tile) - 1;
-	tile.color = GV.ColorId.BLACK if tile.power == GV.TILE_POW_MAX else GV.ColorId.ALL;
+	tile.power = GV.TilePow.MAX_PROCGEN if (n_tile == 1.0) else int((GV.TilePow.MAX_PROCGEN + 2) * n_tile) - 1;
+	tile.color = GV.ColorId.BLACK if tile.power == GV.TilePow.MAX else GV.ColorId.ALL;
 
 func load_player():
 	#remove wall/tile at cell

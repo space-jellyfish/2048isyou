@@ -37,9 +37,13 @@ var reverting:bool = false; #if true, fade faster and don't show lv name
 #var through_goal:bool = false; #changing level via goal
 
 #procgen-related stuff
-const TILE_POW_MAX:int = 14;
-const TILE_GEN_POW_MAX:int = 11;
-const TILE_VALUE_COUNT:int = 2 * TILE_POW_MAX + 3;
+enum TilePow {
+	VAL_ZERO = -1,
+	VAL_ONE = 0,
+	MAX = 14,
+	MAX_PROCGEN = 11,
+};
+const TILE_VALUE_COUNT:int = 2 * TilePow.MAX + 3;
 const TILE_LOAD_BUFFER:float = 8 * TILE_WIDTH;
 const TILE_UNLOAD_BUFFER:float = 8 * TILE_WIDTH;
 const P_GEN_DUPLICATOR:float = 0.0005;
@@ -230,7 +234,8 @@ enum TileId { #5 bits
 };
 
 enum TypeId { #3 bits
-	PLAYER = 0,
+	NONE = 0,
+	PLAYER,
 	DUPLICATOR,
 	HOSTILE,
 	VOID,
@@ -254,16 +259,18 @@ enum BackId { #8 bits
 const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
 const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
 const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
+const T_NONE_OR_REGULAR:Array = [TypeId.NONE, TypeId.REGULAR];
 const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
 const T_ENEMY_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
 
 # NOTE TypeId should be usable as EntityId without conversion
 enum EntityId {
+	NONE = 0,
 	PLAYER, #for simplicity, player priorities/push_weight/tpl are the same when roaming
 	DUPLICATOR,
 	HOSTILE,
 	VOID,
-	NONE, #TypeId.REGULAR
+	REGULAR,
 	SQUID_BODY,
 	SQUID_CLUB,
 	STP_SPAWNING,
@@ -318,11 +325,12 @@ const NAV_UNITS:Dictionary = {
 
 #player tile_push_limit does not change when roaming
 var tile_push_limits:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 2,
 	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 3,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 0,
 	EntityId.SQUID_CLUB : 6,
 	EntityId.STP_SPAWNING : 0,
@@ -331,6 +339,7 @@ var tile_push_limits:Dictionary = {
 };
 
 var duplicate_upon_split:Dictionary = {
+	TypeId.NONE : false,
 	TypeId.PLAYER : false,
 	TypeId.DUPLICATOR : true,
 	TypeId.HOSTILE : false,
@@ -340,7 +349,7 @@ var duplicate_upon_split:Dictionary = {
 }
 
 var merge_priorities:Dictionary = {
-	-1 : -1,
+	TypeId.NONE : -1,
 	TypeId.REGULAR : 0,
 	TypeId.PLAYER : 1,
 	TypeId.HOSTILE : 2,
@@ -349,13 +358,14 @@ var merge_priorities:Dictionary = {
 	TypeId.SQUID : 5,
 }
 
-#push is possible if pusher push_weight >= pushed slide_weight
+# push is possible if pusher push_weight >= pushed slide_weight
 var slide_weights:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 3, #INT64_MAX when roaming, but doesn't matter since only SQUID_CLUB can push player
 	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 2,
 	EntityId.VOID : 0,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 0,
 	EntityId.SQUID_CLUB : INT64_MAX,
 	EntityId.STP_SPAWNING : INT64_MAX,
@@ -363,13 +373,14 @@ var slide_weights:Dictionary = {
 	EntityId.SNAKE : INT64_MAX,
 }
 
-#-1 if entity cannot push anything
+# -1 if entity cannot push anything
 var push_weights:Dictionary = {
+	EntityId.NONE : -1,
 	EntityId.PLAYER : 2,
 	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 2,
-	EntityId.NONE : -1,
+	EntityId.REGULAR : -1,
 	EntityId.SQUID_BODY : -1,
 	EntityId.SQUID_CLUB : 3,
 	EntityId.STP_SPAWNING : -1,
@@ -387,11 +398,12 @@ enum SlideArbitrationMode {
 # for tiebreaking when two slides collide at midpoint
 # id of entity that initiated move is used, not EntityId of moving tile
 var slide_priorities:Dictionary = {
+	EntityId.NONE : -1,
 	EntityId.PLAYER : 8,
 	EntityId.DUPLICATOR : 3,
 	EntityId.HOSTILE : 4,
 	EntityId.VOID : 5,
-	EntityId.NONE : -1,
+	EntityId.REGULAR : -1,
 	EntityId.SQUID_BODY : 2,
 	EntityId.SQUID_CLUB : 1,
 	EntityId.STP_SPAWNING : 0,
@@ -403,11 +415,12 @@ var slide_priorities:Dictionary = {
 # enemies have higher priority so player cannot use premoving to cross enemy-protected cells
 # roaming entities should use the premove system instead of initiating moves in the middle of physics frame
 var premove_priorities:Dictionary = {
+	EntityId.NONE : -1,
 	EntityId.PLAYER : 3,
 	EntityId.DUPLICATOR : 5,
 	EntityId.HOSTILE : 4,
 	EntityId.VOID : 6,
-	EntityId.NONE : -1,
+	EntityId.REGULAR : -1,
 	EntityId.SQUID_BODY : 2,
 	EntityId.SQUID_CLUB : 1,
 	EntityId.STP_SPAWNING : 0,
@@ -418,6 +431,7 @@ var premove_priorities:Dictionary = {
 var ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:Array;
 
 var max_shift_dists:Dictionary = {
+	TypeId.NONE : 0,
 	TypeId.PLAYER : 4,
 	TypeId.DUPLICATOR : 0,
 	TypeId.HOSTILE : 0,
@@ -428,11 +442,12 @@ var max_shift_dists:Dictionary = {
 
 # whether all instances of entity should move in sync
 var move_sync:Dictionary = {
+	EntityId.NONE : false,
 	EntityId.PLAYER : false,
 	EntityId.DUPLICATOR : false,
 	EntityId.HOSTILE : false,
 	EntityId.VOID : false,
-	EntityId.NONE : false,
+	EntityId.REGULAR : false,
 	EntityId.SQUID_BODY : false,
 	EntityId.SQUID_CLUB : false,
 	EntityId.STP_SPAWNING : false,
@@ -445,11 +460,12 @@ var move_sync:Dictionary = {
 # NOTE extend to use Vector2i(entity_id, action_id) as key if necessary
 # NOTE phase should be delayed if ThreadPool couldn't finish pathfinding on time
 var move_cooldowns:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
 	EntityId.DUPLICATOR : 14,
 	EntityId.HOSTILE : 0.8,
 	EntityId.VOID : 0.5,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 1,
 	EntityId.SQUID_CLUB : 0,
 	EntityId.STP_SPAWNING : 2.8, #should accelerate
@@ -459,11 +475,12 @@ var move_cooldowns:Dictionary = {
 
 # max random deviation from premove_interval, in seconds
 var move_cooldown_deviations:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
 	EntityId.DUPLICATOR : 3,
 	EntityId.HOSTILE : 0,
 	EntityId.VOID : 0,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 0.1,
 	EntityId.SQUID_CLUB : 0,
 	EntityId.STP_SPAWNING : 0,
@@ -596,10 +613,10 @@ func tile_val_to_id(power:int, ssign:int) -> int:
 	return (power + 1) * ssign + TileId.ZERO;
 
 # ssign should be 1 for TileId.ZERO (required by is_vals_mergeable())
-func id_to_tile_val(id:int):
-	if id == TileId.ZERO:
+func tile_id_to_val(tile_id:int):
+	if tile_id == TileId.ZERO:
 		return Vector2i(-1, 1);
-	var signed_incremented_pow:int = id - TileId.ZERO;
+	var signed_incremented_pow:int = tile_id - TileId.ZERO;
 	return Vector2i(absi(signed_incremented_pow) - 1, signi(signed_incremented_pow));
 
 func is_approx_equal(a:float, b:float, tolerance:float) -> bool:

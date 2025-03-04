@@ -1875,3 +1875,18 @@ func is_in_area(pos:Vector2) -> bool:
 			world.get_node("Pathfinder").rrd_clear_iad();
 		world.get_node("Pathfinder").set_player_pos(pos_t);
 '''
+
+'''
+const TILE_POW_MAX:int = 14;
+const TILE_GEN_POW_MAX:int = 11;
+
+#assume at most one is -Vector2i.ONE
+func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
+	var atlas_y:int = coords1.y if get_tile_type_merge_priority(coords1.y) > get_tile_type_merge_priority(coords2.y) else coords2.y;
+	var atlas_x:int = get_merged_tile_id(coords1.x + 1, coords2.x + 1) - 1;
+	#hostile death
+	if atlas_x == GV.TileId.ZERO - 1 and atlas_y in GV.T_ENEMY_KILLABLE_BY_ZEROING:
+		atlas_y = GV.TypeId.REGULAR;
+	assert(atlas_y != -1 && atlas_x != -1);
+	return Vector2i(atlas_x, atlas_y);
+'''
