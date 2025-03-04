@@ -252,37 +252,37 @@ func update_map(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Ve
 func load_rect(pos_t_min:Vector2i, pos_t_max:Vector2i):
 	for ty in range(pos_t_min.y, pos_t_max.y+1):
 		for tx in range(pos_t_min.x, pos_t_max.x+1):
-			var pos_t:Vector2i = Vector2i(tx, ty);
+			var pos_t := Vector2i(tx, ty);
 			generate_cell(pos_t);
 
 func generate_cell(pos_t:Vector2i):
 	if get_atlas_coords(GV.LayerId.BACK, pos_t, false) != -Vector2i.ONE:
-		#once generated, tile may return to -Vector2i.ONE, so use BackId to mark generated cells
+		#once generated, TILE layer may return to -Vector2i.ONE, so use BackId to mark generated cells
 		return; #cell was previously generated
 	if is_world_border(pos_t):
-		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.BORDER_SQUARE, 0));
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.BORDER_SQUARE));
 		return;
 	if pos_t == initial_player_pos_t:
 		# NOTE assume player entity initialization and player tile generation both happen on world ready, so no critical section needed here
-		set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(GV.TileId.ZERO - 1, GV.TypeId.PLAYER));
-		#set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
-		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.MEMBRANE, 0)); #spawn player in membrane (and mark as generated)
+		set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, tile_and_type_id_to_atlas_coords(GV.TileId.ZERO, GV.TypeId.PLAYER));
+		#set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.EMPTY)); #to mark as generated
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.MEMBRANE)); #spawn player in membrane (and mark as generated)
 		return;
 	
 	#back
 	var n_wall:float = clamp(wall_noise.get_noise_2d(pos_t.x, pos_t.y), -1, 1); #[-1, 1]
 	if absf(n_wall) < 0.009:
-		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.BLACK_WALL, 0));
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.BLACK_WALL));
 		return;
 	if absf(n_wall) < 0.02:
-		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.MEMBRANE, 0));
+		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.MEMBRANE));
 		return;
 
 	# tile value
 	var n_tile:float = clamp(tile_noise.get_noise_2d(pos_t.x, pos_t.y), -1, 1); #[-1, 1]
 	var ssign:int = int(signf(n_tile));
 	n_tile = pow(absf(n_tile), 1); #[0, 1]; use power > 1 to bias towards 0
-	var power:int = GV.TILE_GEN_POW_MAX if (n_tile == 1.0) else int((GV.TILE_GEN_POW_MAX + 2) * n_tile) - 1;
+	var power:int = GV.TilePow.MAX_PROCGEN if (n_tile == 1.0) else int((GV.TilePow.MAX_PROCGEN + 2) * n_tile) - 1;
 	var tile_id:int = GV.tile_val_to_id(power, ssign);
 	
 	# tile type
@@ -294,13 +294,13 @@ func generate_cell(pos_t:Vector2i):
 		type_id = GV.TypeId.HOSTILE;
 	
 	# tilemap
-	set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, Vector2i(GV.BackId.EMPTY, 0)); #to mark as generated
+	set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.EMPTY)); #to mark as generated
 	# ================ START CRITICAL SECTION ================
 	layer_mutexes[GV.LayerId.TILE].lock();
-	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, Vector2i(tile_id-1, type_id));
+	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, tile_and_type_id_to_atlas_coords(tile_id, type_id));
 	
 	# entity
-	if type_id != GV.EntityId.NONE:
+	if type_id not in GV.T_NONE_OR_REGULAR:
 		add_entity(type_id, pos_t, Entity.new(self, null, type_id, pos_t));
 	
 	layer_mutexes[GV.LayerId.TILE].unlock();
@@ -339,8 +339,8 @@ func _input(event):
 		else:
 			update_last_input_premove(event, GV.ActionId.SLIDE);
 	if event.is_action_pressed("debug"):
-		player.add_premove(Premove.new(player, Vector2i(1,0), GV.ActionId.SPLIT))
-		player.add_premove(Premove.new(player, Vector2i(-1,0), GV.ActionId.SPLIT))
+		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SPLIT))
+		player.add_premove(Premove.new(player, Vector2i(-1, 0), GV.ActionId.SPLIT))
 		#print(entities[0][Vector2i(1, 0)].is_busy)
 
 # NOTE for multithreading: sequential consistency is unnecessary for pathfinder, only data integrity matters
@@ -397,10 +397,13 @@ func atlas_coords_to_tile_id(tile_atlas_coords:Vector2i):
 	return tile_atlas_coords.x + 1;
 
 func atlas_coords_to_type_id(tile_atlas_coords:Vector2i):
-	return GV.TypeId.REGULAR if tile_atlas_coords.y == -1 else tile_atlas_coords.y;
+	return tile_atlas_coords.y + 1;
 
 func atlas_coords_to_back_id(back_atlas_coords:Vector2i):
 	return maxi(back_atlas_coords.x, 0);
+
+func tile_and_type_id_to_atlas_coords(tile_id:int, type_id:int):
+	return Vector2i(tile_id - 1, type_id - 1);
 
 func back_id_to_atlas_coords(back_id:int, is_generated:bool = true):
 	if back_id == GV.BackId.EMPTY and not is_generated:
@@ -432,22 +435,22 @@ func get_nav_id(pos_t:Vector2i):
 func is_tile(pos_t:Vector2i, include_transient:bool):
 	return get_tile_id(pos_t, include_transient) != GV.TileId.EMPTY;
 
-func is_vals_mergeable(pow1:int, sign1:int, pow2:int, sign2:int):
-	if pow1 == -1 or pow2 == -1:
+func is_vals_mergeable(val1:Vector2i, val2:Vector2i) -> bool:
+	if val1.x == GV.TilePow.VAL_ZERO or val2.x == GV.TilePow.VAL_ZERO:
 		return true;
-	if pow1 == pow2 and (pow1 < GV.TILE_POW_MAX or sign1 != sign2):
+	if val1.x == val2.x and (val1.x < GV.TilePow.MAX or val1.y != val2.y):
 		return true;
 	return false;
 
 func is_ids_mergeable(tile_id1:int, tile_id2:int):
-	if tile_id1 == 0 or tile_id2 == 0: #either cell empty
+	if tile_id1 == GV.TileId.EMPTY or tile_id2 == GV.TileId.EMPTY:
 		return true;
-	var val1:Vector2i = GV.id_to_tile_val(tile_id1);
-	var val2:Vector2i = GV.id_to_tile_val(tile_id2);
-	return is_vals_mergeable(val1.x, val1.y, val2.x, val2.y);
+	var val1:Vector2i = GV.tile_id_to_val(tile_id1);
+	var val2:Vector2i = GV.tile_id_to_val(tile_id2);
+	return is_vals_mergeable(val1, val2);
 
 func is_id_splittable(tile_id:int):
-	var val:Vector2i = GV.id_to_tile_val(tile_id);
+	var val:Vector2i = GV.tile_id_to_val(tile_id);
 	return not tile_id == GV.TileId.EMPTY and val.x > 0;
 
 func is_pow_splittable(pow:int):
@@ -455,19 +458,23 @@ func is_pow_splittable(pow:int):
 
 #return -Vector2i.ONE if not splittable
 func get_splitted_tile_atlas_coords(atlas_coords:Vector2i, keep_type:bool = true):
-	var tile_val:Vector2i = GV.id_to_tile_val(atlas_coords.x + 1);
+	var tile_val:Vector2i = GV.tile_id_to_val(atlas_coords.x + 1);
 	if not is_pow_splittable(tile_val.x):
 		return -Vector2i.ONE;
-	return Vector2i(atlas_coords.x - tile_val.y, atlas_coords.y if keep_type else GV.TypeId.REGULAR);
+	var splitted_tile_id:int = atlas_coords_to_tile_id(atlas_coords) - tile_val.y;
+	var splitted_type_id:int = atlas_coords_to_type_id(atlas_coords) if keep_type else GV.TypeId.REGULAR;
+	return tile_and_type_id_to_atlas_coords(splitted_tile_id, splitted_type_id);
 
 func get_doubled_tile_atlas_coords(atlas_coords:Vector2i, keep_type:bool = true):
 	var tile_id:int = atlas_coords_to_tile_id(atlas_coords);
-	var tile_val:Vector2i = GV.id_to_tile_val(tile_id);
-	assert(tile_val.x < GV.TILE_POW_MAX);
+	var tile_val:Vector2i = GV.tile_id_to_val(tile_id);
+	assert(tile_val.x < GV.TilePow.MAX);
 	
-	if tile_id == GV.TileId.ZERO:
-		return atlas_coords;
-	return Vector2i(atlas_coords.x + tile_val.y, atlas_coords.y if keep_type else GV.TypeId.REGULAR);
+	var doubled_tile_id:int = tile_id;
+	if tile_id != GV.TileId.ZERO:
+		doubled_tile_id += tile_val.y;
+	var doubled_type_id:int = atlas_coords_to_type_id(atlas_coords) if keep_type else GV.TypeId.REGULAR;
+	return tile_and_type_id_to_atlas_coords(doubled_tile_id, doubled_type_id);
 
 func is_compatible(type_id:int, back_id:int) -> bool:
 	if back_id in GV.B_EMPTY:
@@ -521,7 +528,7 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		if is_ids_mergeable(prev_tile_id, curr_tile_id):
 			if nearest_merge_push_count == -1:
 				nearest_merge_push_count = push_count;
-			if curr_tile_id != GV.TileId.ZERO or curr_type_id != GV.TypeId.REGULAR:
+			if curr_tile_id != GV.TileId.ZERO or curr_type_id not in GV.T_NONE_OR_REGULAR:
 				if prev_tile_id == GV.TileId.ZERO and curr_tile_id == GV.TileId.EMPTY:
 					return push_count; #bubble
 				return nearest_merge_push_count;
@@ -548,15 +555,19 @@ func get_merged_tile_id(tile_id1:int, tile_id2:int):
 		return GV.TileId.ZERO;
 	return tile_id1 + sign(tile_id1 - GV.TileId.ZERO);
 
-#assume at most one is -Vector2i.ONE
 func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
-	var atlas_y:int = coords1.y if get_tile_type_merge_priority(coords1.y) > get_tile_type_merge_priority(coords2.y) else coords2.y;
-	var atlas_x:int = get_merged_tile_id(coords1.x + 1, coords2.x + 1) - 1;
-	#hostile death
-	if atlas_x == GV.TileId.ZERO - 1 and atlas_y in GV.T_ENEMY_KILLABLE_BY_ZEROING:
-		atlas_y = GV.TypeId.REGULAR;
-	assert(atlas_y != -1 && atlas_x != -1);
-	return Vector2i(atlas_x, atlas_y);
+	var tile_id1:int = atlas_coords_to_tile_id(coords1);
+	var tile_id2:int = atlas_coords_to_tile_id(coords2);
+	var type_id1:int = atlas_coords_to_type_id(coords1);
+	var type_id2:int = atlas_coords_to_type_id(coords2);
+	var merged_tile_id:int = get_merged_tile_id(tile_id1, tile_id2);
+	var merged_type_id:int = type_id1 if get_tile_type_merge_priority(type_id1) >= get_tile_type_merge_priority(type_id2) else type_id2;
+	
+	# hostile death
+	if merged_tile_id == GV.TileId.ZERO and merged_type_id in GV.T_ENEMY_KILLABLE_BY_ZEROING:
+		merged_type_id = GV.TypeId.REGULAR;
+	
+	return tile_and_type_id_to_atlas_coords(merged_tile_id, merged_type_id);
 
 #used for shift speed calculation
 func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool) -> int:
@@ -692,7 +703,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var curr_tile:TileForTilemap = get_transit_tile(curr_pos_t, not curr_splitted);
 		
 		# update entity
-		if curr_type_id != GV.EntityId.NONE:
+		if curr_type_id not in GV.T_NONE_OR_REGULAR:
 			var tile_entity:Entity = get_aligned_tile_entity(curr_type_id, curr_pos_t);
 			if tile_entity:
 				tile_entity.set_entity_id_and_body(curr_type_id, curr_tile);
@@ -705,13 +716,13 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 			# find split atlas coords
 			var splitter_type_id:int = atlas_coords_to_type_id(curr_atlas_coords);
 			splitter_type_id = splitter_type_id if GV.duplicate_upon_split[splitter_type_id] else GV.TypeId.REGULAR;
-			splitter_atlas_coords = Vector2i(curr_atlas_coords.x, splitter_type_id);
+			splitter_atlas_coords = tile_and_type_id_to_atlas_coords(atlas_coords_to_tile_id(curr_atlas_coords), splitter_type_id);
 			
 			# get splitting tile
 			splitting_tile = get_transit_tile(pos_t, true);
 			
 			# add entity if duplicated
-			if splitter_type_id != GV.TypeId.REGULAR:
+			if splitter_type_id not in GV.T_NONE_OR_REGULAR:
 				add_entity(splitter_type_id, splitting_tile, Entity.new(self, splitting_tile, splitter_type_id, Vector2i()));
 		
 		layer_mutexes[GV.LayerId.TILE].unlock();
@@ -765,7 +776,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		var merging_tile:TileForTilemap = get_transit_tile(merge_pos_t, true);
 		
 		# update entity
-		if old_type_id != GV.EntityId.NONE:
+		if old_type_id not in GV.T_NONE_OR_REGULAR:
 			var tile_entity:Entity = get_entity(old_type_id, merge_pos_t);
 			if tile_entity:
 				tile_entity.set_entity_id_and_body(old_type_id, merging_tile);
@@ -797,7 +808,7 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	var tile:TileForTilemap = get_transit_tile(pos_t, true);
 	
 	# update entity
-	if type_id != GV.EntityId.NONE:
+	if type_id not in GV.T_NONE_OR_REGULAR:
 		var tile_entity:Entity = get_entity(type_id, pos_t);
 		if tile_entity:
 			tile_entity.set_entity_id_and_body(type_id, tile);

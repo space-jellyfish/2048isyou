@@ -179,7 +179,7 @@ func debug_frame():
 		pass;
 
 func update_texture(s:Sprite2D, power, ssign, _is_player, _is_hostile, _is_invincible):
-	assert(power <= GV.TILE_POW_MAX);
+	assert(power <= GV.TilePow.MAX);
 	var texture_path:String = "res://Sprites/Sprites/2_";
 	
 	#power
@@ -342,7 +342,7 @@ func slide(dir:Vector2i) -> bool:
 #				elif collider.color == GV.ColorId.GRAY and collider.slide(dir): #receding player
 #					pass;
 				elif (power == -1 or collider.power == -1 or power == collider.power) and \
-				(power < GV.TILE_POW_MAX or ssign != collider.ssign): #merge
+				(power < GV.TilePow.MAX or ssign != collider.ssign): #merge
 					partner = collider;
 					collider.pusher = null;
 					collider.partner = self;
@@ -439,7 +439,7 @@ func split(dir:Vector2i) -> bool:
 			
 			if collider.color == GV.ColorId.GRAY and collider.slide(dir): #recede split
 				continue;
-			elif power - 1 == collider.power and collider.power < GV.TILE_POW_MAX: #merge split
+			elif power - 1 == collider.power and collider.power < GV.TilePow.MAX: #merge split
 				continue;
 				
 			#act as temporary pusher before splitted tile spawns
