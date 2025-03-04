@@ -228,11 +228,13 @@ var abilities:Dictionary = {
 	"copy" : true,
 };
 
+# should match tile_sheet
 enum TileId { #5 bits
 	EMPTY = 0,
 	ZERO = 16,
 };
 
+# should match tile_sheet
 enum TypeId { #3 bits
 	NONE = 0,
 	PLAYER,
@@ -243,6 +245,7 @@ enum TypeId { #3 bits
 	SQUID,
 }
 
+# should match back_sheet
 enum BackId { #8 bits
 	EMPTY = 0,
 	BORDER_ROUND,
@@ -614,7 +617,7 @@ func tile_val_to_id(power:int, ssign:int) -> int:
 
 # ssign should be 1 for TileId.ZERO (required by is_vals_mergeable())
 func tile_id_to_val(tile_id:int):
-	if tile_id == TileId.ZERO:
+	if tile_id == TileId.ZERO or tile_id == TileId.EMPTY:
 		return Vector2i(-1, 1);
 	var signed_incremented_pow:int = tile_id - TileId.ZERO;
 	return Vector2i(absi(signed_incremented_pow) - 1, signi(signed_incremented_pow));

@@ -20,6 +20,22 @@ uint32_t make_nav_bits(uint16_t nav_id) {
     return nav_id << NAV_ID_BITPOS;
 }
 
+uint32_t remove_tile_id(uint32_t stuff_id) {
+    return stuff_id & TILE_ID_INVERTED_MASK;
+}
+
+uint32_t remove_type_id(uint32_t stuff_id) {
+    return stuff_id & TYPE_ID_INVERTED_MASK;
+}
+
+uint32_t remove_back_id(uint32_t stuff_id) {
+    return stuff_id & BACK_ID_INVERTED_MASK;
+}
+
+uint32_t remove_nav_id(uint32_t stuff_id) {
+    return stuff_id & NAV_ID_INVERTED_MASK;
+}
+
 uint32_t get_tile_bits(uint32_t stuff_id) {
     return stuff_id & TILE_ID_MASK;
 }
@@ -61,7 +77,7 @@ int dir_to_dir_id(Vector2i dir) {
 }
 
 Vector2i tile_id_to_val(uint8_t tile_id) {
-    if (tile_id == TileId::ZERO) {
+    if (tile_id == TileId::ZERO || tile_id == TileId::EMPTY) {
         return Vector2i(-1, -1);
     }
     int signed_incremented_pow = tile_id - TileId::ZERO;
@@ -69,7 +85,45 @@ Vector2i tile_id_to_val(uint8_t tile_id) {
 }
 
 bool is_vals_mergeable(Vector2i val1, Vector2i val2) {
-    if (val1.x == -1 or )
+    if (val1.x == TilePow::VAL_ZERO || val2.x == TilePow::VAL_ZERO) {
+        return true;
+    }
+    if (val1.x == val2.x && (val1.x < TilePow::MAX || val1.y != val2.y)) {
+        return true;
+    }
+    return false;
+}
+
+bool is_ids_mergeable(uint8_t tile_id1, uint8_t tile_id2) {
+    if (tile_id1 == TileId::EMPTY || tile_id2 == TileId::EMPTY) {
+        return true;
+    }
+    Vector2i val1 = tile_id_to_val(tile_id1);
+    Vector2i val2 = tile_id_to_val(tile_id2);
+    return is_vals_mergeable(val1, val2);
+}
+
+bool is_type_preserved(uint8_t src_type_id, uint8_t dest_type_id) {
+    return merge_priorities.at(src_type_id) >= merge_priorities.at(dest_type_id);
+}
+
+// equivalent to !is_type_preserved(dest_type_id, src_type_id)
+bool is_type_dominant(uint8_t src_type_id, uint8_t dest_type_id) {
+    return merge_priorities.at(src_type_id) > merge_priorities.at(dest_type_id);
+}
+
+bool is_id_splittable(uint8_t tile_id) {
+    Vector2i val = tile_id_to_val(tile_id);
+    return val.x > TilePow::VAL_ONE;
+}
+
+// return TileId::EMPTY if not splittable
+uint8_t get_splitted_tile_id(uint8_t tile_id) {
+    Vector2i val = tile_id_to_val(tile_id);
+    if (val.x <= TilePow::VAL_ONE) {
+        return TileId::EMPTY;
+    }
+    return tile_id - val.y;
 }
 
 bool is_compatible(uint8_t type_id, uint8_t back_id) {
@@ -89,15 +143,6 @@ bool is_compatible(uint8_t type_id, uint8_t back_id) {
 
 bool is_navigable(Vector2i dir, uint16_t nav_id) {
     return (nav_id & (NAV_BIT_BLOCK << dir_to_dir_id(dir))) == 0;
-}
-
-bool is_ids_mergeable(uint8_t tile_id1, uint8_t tile_id2) {
-    if (tile_id1 == TileId::EMPTY || tile_id2 == TileId::EMPTY) {
-        return true;
-    }
-    Vector2i val1 = tile_id_to_val(tile_id1);
-    Vector2i val2 = tile_id_to_val(tile_id2);
-    return is_vals_mergeable(val1, val2);
 }
 
 // returns negative number if lv_pos is out of bounds in dir
@@ -140,7 +185,12 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
         uint8_t prev_tile_id = curr_tile_id;
         curr_tile_id = get_tile_id(curr_stuff_id);
 
-        if is_ids_mergeable(prev_tile_id, curr_tile_id) {
+        if (is_ids_mergeable(prev_tile_id, curr_tile_id)) {
+            //check for type change
+            if (!push_count && !allow_type_change && is_type_dominant(curr_type_id, src_type_id)) {
+                return -1;
+            }
+
             if (nearest_merge_push_count == -1) {
                 nearest_merge_push_count = push_count;
             }
@@ -162,40 +212,33 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
 }
 
 bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change) {
-    int push_count = get_slide_push_count(dir, allow_type_change);
+    int push_count = get_slide_push_count(lv, lv_pos, dir, allow_type_change, true, true);
     if (push_count != -1) {
-        shared_ptr<SASearchNode_t> m = node_pool.acquire<SASearchNode_t>();
-        m->sanode = node_pool.acquire<SANode>();
-        *(m->sanode) = SANode(*sanode);
-        m->prev = static_pointer_cast<SASearchNode_t>(this->shared_from_this());
-        m->prev_push_count = push_count;
-        m->prune_backtrack(dir);
-        m->sanode->perform_slide(dir, push_count);
-        return m;
+        perform_slide(lv, lv_pos, dir, push_count);
+        return true;
     }
-    return nullptr;
+    return false;
 }
 
 bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change) {
-    uint32_t src_sid = sanode->get_lv_sid(sanode->lv_pos);
-    int src_pow = get_tile_pow(get_tile_id(src_sid));
-    if (!is_pow_splittable(src_pow)) {
-        return nullptr;
+    // check if split possible
+    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
+    uint8_t src_tile_id = get_tile_id(src_stuff_id);
+    uint8_t splitted_tile_id = get_splitted_tile_id(src_tile_id);
+    if (splitted_tile_id == TileId::EMPTY) {
+        return false;
     }
 
-    //halve src tile, try_slide, then (re)set its tile_id
-    //splitted is new tile, splitter is old tile
-    uint32_t untyped_split_sid = get_back_bits(src_sid) + get_splitted_tid(get_tile_id(src_sid));
-    uint32_t splitted_sid = untyped_split_sid + get_type_bits(src_sid);
-    sanode->set_lv_sid(sanode->lv_pos, splitted_sid);
-    shared_ptr<SASearchNode_t> ans = try_slide(dir, allow_type_change);
-    if (ans != nullptr) {
-        //insert splitter tile
-        uint32_t splitter_sid = untyped_split_sid + REGULAR_TYPE_BITS;
-        ans->sanode->set_lv_sid(sanode->lv_pos, splitter_sid);
+    uint32_t splitted_stuff_id = remove_tile_id(src_stuff_id) + make_tile_bits(splitted_tile_id);
+    lv[lv_pos.y][lv_pos.x] = splitted_stuff_id;
+    bool initiated = try_slide(lv, lv_pos, dir, allow_type_change);
+    if (initiated) {
+        uint8_t src_type_id = get_type_id(src_stuff_id);
+        uint8_t splitter_type_id = (duplicate_upon_split.at(src_type_id)) ? src_type_id : TypeId::REGULAR;
+        lv[lv_pos.y][lv_pos.x] = remove_type_id(splitted_stuff_id) + make_type_bits(splitter_type_id);
     }
-    //reset src tile in this
-    sanode->set_lv_sid(sanode->lv_pos, src_sid);
-
-    return ans;
+    else {
+        lv[lv_pos.y][lv_pos.x] = src_stuff_id;
+    }
+    return initiated;
 }

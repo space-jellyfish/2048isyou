@@ -451,10 +451,10 @@ func is_ids_mergeable(tile_id1:int, tile_id2:int):
 
 func is_id_splittable(tile_id:int):
 	var val:Vector2i = GV.tile_id_to_val(tile_id);
-	return not tile_id == GV.TileId.EMPTY and val.x > 0;
+	return val.x > GV.TilePow.VAL_ONE;
 
 func is_pow_splittable(pow:int):
-	return pow > 0;
+	return pow > GV.TilePow.VAL_ONE;
 
 #return -Vector2i.ONE if not splittable
 func get_splitted_tile_atlas_coords(atlas_coords:Vector2i, keep_type:bool = true):
@@ -538,8 +538,11 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		push_count += 1;
 	return -1;
 
-func get_tile_type_merge_priority(type_id:int):
+func get_merge_priority(type_id:int):
 	return GV.merge_priorities[type_id];
+
+func is_type_preserved(src_type_id:int, dest_type_id:int) -> bool:
+	return get_merge_priority(src_type_id) >= get_merge_priority(dest_type_id);
 
 #assume tile ids are mergeable
 func get_merged_tile_id(tile_id1:int, tile_id2:int):
@@ -561,7 +564,7 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	var type_id1:int = atlas_coords_to_type_id(coords1);
 	var type_id2:int = atlas_coords_to_type_id(coords2);
 	var merged_tile_id:int = get_merged_tile_id(tile_id1, tile_id2);
-	var merged_type_id:int = type_id1 if get_tile_type_merge_priority(type_id1) >= get_tile_type_merge_priority(type_id2) else type_id2;
+	var merged_type_id:int = type_id1 if is_type_preserved(type_id1, type_id2) else type_id2;
 	
 	# hostile death
 	if merged_tile_id == GV.TileId.ZERO and merged_type_id in GV.T_ENEMY_KILLABLE_BY_ZEROING:
