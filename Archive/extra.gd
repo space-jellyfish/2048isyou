@@ -1882,7 +1882,7 @@ const TILE_GEN_POW_MAX:int = 11;
 
 #assume at most one is -Vector2i.ONE
 func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
-	var atlas_y:int = coords1.y if get_tile_type_merge_priority(coords1.y) > get_tile_type_merge_priority(coords2.y) else coords2.y;
+	var atlas_y:int = coords1.y if get_merge_priority(coords1.y) > get_merge_priority(coords2.y) else coords2.y;
 	var atlas_x:int = get_merged_tile_id(coords1.x + 1, coords2.x + 1) - 1;
 	#hostile death
 	if atlas_x == GV.TileId.ZERO - 1 and atlas_y in GV.T_ENEMY_KILLABLE_BY_ZEROING:
