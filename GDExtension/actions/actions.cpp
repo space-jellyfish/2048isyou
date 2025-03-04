@@ -126,6 +126,40 @@ uint8_t get_splitted_tile_id(uint8_t tile_id) {
     return tile_id - val.y;
 }
 
+// assume tile ids are mergeable
+uint8_t get_merged_tile_id(uint8_t tile_id1, uint8_t tile_id2) {
+    if (tile_id1 == TileId::EMPTY) {
+        return tile_id2;
+    }
+    if (tile_id2 == TileId::EMPTY) {
+        return tile_id1;
+    }
+    if (tile_id1 == TileId::ZERO) {
+        return tile_id2;
+    }
+    if (tile_id2 == TileId::ZERO) {
+        return tile_id1;
+    }
+    if (signi(tile_id1 - TileId::ZERO) != signi(tile_id2 - TileId::ZERO)) {
+        return TileId::ZERO;
+    }
+    return tile_id1 + signi(tile_id1 - TileId::ZERO);
+}
+
+uint32_t get_merged_stuff_id(uint32_t src_stuff_id, uint32_t dest_stuff_id) {
+    uint8_t src_tile_id = get_tile_id(src_stuff_id);
+    uint8_t dest_tile_id = get_tile_id(dest_stuff_id);
+    uint8_t src_type_id = get_type_id(src_stuff_id);
+    uint8_t dest_type_id = get_type_id(dest_stuff_id);
+    uint8_t merged_tile_id = get_merged_tile_id(src_tile_id, dest_tile_id);
+    uint8_t merged_type_id = is_type_preserved(src_type_id, dest_type_id) ? src_type_id : dest_type_id;
+
+    if (merged_tile_id == TileId::ZERO && T_ENEMY_KILLABLE_BY_ZEROING.find(merged_type_id) != T_ENEMY_KILLABLE_BY_ZEROING.end()) {
+        merged_type_id = TypeId::REGULAR;
+    }
+    return remove_type_id(remove_tile_id(dest_stuff_id)) + make_type_bits(merged_type_id) + make_tile_bits(merged_tile_id);
+}
+
 bool is_compatible(uint8_t type_id, uint8_t back_id) {
     if (B_EMPTY.find(back_id) != B_EMPTY.end()) {
         return true;
@@ -209,6 +243,36 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
     }
 
     return -1;
+}
+
+void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, int push_count) {
+    Vector2i merge_lv_pos = lv_pos + (push_count + 1) * dir;
+    uint32_t merge_stuff_id = lv[merge_lv_pos.y][merge_lv_pos.x];
+    Vector2i curr_lv_pos = merge_lv_pos;
+    uint32_t curr_static_id = remove_type_id(remove_tile_id(merge_stuff_id));
+    uint32_t result_stuff_id;
+
+    for (int dist_to_merge = 0; dist_to_merge <= push_count; ++dist_to_merge) {
+        Vector2i prev_lv_pos = curr_lv_pos - dir;
+        uint32_t prev_stuff_id = lv[prev_lv_pos.y][prev_lv_pos.x];
+
+        if (dist_to_merge) {
+            // push
+            result_stuff_id = curr_static_id + remove_back_id(remove_nav_id(prev_stuff_id));
+        }
+        else {
+            // merge
+            result_stuff_id = get_merged_stuff_id(prev_stuff_id, merge_stuff_id);
+        }
+        lv[curr_lv_pos.y][curr_lv_pos.x] = result_stuff_id;
+
+        // update loop vars
+        curr_lv_pos -= dir;
+        curr_static_id = remove_type_id(remove_tile_id(prev_stuff_id));
+    }
+
+    // remove src tile
+    lv[lv_pos.y][lv_pos.x] = remove_type_id(remove_tile_id(lv[lv_pos.y][lv_pos.x]));
 }
 
 bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change) {

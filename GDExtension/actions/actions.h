@@ -178,12 +178,15 @@ bool is_type_preserved(uint8_t src_type_id, uint8_t dest_type_id);
 bool is_type_dominant(uint8_t src_type_id, uint8_t dest_type_id);
 bool is_id_splittable(uint8_t tile_id);
 uint8_t get_splitted_tile_id(uint8_t tile_id);
+uint8_t get_merged_tile_id(uint8_t tile_id1, uint8_t tile_id2);
+uint32_t get_merged_stuff_id(uint32_t src_stuff_id, uint32_t dest_stuff_id);
 
 bool is_compatible(uint8_t type_id, uint8_t back_id);
 bool is_navigable(Vector2i dir, uint16_t nav_id);
 
 int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir);
 int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav);
+void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, int push_count);
 bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
 bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
 
