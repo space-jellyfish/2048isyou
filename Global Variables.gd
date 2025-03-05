@@ -158,6 +158,7 @@ enum ConversionAnimatorId {
 }
 
 enum ActionId {
+	NONE, #when in path returned by path_controller, indicates tile should wait
 	SLIDE,
 	SPLIT,
 	SHIFT,

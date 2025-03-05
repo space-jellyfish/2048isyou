@@ -14,6 +14,7 @@
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/tile_map.hpp>
+#include <random>
 #include "actions.h"
 
 using namespace std;
@@ -30,14 +31,17 @@ private:
         Vector2i escape_dir = DIRECTIONS.at(DirectionId::RIGHT);
     };
 
-    static const int DANGER_LV_MAX = 2;
-    int LV_RADIUS = tile_push_limits.at(EntityId::DUPLICATOR) + 1;
-    int LV_WIDTH = 2 * LV_RADIUS + 1;
-
+    // stuff from scene tree
     Node* gv = nullptr;
     Node2D* world = nullptr;
     TileMap* cells = nullptr;
 
+    // random generator stuff for tiebreaking
+    mt19937 generator{random_device{}()};
+
+    static const int DANGER_LV_MAX = 2;
+    int LV_RADIUS = tile_push_limits.at(EntityId::DUPLICATOR) + 1;
+    int LV_WIDTH = 2 * LV_RADIUS + 1;
     Danger danger;
 
 protected:

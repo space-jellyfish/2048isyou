@@ -64,3 +64,11 @@ Vector2i DuplicatorPathController::get_danger_escape_dir() {
     return danger_escape_dir;
 }
 */
+
+/*
+    // seed random generator
+    DuplicatorPathController() :
+        generator(random_device{}()),
+        distribution(0, 1)
+    {}
+*/
