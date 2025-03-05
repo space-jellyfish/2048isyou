@@ -216,10 +216,11 @@ int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i 
 // assume pusher entity is the lv_pos tile
 // NOTE dist_to_lv_edge must be checked
 int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav) {
+    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
+    uint8_t src_type_id = get_type_id(src_stuff_id);
     Vector2i curr_lv_pos = lv_pos;
-    uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+    uint32_t curr_stuff_id = src_stuff_id;
     uint8_t curr_tile_id = get_tile_id(curr_stuff_id);
-    uint8_t src_type_id = get_type_id(curr_stuff_id);
     uint8_t curr_type_id = src_type_id;
     int push_count = 0;
     int nearest_merge_push_count = -1;
@@ -243,7 +244,7 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
 
         if (is_ids_mergeable(prev_tile_id, curr_tile_id)) {
             //check for type change
-            if (!push_count && !allow_type_change && is_type_dominant(curr_type_id, src_type_id)) {
+            if (!push_count && !allow_type_change && get_type_id(get_merged_stuff_id(src_stuff_id, curr_stuff_id)) != src_type_id) {
                 return -1;
             }
 

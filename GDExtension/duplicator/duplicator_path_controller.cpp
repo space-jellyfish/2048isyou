@@ -105,23 +105,26 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
 // danger_lv is set to DANGER_LV_MAX if adjacent to a higher-merge-priority tile, or neighbor.danger_lv - 1 if adjacent to another duplicator
 // danger_escape_dir is set to point away from souce of highest danger_lv, or any one if there are multiple
 // NOTE assumes each entity has unique merge_priority
-void DuplicatorPathController::update_danger(Vector2i pos_t) {
+void DuplicatorPathController::update_danger(vector<vector<uint32_t>>& lv, Vector2i lv_pos, unordered_map<Vector2i, Danger>& neighbors) {
     for (auto& [dir_id, dir] : DIRECTIONS) {
-        Vector2i curr_pos_t = pos_t + dir;
-        int slide_push_count = get_slide_push_count(lv, )
+        auto neighbor_itr = neighbors.find(dir);
 
-        if (curr_merge_priority > merge_priority) {
-            danger_lv = DANGER_LV_MAX;
-            danger_escape_dir = -dir;
-            return;
+        if (neighbor_itr != neighbors.end()) {
+            // neighbor is duplicator
+            Danger neighbor_danger = (*neighbor_itr).second;
+            if (neighbor_danger.level - 1 > danger.level) {
+                danger.level = neighbor_danger.level - 1;
+                danger.escape_dir = neighbor_danger.escape_dir;
+            }
         }
-        else if (curr_type_id == type_id) {
-            assert(curr_tile_entity != nullptr);
-            assert(danger_lv != DANGER_LV_MAX);
-            DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(curr_tile_entity->get("path_controller"));
-            if (path_controller->danger_lv - 1 > danger_lv) {
-                danger_lv = path_controller->danger_lv - 1;
-                danger_escape_dir = path_controller->danger_escape_dir;
+        else {
+            Vector2i curr_lv_pos = lv_pos + dir;
+            // duplicator is safe if push_count is nonzero (not immediate merge where neighbor type_id is preserved)
+            // lv width does not have to accommodate neighbor's tpl
+            if (!get_slide_push_count(lv, curr_lv_pos, -dir, false, true, true) || !get_split_push_count(lv, curr_lv_pos, -dir, false, true, true)) {
+                danger.level = DANGER_LV_MAX;
+                danger.escape_dir = -dir;
+                return;
             }
         }
     }
@@ -131,16 +134,17 @@ void DuplicatorPathController::update_danger(Vector2i pos_t) {
 Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
     // get world info
     Vector2i min_pos_t = Vector2i(pos_t.x - LV_RADIUS, pos_t.y - LV_RADIUS);
+    Vector2i lv_pos = pos_t - min_pos_t;
     vector<vector<uint32_t>> lv = vector<vector<uint32_t>>(LV_WIDTH, vector<uint32_t>(LV_WIDTH, StuffId::NONE));
     unordered_map<Vector2i, Danger> neighbors;
     get_world_info(pos_t, min_pos_t, lv, neighbors);
 
     // update danger
-    update_danger(pos_t);
+    update_danger(lv, lv_pos, neighbors);
 
     // escape has highest priority
-    if (danger_lv) {
-        // check if escape_dir is available
+    if (danger.level) {
+        // try escape_dir
         if (world->call("try_slide"))
     }
 }
