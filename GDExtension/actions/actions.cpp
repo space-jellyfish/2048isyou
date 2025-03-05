@@ -4,6 +4,23 @@ using namespace std;
 using namespace godot;
 
 
+uint8_t atlas_coords_to_tile_id(Vector2i tile_atlas_coords) {
+    return tile_atlas_coords.x + 1;
+}
+
+uint8_t atlas_coords_to_type_id(Vector2i tile_atlas_coords) {
+    return tile_atlas_coords.y + 1;
+}
+
+uint8_t atlas_coords_to_back_id(Vector2i back_atlas_coords) {
+    return max(back_atlas_coords.x, 0);
+}
+
+uint16_t atlas_coords_to_nav_id(Vector2i nav_atlas_coords) {
+    return nav_atlas_coords.x + 1;
+}
+
+
 uint32_t make_tile_bits(uint8_t tile_id) {
     return tile_id << TILE_ID_BITPOS;
 }
@@ -67,6 +84,7 @@ uint8_t get_back_id(uint32_t stuff_id) {
 uint16_t get_nav_id(uint32_t stuff_id) {
     return get_nav_bits(stuff_id) >> NAV_ID_BITPOS;
 }
+
 
 int signi(int x) {
     return (x > 0) - (x < 0);
@@ -160,6 +178,7 @@ uint32_t get_merged_stuff_id(uint32_t src_stuff_id, uint32_t dest_stuff_id) {
     return remove_type_id(remove_tile_id(dest_stuff_id)) + make_type_bits(merged_type_id) + make_tile_bits(merged_tile_id);
 }
 
+
 bool is_compatible(uint8_t type_id, uint8_t back_id) {
     if (B_EMPTY.find(back_id) != B_EMPTY.end()) {
         return true;
@@ -179,6 +198,7 @@ bool is_navigable(Vector2i dir, uint16_t nav_id) {
     return (nav_id & (NAV_BIT_BLOCK << dir_to_dir_id(dir))) == 0;
 }
 
+
 // returns negative number if lv_pos is out of bounds in dir
 int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir) {
     if (dir == Vector2i(1, 0)) {
@@ -194,6 +214,7 @@ int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i 
 }
 
 // assume pusher entity is the lv_pos tile
+// NOTE dist_to_lv_edge must be checked
 int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav) {
     Vector2i curr_lv_pos = lv_pos;
     uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
@@ -202,8 +223,9 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
     uint8_t curr_type_id = src_type_id;
     int push_count = 0;
     int nearest_merge_push_count = -1;
+    int dist_to_lv_edge = get_dist_to_lv_edge(lv, lv_pos, dir);
     
-    while (push_count < tile_push_limits.at(src_type_id)) {
+    while (push_count <= min(tile_push_limits.at(src_type_id), dist_to_lv_edge - 1)) {
         uint8_t prev_type_id = curr_type_id;
         curr_lv_pos += dir;
         curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
@@ -243,6 +265,22 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
     }
 
     return -1;
+}
+
+int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav) {
+    // check if split possible
+    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
+    uint8_t src_tile_id = get_tile_id(src_stuff_id);
+    uint8_t splitted_tile_id = get_splitted_tile_id(src_tile_id);
+    if (splitted_tile_id == TileId::EMPTY) {
+        return -1;
+    }
+
+    uint32_t splitted_stuff_id = remove_tile_id(src_stuff_id) + make_tile_bits(splitted_tile_id);
+    lv[lv_pos.y][lv_pos.x] = splitted_stuff_id;
+    int push_count = get_slide_push_count(lv, lv_pos, dir, allow_type_change, check_back, check_nav);
+    lv[lv_pos.y][lv_pos.x] = src_stuff_id;
+    return push_count;
 }
 
 void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, int push_count) {

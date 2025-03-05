@@ -2,6 +2,7 @@
 #define ACTIONS_HPP
 
 #include <godot_cpp/variant/vector2i.hpp>
+#include <godot_cpp/classes/tile_map.hpp>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -9,6 +10,26 @@
 using namespace std;
 using namespace godot;
 
+
+enum DirectionId {
+	LEFT,
+	DOWN,
+	UP,
+	RIGHT,
+};
+
+const unordered_map<int, Vector2i> DIRECTIONS = {
+	{DirectionId::LEFT, Vector2i(-1, 0)},
+	{DirectionId::DOWN, Vector2i(0, 1)},
+	{DirectionId::UP, Vector2i(0, -1)},
+	{DirectionId::RIGHT, Vector2i(1, 0)},
+};
+
+enum LayerId {
+	BACK,
+	TILE,
+	NAV,
+};
 
 enum TilePow {
 	VAL_ZERO = -1,
@@ -63,6 +84,14 @@ enum BackId {
 const int NAV_REFCOUNT_MAX = 4; //one tile approaching per side (this is possible since corners are rounded)
 const int NAV_DIR_BITLEN = 3; //should be long enough to store max refcount
 const int NAV_BIT_BLOCK = (1 << NAV_DIR_BITLEN) - 1;
+enum NavId {
+	NONE = 0,
+	LEFT = (1 << (DirectionId::LEFT * NAV_DIR_BITLEN)),
+	DOWN = (1 << (DirectionId::DOWN * NAV_DIR_BITLEN)),
+	UP = (1 << (DirectionId::UP * NAV_DIR_BITLEN)),
+	RIGHT = (1 << (DirectionId::RIGHT * NAV_DIR_BITLEN)),
+	ALL = LEFT + DOWN + UP + RIGHT,
+};
 
 const unordered_map<int, int> tile_push_limits = {
     {EntityId::NONE,            0},
@@ -152,6 +181,15 @@ const uint32_t TYPE_ID_INVERTED_MASK = numeric_limits<uint32_t>::max() - TYPE_ID
 const uint32_t BACK_ID_INVERTED_MASK = numeric_limits<uint32_t>::max() - BACK_ID_MASK;
 const uint32_t NAV_ID_INVERTED_MASK = numeric_limits<uint32_t>::max() - NAV_ID_MASK;
 
+enum StuffId {
+    NONE = (TileId::EMPTY << TILE_ID_BITPOS) + (TypeId::NONE << TYPE_ID_BITPOS) + (BackId::EMPTY << BACK_ID_BITPOS) + (NavId::NONE << NAV_ID_BITPOS),
+};
+
+uint8_t atlas_coords_to_tile_id(Vector2i tile_atlas_coords);
+uint8_t atlas_coords_to_type_id(Vector2i tile_atlas_coords);
+uint8_t atlas_coords_to_back_id(Vector2i back_atlas_coords);
+uint16_t atlas_coords_to_nav_id(Vector2i nav_atlas_coords);
+
 uint32_t make_tile_bits(uint8_t tile_id);
 uint32_t make_type_bits(uint8_t type_id);
 uint32_t make_back_bits(uint8_t back_id);
@@ -186,6 +224,7 @@ bool is_navigable(Vector2i dir, uint16_t nav_id);
 
 int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir);
 int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav);
+int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav);
 void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, int push_count);
 bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
 bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
