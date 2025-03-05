@@ -145,6 +145,66 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
     // escape has highest priority
     if (danger.level) {
         // try escape_dir
-        if (world->call("try_slide"))
+        if (get_slide_push_count(lv, lv_pos, danger.escape_dir, false, true, true) != -1) {
+            --danger.level;
+            return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::SLIDE);
+        }
+        if (get_split_push_count(lv, lv_pos, danger.escape_dir, false, true, true) != -1) {
+            --danger.level;
+            return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::SPLIT);
+        }
+
+        // try dirs perpendicular to escape_dir
+        // prefer slide over split
+        // prefer randomly chosen perpendicular dir
+        uniform_int_distribution<int> distribution{0, 1};
+        bool rand_bool = distribution(generator);
+
+        for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
+            for (const pair<int, Vector2i>& dir_entry : DIRECTIONS) {
+                Vector2i dir = dir_entry.second;
+
+                if (!dot(danger.escape_dir, dir)) {
+                    if (rand_bool) {
+                        dir *= -1;
+                    }
+                    Vector3i action = Vector3i(dir.x, dir.y, action_id);
+                    if (get_action_push_count(lv, lv_pos, action, false, true, true) != -1) {
+                        --danger.level;
+                        return action;
+                    }
+                }
+            }
+        }
+
+        // wait
+        // NOTE there is rare case where if dominant tile is on top of duplicator membrane and split-mergeable,
+        // sliding in -escape_dir can be a good move by pushing dominant tile out
+        // ignore this case since duplicator shouldn't be that intelligent anyway
+        return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::NONE);
     }
+
+    // hunt type-dominated, non-regular, no-type-change-mergeable neighbor
+    // (don't die (become TileId::ZERO) for the hunt)
+    // prefer split over slide
+    // else prefer higher resulting power
+    // else prefer lower merge priority neighbor
+    // else prefer randomly chosen neighbor
+
+    vector<Vector3i> 
+
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        Vector2i curr_lv_pos = lv_pos + dir;
+        uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+        uint8_t curr_type_id = get_type_id(curr_stuff_id);
+
+        for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
+            Vector3i action = Vector3i(dir.x, dir.y, action_id);
+            if (get_action_push_count(lv, lv_pos, action, false, true, true)) {
+
+            }
+        }
+    }
+
+    // wander and reproduce
 }

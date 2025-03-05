@@ -90,6 +90,10 @@ int signi(int x) {
     return (x > 0) - (x < 0);
 }
 
+int dot(Vector2i a, Vector2i b) {
+    return a.x * b.x + a.y * b.y;
+}
+
 int dir_to_dir_id(Vector2i dir) {
     return 1.5 * dir.x - 0.5 * dir.y + 1.5;
 }
@@ -282,6 +286,18 @@ int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
     int push_count = get_slide_push_count(lv, lv_pos, dir, allow_type_change, check_back, check_nav);
     lv[lv_pos.y][lv_pos.x] = src_stuff_id;
     return push_count;
+}
+
+int get_action_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector3i action, bool allow_type_change, bool check_back, bool check_nav) {
+    Vector2i dir = Vector2i(action.x, action.y);
+    switch (action.z) {
+        case ActionId::SLIDE:
+            return get_slide_push_count(lv, lv_pos, dir, allow_type_change, check_back, check_nav);
+        case ActionId::SPLIT:
+            return get_split_push_count(lv, lv_pos, dir, allow_type_change, check_back, check_nav);
+        default:
+            return -1;
+    }
 }
 
 void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, int push_count) {

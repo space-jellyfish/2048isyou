@@ -25,6 +25,13 @@ const unordered_map<int, Vector2i> DIRECTIONS = {
 	{DirectionId::RIGHT, Vector2i(1, 0)},
 };
 
+enum ActionId {
+    NONE, //wait
+	SLIDE,
+	SPLIT,
+	SHIFT,
+};
+
 enum LayerId {
 	BACK,
 	TILE,
@@ -208,6 +215,7 @@ uint8_t get_back_id(uint32_t stuff_id);
 uint16_t get_nav_id(uint32_t stuff_id);
 
 int signi(int x);
+int dot(Vector2i a, Vector2i b);
 int dir_to_dir_id(Vector2i dir);
 Vector2i tile_id_to_val(uint8_t tile_id);
 bool is_vals_mergeable(Vector2i val1, Vector2i val2);
@@ -225,6 +233,7 @@ bool is_navigable(Vector2i dir, uint16_t nav_id);
 int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir);
 int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav);
 int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav);
+int get_action_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector3i action, bool allow_type_change, bool check_back, bool check_nav);
 void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, int push_count);
 bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
 bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
