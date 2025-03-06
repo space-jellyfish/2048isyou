@@ -1,7 +1,7 @@
 class_name TileForTilemap
 extends CharacterBody2D;
 
-signal moved;
+signal moved_for_tracking_cam;
 var atlas_coords:Vector2i;
 var curr_sprite:TileForTilemapSprite;
 var prev_sprite:TileForTilemapSprite;

@@ -72,3 +72,34 @@ Vector2i DuplicatorPathController::get_danger_escape_dir() {
         distribution(0, 1)
     {}
 */
+
+/*
+void DuplicatorPathController::update_danger(vector<vector<uint32_t>>& lv, Vector2i lv_pos, unordered_map<Vector2i, Danger>& neighbors) {
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        auto neighbor_itr = neighbors.find(dir);
+
+        if (neighbor_itr != neighbors.end()) {
+            // neighbor is duplicator
+            Danger neighbor_danger = (*neighbor_itr).second;
+            if (neighbor_danger.level - 1 > danger.level) {
+                danger.level = neighbor_danger.level - 1;
+                danger.escape_dir = neighbor_danger.escape_dir;
+            }
+        }
+        else {
+            Vector2i curr_lv_pos = lv_pos + dir;
+            // duplicator is safe if push_count is nonzero (not immediate merge where neighbor type_id is preserved)
+            // lv width does not have to accommodate neighbor's tpl
+            if (!get_slide_push_count(lv, curr_lv_pos, -dir, false, true, true) || !get_split_push_count(lv, curr_lv_pos, -dir, false, true, true)) {
+                danger.level = DANGER_LV_MAX;
+                danger.escape_dir = -dir;
+                break;
+            }
+        }
+    }
+
+    // update neighbor dangers
+
+}
+
+*/

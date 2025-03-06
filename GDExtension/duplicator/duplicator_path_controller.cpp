@@ -72,7 +72,7 @@ uint32_t DuplicatorPathController::get_stuff_id(Vector2i pos_t) {
 
 
 // neighbor entry (dir : Danger) not added if neighbor isn't a duplicator
-void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv, unordered_map<Vector2i, Danger>& neighbors) {
+void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv) {
     Array layer_mutexes = world->get("layer_mutexes");
     Ref<Mutex> tile_mutex = layer_mutexes[LayerId::TILE];
     // ================ START CRITICAL SECTION ================
@@ -88,15 +88,6 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
         Vector2i curr_lv_pos = curr_pos_t - min_pos_t;
         lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t);
     }
-    for (auto& [dir_id, dir] : DIRECTIONS) {
-        Vector2i curr_pos_t = pos_t + dir;
-        uint8_t curr_type_id = get_type_id(curr_pos_t);
-        if (curr_type_id == TypeId::DUPLICATOR) {
-            Ref<RefCounted> curr_tile_entity = world->call("get_aligned_tile_entity", curr_type_id, curr_pos_t);
-            DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(curr_tile_entity->get("path_controller"));
-            neighbors[dir] = path_controller->danger;
-        }
-    }
 
     tile_mutex->unlock();
     // ================ END CRITICAL SECTION ================
@@ -107,28 +98,60 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
 // danger_escape_dir is set to point away from souce of highest danger_lv, or any one if there are multiple
 // set neighbor danger rn bc own danger will change once get_action() returns
 // NOTE assumes each entity has unique merge_priority
-void DuplicatorPathController::update_danger(vector<vector<uint32_t>>& lv, Vector2i lv_pos, unordered_map<Vector2i, Danger>& neighbors) {
-    for (auto& [dir_id, dir] : DIRECTIONS) {
-        auto neighbor_itr = neighbors.find(dir);
+void DuplicatorPathController::update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos) {
+    uint32_t dest_stuff_id = lv[lv_pos.y][lv_pos.x];
+    uint8_t dest_type_id = actions::get_type_id(dest_stuff_id);
 
-        if (neighbor_itr != neighbors.end()) {
-            // neighbor is duplicator
-            Danger neighbor_danger = (*neighbor_itr).second;
-            if (neighbor_danger.level - 1 > danger.level) {
-                danger.level = neighbor_danger.level - 1;
-                danger.escape_dir = neighbor_danger.escape_dir;
-            }
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        Vector2i src_lv_pos = lv_pos + dir;
+        uint32_t src_stuff_id = lv[src_lv_pos.y][src_lv_pos.x];
+        uint8_t src_type_id = actions::get_type_id(src_stuff_id);
+
+        // duplicator is safe if push_count is nonzero (not immediate merge where neighbor type_id is preserved)
+        // lv width does not have to accommodate neighbor's tpl
+        // to be conservative, assume allow_type_change for dominant tile
+        if (is_type_dominant(src_type_id, dest_type_id) && (!get_slide_push_count(lv, src_lv_pos, -dir, true, true, true) || !get_split_push_count(lv, src_lv_pos, -dir, true, true, true))) {
+            // ================ START CRITICAL SECTION ================
+            danger_mutex.lock();
+            danger.level = DANGER_LV_MAX;
+            danger.escape_dir = -dir;
+            danger_mutex.unlock();
+            // ================ END CRITICAL SECTION ================
+            update_neighbor_dangers(min_pos_t, lv_pos);
+            break;
         }
-        else {
-            Vector2i curr_lv_pos = lv_pos + dir;
-            // duplicator is safe if push_count is nonzero (not immediate merge where neighbor type_id is preserved)
-            // lv width does not have to accommodate neighbor's tpl
-            if (!get_slide_push_count(lv, curr_lv_pos, -dir, false, true, true) || !get_split_push_count(lv, curr_lv_pos, -dir, false, true, true)) {
-                danger.level = DANGER_LV_MAX;
-                danger.escape_dir = -dir;
-                return;
+    }
+}
+
+void DuplicatorPathController::update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos) {
+    // update neighbor dangers
+    Vector2i pos_t = min_pos_t + lv_pos;
+    Array layer_mutexes = world->get("layer_mutexes");
+    Ref<Mutex> tile_mutex = layer_mutexes[LayerId::TILE];
+
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        Vector2i curr_pos_t = pos_t + dir;
+
+        // ================ START CRITICAL SECTION ================
+        tile_mutex->lock();
+        uint8_t curr_type_id = get_type_id(curr_pos_t);
+        if (curr_type_id == TypeId::DUPLICATOR) {
+            Ref<RefCounted> curr_tile_entity = world->call("get_aligned_tile_entity", curr_type_id, curr_pos_t);
+            DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(curr_tile_entity->get("path_controller"));
+            // ================ START CRITICAL SECTION ================
+            danger_mutex.lock();
+            path_controller->danger_mutex.lock();
+            Danger& neighbor_danger = path_controller->danger;
+            if (danger.level - 1 > neighbor_danger.level) {
+                neighbor_danger.level = danger.level - 1;
+                neighbor_danger.escape_dir = danger.escape_dir;
             }
+            path_controller->danger_mutex.unlock();
+            danger_mutex.unlock();
+            // ================ END CRITICAL SECTION ================
         }
+        tile_mutex->unlock();
+        // ================ END CRITICAL SECTION ================
     }
 }
 
@@ -139,13 +162,15 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
     Vector2i lv_pos = pos_t - min_pos_t;
     vector<vector<uint32_t>> lv = vector<vector<uint32_t>>(LV_WIDTH, vector<uint32_t>(LV_WIDTH, StuffId::NONE));
     unordered_map<Vector2i, Danger> neighbors;
-    get_world_info(pos_t, min_pos_t, lv, neighbors);
+    get_world_info(pos_t, min_pos_t, lv);
 
     // update danger
-    update_danger(lv, lv_pos, neighbors);
+    update_danger(lv, lv_pos);
 
     // escape has highest priority
     if (danger.level) {
+        vector<EscapeAction> escape_actions;
+        
         // try escape_dir
         if (get_slide_push_count(lv, lv_pos, danger.escape_dir, false, true, true) != -1) {
             --danger.level;

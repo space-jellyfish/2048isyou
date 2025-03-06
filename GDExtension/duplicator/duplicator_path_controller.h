@@ -15,6 +15,7 @@
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/tile_map.hpp>
 #include <random>
+#include <mutex>
 #include "actions.h"
 
 using namespace std;
@@ -68,7 +69,9 @@ private:
     static const int DANGER_LV_MAX = 2;
     int LV_RADIUS = tile_push_limits.at(EntityId::DUPLICATOR) + 1;
     int LV_WIDTH = 2 * LV_RADIUS + 1;
+
     Danger danger;
+    mutex danger_mutex;
 
 protected:
 	static void _bind_methods();
@@ -84,14 +87,16 @@ public:
     int get_danger_lv();
     Vector2i get_danger_escape_dir();
 
+    // these require tile_mutex
     uint8_t get_tile_id(Vector2i pos_t);
     uint8_t get_type_id(Vector2i pos_t);
     uint8_t get_back_id(Vector2i pos_t);
     uint16_t get_nav_id(Vector2i pos_t);
     uint32_t get_stuff_id(Vector2i pos_t);
 
-    void get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv, unordered_map<Vector2i, Danger>& neighbors);
-    void update_danger(vector<vector<uint32_t>>& lv, Vector2i lv_pos, unordered_map<Vector2i, Danger>& neighbors);
+    void get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv);
+    void update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos);
+    void update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos);
     Vector3i get_action(Vector2i pos_t);
 };
 thread_local mt19937 DuplicatorPathController::generator{random_device{}()};

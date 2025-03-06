@@ -17,9 +17,9 @@ var pos_tween:Tween;
 func set_target_entity(target_entity:Entity, transition:bool):
 	#connect/disconnect target_entity.moved
 	if self.target_entity:
-		self.target_entity.moved.disconnect(_on_target_entity_moved);
+		self.target_entity.moved_for_tracking_cam.disconnect(_on_target_entity_moved);
 	if target_entity:
-		target_entity.moved.connect(_on_target_entity_moved);
+		target_entity.moved_for_tracking_cam.connect(_on_target_entity_moved);
 	
 	#set
 	self.target_entity = target_entity;
