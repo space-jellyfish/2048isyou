@@ -356,13 +356,17 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		world.remove_entity(tile_entity_id, self);
 		tile_entity = null;
 
-	# set self entity key
-	# NOTE assume type did not change if not is_aligned
 	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
+		# set self entity key
+		# NOTE assume type did not change if not is_aligned
 		if is_merging and not is_reversed and merger_tile.new_type_id == old_type_id and merger_tile.new_type_id != merger_tile.old_type_id:
 			tile_entity.set_entity_id_and_body(old_type_id, merger_tile);
 		else:
 			tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
+		
+		# emit entity move signals
+		tile_entity.moved_for_tracking_cam.emit();
+		tile_entity.moved_for_path_controller.emit();
 	
 	# remove merger/splitter entity
 	# if governor and merger_tile have the same type, merger entity is kept

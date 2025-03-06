@@ -165,7 +165,7 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
     get_world_info(pos_t, min_pos_t, lv);
 
     // update danger
-    update_danger(lv, lv_pos);
+    update_danger(lv, min_pos_t, lv_pos);
 
     // escape has highest priority
     if (danger.level) {
