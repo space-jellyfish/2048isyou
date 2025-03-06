@@ -13,7 +13,7 @@ class_name Entity
 
 # emitted when body emits moved or set_body/set_pos_t changes entity position
 # assumes body has a moved signal
-signal moved;
+signal moved_for_tracking_cam;
 
 var world:World;
 var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
@@ -106,13 +106,13 @@ func set_entity_id_and_body(entity_id:int, body:Node2D):
 	var old_pos:Vector2 = get_position();
 	var new_pos:Vector2 = body.position if body else GV.pos_t_to_world(pos_t);
 	if new_pos != old_pos:
-		moved.emit();
+		moved_for_tracking_cam.emit();
 	
 	#connect/disconnect body.moved signal
 	if self.body and self.body != body:
-		self.body.moved.disconnect(_on_body_moved);
+		self.body.moved_for_tracking_cam.disconnect(_on_body_moved_for_tracking_cam);
 	if body and body != self.body:
-		body.moved.connect(_on_body_moved);
+		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
 	
 	#update properties
 	self.entity_id = entity_id;
@@ -134,11 +134,11 @@ func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
 	var old_pos:Vector2 = get_position();
 	var new_pos:Vector2 = GV.pos_t_to_world(pos_t);
 	if new_pos != old_pos or (GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.FINISH_ACTION and pos_t != self.pos_t):
-		moved.emit();
+		moved_for_tracking_cam.emit();
 	
 	#connect/disconnect body.moved signal
 	if body:
-		body.moved.disconnect(_on_body_moved);
+		body.moved_for_tracking_cam.disconnect(_on_body_moved_for_tracking_cam);
 	
 	#update properties
 	self.entity_id = entity_id;
@@ -154,8 +154,8 @@ func set_is_busy(is_busy:bool):
 	if not is_busy and premoves:
 		world.add_curr_frame_premove_entity(self);
 		
-func _on_body_moved():
-	moved.emit();
+func _on_body_moved_for_tracking_cam():
+	moved_for_tracking_cam.emit();
 
 func get_position() -> Vector2:
 	return body.position if body else GV.pos_t_to_world(pos_t);

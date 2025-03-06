@@ -24,7 +24,7 @@ func step(delta:float):
 	
 	#emit moved signal
 	if tile.get_last_motion().length():
-		tile.moved.emit();
+		tile.moved_for_tracking_cam.emit();
 	
 	for index in tile.get_slide_collision_count():
 		var collision:KinematicCollision2D = tile.get_slide_collision(index);

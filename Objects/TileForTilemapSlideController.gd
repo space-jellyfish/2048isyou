@@ -41,7 +41,7 @@ func step(delta:float):
 	
 	#emit moved signal
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:
-		tile.moved.emit();
+		tile.moved_for_tracking_cam.emit();
 	
 	#bounce, finalize slide (if applicable)
 	#bounce if true_step_dist ~< target_step_dist? NAH, older slide should continue
