@@ -26,18 +26,44 @@ class DuplicatorPathController : public RefCounted {
     GDCLASS(DuplicatorPathController, RefCounted);
 
 private:
+    // random generator stuff for tiebreaking
+    static thread_local mt19937 generator;
+
     struct Danger {
         int level = 0;
         Vector2i escape_dir = DIRECTIONS.at(DirectionId::RIGHT);
+    };
+
+    struct EscapeAction {
+        Vector3i action;
+        int resulting_power;
+        
+        EscapeAction(Vector3i p_action, int p_resulting_power) :
+            action(p_action),
+            resulting_power(p_resulting_power)
+        {}
+
+        bool operator<(const EscapeAction& other) const;
+    };
+
+    struct HuntAction {
+        Vector3i action;
+        int resulting_power;
+        int target_merge_priority;
+
+        HuntAction(Vector3i p_action, int p_resulting_power, int p_target_merge_priority) :
+            action(p_action),
+            resulting_power(p_resulting_power),
+            target_merge_priority(p_target_merge_priority)
+        {}
+
+        bool operator<(const HuntAction& other) const;
     };
 
     // stuff from scene tree
     Node* gv = nullptr;
     Node2D* world = nullptr;
     TileMap* cells = nullptr;
-
-    // random generator stuff for tiebreaking
-    mt19937 generator{random_device{}()};
 
     static const int DANGER_LV_MAX = 2;
     int LV_RADIUS = tile_push_limits.at(EntityId::DUPLICATOR) + 1;
@@ -68,5 +94,6 @@ public:
     void update_danger(vector<vector<uint32_t>>& lv, Vector2i lv_pos, unordered_map<Vector2i, Danger>& neighbors);
     Vector3i get_action(Vector2i pos_t);
 };
+thread_local mt19937 DuplicatorPathController::generator{random_device{}()};
 
 #endif
