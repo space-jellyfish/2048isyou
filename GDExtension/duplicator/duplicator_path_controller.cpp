@@ -6,6 +6,7 @@
 
 using namespace std;
 using namespace godot;
+using namespace actions;
 
 
 void DuplicatorPathController::_bind_methods() {
@@ -104,6 +105,7 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
 // check all four neighbors for tiles with higher merge priority, or other duplicators from which danger can be inherited
 // danger_lv is set to DANGER_LV_MAX if adjacent to a higher-merge-priority tile, or neighbor.danger_lv - 1 if adjacent to another duplicator
 // danger_escape_dir is set to point away from souce of highest danger_lv, or any one if there are multiple
+// set neighbor danger rn bc own danger will change once get_action() returns
 // NOTE assumes each entity has unique merge_priority
 void DuplicatorPathController::update_danger(vector<vector<uint32_t>>& lv, Vector2i lv_pos, unordered_map<Vector2i, Danger>& neighbors) {
     for (auto& [dir_id, dir] : DIRECTIONS) {
@@ -155,8 +157,6 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
         }
 
         // try dirs perpendicular to escape_dir
-        // prefer slide over split
-        // prefer randomly chosen perpendicular dir
         uniform_int_distribution<int> distribution{0, 1};
         bool rand_bool = distribution(generator);
 
@@ -186,25 +186,70 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
 
     // hunt type-dominated, non-regular, no-type-change-mergeable neighbor
     // (don't die (become TileId::ZERO) for the hunt)
-    // prefer split over slide
-    // else prefer higher resulting power
-    // else prefer lower merge priority neighbor
-    // else prefer randomly chosen neighbor
-
-    vector<Vector3i> 
+    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
+    vector<HuntAction> hunt_actions;
 
     for (auto& [dir_id, dir] : DIRECTIONS) {
         Vector2i curr_lv_pos = lv_pos + dir;
         uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
-        uint8_t curr_type_id = get_type_id(curr_stuff_id);
+        uint8_t curr_type_id = actions::get_type_id(curr_stuff_id);
 
-        for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
-            Vector3i action = Vector3i(dir.x, dir.y, action_id);
-            if (get_action_push_count(lv, lv_pos, action, false, true, true)) {
+        if (curr_type_id != TypeId::REGULAR && is_type_dominant(TypeId::DUPLICATOR, curr_type_id)) {
 
+            for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
+                Vector3i action = Vector3i(dir.x, dir.y, action_id);
+
+                if (!get_action_push_count(lv, lv_pos, action, false, true, true)) {
+                    // get power resulting from merge
+                    int src_tile_id = actions::get_tile_id(src_stuff_id);
+                    if (action.z == ActionId::SPLIT) {
+                        src_tile_id = get_splitted_tile_id(src_tile_id);
+                    }
+                    int dest_tile_id = actions::get_tile_id(curr_stuff_id);
+                    int merged_tile_id = get_merged_tile_id(src_tile_id, dest_tile_id);
+                    int resulting_power = tile_id_to_val(merged_tile_id).x;
+
+                    // get target merge priority
+                    int target_merge_priority = merge_priorities.at(curr_type_id);
+
+                    hunt_actions.emplace_back(action, resulting_power, target_merge_priority);
+                }
             }
         }
     }
 
+    if (!hunt_actions.empty()) {
+        sort(hunt_actions.begin(), hunt_actions.end());
+        return hunt_actions[0].action;
+    }
+
     // wander and reproduce
+    // don't make wander action deterministic, even if conditions suggest that a move is very good
+    // generally prefer split over slide and high resulting pow over low
+}
+
+// prefer slide over split
+// prefer randomly chosen perpendicular dir
+bool DuplicatorPathController::EscapeAction::operator<(const EscapeAction& other) const {
+    if (action.z != other.action.z) {
+        return action.z == ActionId::SPLIT;
+    }
+}
+
+// prefer split over slide
+// else prefer higher resulting power
+// else prefer lower merge priority neighbor
+// else prefer randomly chosen neighbor
+bool DuplicatorPathController::HuntAction::operator<(const HuntAction& other) const {
+    if (action.z != other.action.z) {
+        return action.z == ActionId::SPLIT;
+    }
+    if (resulting_power != other.resulting_power) {
+        return resulting_power > other.resulting_power;
+    }
+    if (target_merge_priority != other.target_merge_priority) {
+        return target_merge_priority < other.target_merge_priority;
+    }
+    uniform_int_distribution<int> distribution{0, 1};
+    return distribution(generator);
 }

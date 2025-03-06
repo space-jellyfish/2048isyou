@@ -68,6 +68,8 @@ func try_premove(premove:Premove):
 		initiated = world.try_split(self, premove.tile_entity, premove.dir, false);
 	elif premove.action_id == GV.ActionId.SHIFT:
 		initiated = world.try_shift(self, premove.tile_entity, premove.dir, false);
+	elif premove.action_id == GV.ActionId.NONE:
+		return;
 	
 	if initiated:
 		# animation should be started from action_func

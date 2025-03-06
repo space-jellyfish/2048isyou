@@ -7,9 +7,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
+// "using declarations should be avoided in header files" nah i don't care
 using namespace std;
 using namespace godot;
 
+
+namespace actions {
 
 enum DirectionId {
 	LEFT,
@@ -238,6 +241,7 @@ void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, 
 bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
 bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
 
+}
 
 
 #endif

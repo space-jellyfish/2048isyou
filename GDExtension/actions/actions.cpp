@@ -4,6 +4,8 @@ using namespace std;
 using namespace godot;
 
 
+namespace actions {
+
 uint8_t atlas_coords_to_tile_id(Vector2i tile_atlas_coords) {
     return tile_atlas_coords.x + 1;
 }
@@ -360,4 +362,6 @@ bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool
         lv[lv_pos.y][lv_pos.x] = src_stuff_id;
     }
     return initiated;
+}
+
 }
