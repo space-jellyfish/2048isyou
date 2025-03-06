@@ -385,11 +385,11 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		else:
 			if is_merging:
 				world.add_tile_in_transient(merger_tile);
-				assert(world.get_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t, false) == -Vector2i.ONE);
+				assert(world.get_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t) == -Vector2i.ONE);
 				world.set_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t, GV.TileSetSourceId.TILE, merger_tile.atlas_coords, 1, false);
 			if is_splitted:
 				world.add_tile_in_transient(splitter_tile);
-				assert(world.get_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, false) == -Vector2i.ONE);
+				assert(world.get_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t) == -Vector2i.ONE);
 				world.set_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, GV.TileSetSourceId.TILE, splitter_tile.atlas_coords, 1, false);
 	world.layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
