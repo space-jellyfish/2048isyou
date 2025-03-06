@@ -1890,3 +1890,8 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	assert(atlas_y != -1 && atlas_x != -1);
 	return Vector2i(atlas_x, atlas_y);
 '''
+
+'''
+	if new_pos != old_pos or (GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.FINISH_ACTION and pos_t != self.pos_t):
+		moved_for_tracking_cam.emit();
+'''
