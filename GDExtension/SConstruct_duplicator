@@ -23,7 +23,8 @@ print(env['CXXFLAGS'])
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
 env.Append(CPPPATH="duplicator/")
-env.Append(CPPPATH="lib/open_list_hog/")
+env.Append(CPPPATH="lib/")
+env.Append(CPPPATH="lib/actions/")
 src = Glob("duplicator/*.cpp")
 
 if env['platform'] == 'macos':
