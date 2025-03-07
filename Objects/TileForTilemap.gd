@@ -345,28 +345,49 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		assert(conversion_transit_id == prev_transit_id);
 		conversion_transit_id = GV.TransitId.NONE;
 	
+	# find derived flags
+	# don't overuse them, they obfuscate the logic
+	var is_self_entity_preserved:bool = true;
+	if is_merging:
+		is_self_entity_preserved = is_reversed or (merger_tile.new_type_id == old_type_id and merger_tile.old_type_id != old_type_id);
+	
 	# ================ START CRITICAL SECTION ================
 	world.layer_mutexes[GV.LayerId.TILE].lock();
-	# get tile entity
+	# get self entity
 	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
 	var tile_entity:Entity = world.get_entity(tile_entity_id, self);
 	
+	# find resulting entity at pos_t
+	# NOTE null if not aligned, assume this is only used for moved_for_PC signal
+	var resulting_entity:Entity;
+	if is_aligned:
+		if is_merging and not is_self_entity_preserved:
+			resulting_entity = world.get_entity(merger_tile.new_type_id, merger_tile);
+		else:
+			resulting_entity = tile_entity;
+	
+	# emit moved for path controller
+	# NOTE this should be done before "remove self entity" so path controller can do its finalize logic
+	if tile_entity and is_aligned and prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
+		tile_entity.moved_for_path_controller.emit(pos_t, is_reversed, resulting_entity);
+	
 	# remove self entity
-	if is_merging and not is_reversed and merger_tile.new_type_id in [merger_tile.old_type_id, GV.TypeId.REGULAR]:
+	if is_merging and not is_self_entity_preserved:
 		world.remove_entity(tile_entity_id, self);
 		tile_entity = null;
-
+	
+	# set self entity key
+	# NOTE assume type did not change if not is_aligned
 	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
-		# set self entity key
-		# NOTE assume type did not change if not is_aligned
-		if is_merging and not is_reversed and merger_tile.new_type_id == old_type_id and merger_tile.new_type_id != merger_tile.old_type_id:
+		if is_merging and not is_reversed and is_self_entity_preserved:
 			tile_entity.set_entity_id_and_body(old_type_id, merger_tile);
 		else:
 			tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
 		
-		# emit entity move signals
-		tile_entity.moved_for_tracking_cam.emit();
-		tile_entity.moved_for_path_controller.emit();
+		# emit moved for tracking cam
+		# NOTE this should be done after "remove self entity" so no pan is triggered if agent dies
+		if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
+			tile_entity.moved_for_tracking_cam.emit();
 	
 	# remove merger/splitter entity
 	# if governor and merger_tile have the same type, merger entity is kept

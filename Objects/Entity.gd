@@ -14,7 +14,7 @@ class_name Entity
 # emitted when body emits moved or set_body/set_pos_t changes entity position
 # assumes body has a moved signal
 signal moved_for_tracking_cam;
-signal moved_for_path_controller;
+signal moved_for_path_controller(pos_t:Vector2i, is_reversed:bool, resulting_entity:Entity);
 
 var world:World;
 var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
@@ -37,7 +37,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 	match entity_id:
 		GV.EntityId.DUPLICATOR:
 			path_controller = DuplicatorPathController.new();
-			moved_for_path_controller.connect(path_controller.on_entity_moved);
+			moved_for_path_controller.connect(path_controller.on_entity_move_finalized);
 
 func has_premove():
 	return not premoves.is_empty();
