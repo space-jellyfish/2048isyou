@@ -260,13 +260,6 @@ enum BackId { #8 bits
 	BOARD_FRAME,
 }
 
-const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
-const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
-const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
-const T_NONE_OR_REGULAR:Array = [TypeId.NONE, TypeId.REGULAR];
-const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
-const T_ENEMY_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
-
 # NOTE TypeId should be usable as EntityId without conversion
 enum EntityId {
 	NONE = 0,
@@ -281,6 +274,14 @@ enum EntityId {
 	STP_SPAWNED,
 	SNAKE,
 }
+
+const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
+const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
+const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
+const T_NONE_OR_REGULAR:Array = [TypeId.NONE, TypeId.REGULAR];
+const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
+const T_ENEMY_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
+const E_HAS_PATHFINDING:Array = [EntityId.DUPLICATOR];
 
 enum TileSetSourceId {
 	BACK,

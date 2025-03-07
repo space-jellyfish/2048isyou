@@ -191,6 +191,7 @@ const unordered_set<uint8_t> B_EMPTY = {BackId::EMPTY, BackId::BOARD_FRAME};
 const unordered_set<uint8_t> T_NONE_OR_REGULAR = {TypeId::NONE, TypeId::REGULAR};
 const unordered_set<uint8_t> T_ENEMY = {TypeId::DUPLICATOR, TypeId::HOSTILE, TypeId::VOID, TypeId::SQUID};
 const unordered_set<uint8_t> T_ENEMY_KILLABLE_BY_ZEROING = {TypeId::DUPLICATOR, TypeId::HOSTILE};
+const unordered_set<int> E_HAS_PATHFINDING = {EntityId::DUPLICATOR};
 
 const int TILE_ID_BITLEN = 5;
 const int TYPE_ID_BITLEN = 3;
