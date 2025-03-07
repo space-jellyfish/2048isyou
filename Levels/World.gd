@@ -116,7 +116,7 @@ func try_curr_frame_premoves():
 
 func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
 	var local_pos:Vector2 = $TrackingCam.position - GV.VIEWPORT_RESOLUTION/2 + viewport_pos;
-	return get_node("Cells").local_to_map(local_pos);
+	return $Cells.local_to_map(local_pos);
 
 func get_pooled_tile(pos_t:Vector2i) -> TileForTilemap:
 	var tile:TileForTilemap;
