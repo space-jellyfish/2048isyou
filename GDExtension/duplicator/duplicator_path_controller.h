@@ -20,6 +20,7 @@
 
 using namespace std;
 using namespace godot;
+using namespace actions;
 
 
 // should be thread-safe
@@ -36,29 +37,35 @@ private:
     };
 
     struct EscapeAction {
+        int weight = 0;
         Vector3i action;
+        int dot_escape_dir;
         int resulting_power;
         
-        EscapeAction(Vector3i p_action, int p_resulting_power) :
-            action(p_action),
-            resulting_power(p_resulting_power)
-        {}
-
+        EscapeAction(Vector3i p_action, int p_dot_escape_dir, int p_resulting_power);
         bool operator<(const EscapeAction& other) const;
     };
 
+    // to make final action non-deterministic, calculate a priority score in constructor of Action struct
+    // and compare priority score in the compare function 
+
     struct HuntAction {
+        int weight = 0;
         Vector3i action;
         int resulting_power;
         int target_merge_priority;
 
-        HuntAction(Vector3i p_action, int p_resulting_power, int p_target_merge_priority) :
-            action(p_action),
-            resulting_power(p_resulting_power),
-            target_merge_priority(p_target_merge_priority)
-        {}
-
+        HuntAction(Vector3i p_action, int p_resulting_power, int p_target_merge_priority);
         bool operator<(const HuntAction& other) const;
+    };
+
+    struct WanderAction {
+        int weight = 0;
+        Vector3i action;
+        int resulting_power;
+
+        WanderAction(Vector3i p_action, int p_resulting_power);
+        bool operator<(const WanderAction& other) const;
     };
 
     // stuff from scene tree
@@ -71,21 +78,20 @@ private:
     int LV_WIDTH = 2 * LV_RADIUS + 1;
 
     Danger danger;
-    mutex danger_mutex;
+    recursive_mutex danger_mutex;
 
 protected:
 	static void _bind_methods();
 
 public:
+    // registered with GDScript
     void set_gv(Node* _gv);
     Node* get_gv();
     void set_world(Node2D* w);
     Node2D* get_world();
     void set_cells(TileMap* t);
     TileMap* get_cells();
-
-    int get_danger_lv();
-    Vector2i get_danger_escape_dir();
+    void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
 
     // these require tile_mutex
     uint8_t get_tile_id(Vector2i pos_t);
@@ -99,6 +105,5 @@ public:
     void update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos);
     Vector3i get_action(Vector2i pos_t);
 };
-thread_local mt19937 DuplicatorPathController::generator{random_device{}()};
 
 #endif

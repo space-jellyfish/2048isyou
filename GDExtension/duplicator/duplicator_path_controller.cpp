@@ -9,13 +9,16 @@ using namespace godot;
 using namespace actions;
 
 
+thread_local mt19937 DuplicatorPathController::generator{random_device{}()};
+
 void DuplicatorPathController::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_gv", "_gv"), &DuplicatorPathController::set_gv);
 	ClassDB::bind_method(D_METHOD("get_gv"), &DuplicatorPathController::get_gv);
 	ClassDB::bind_method(D_METHOD("set_world", "w"), &DuplicatorPathController::set_world);
 	ClassDB::bind_method(D_METHOD("get_world"), &DuplicatorPathController::get_world);
-    ClassDB::bind_method(D_METHOD("get_danger_lv"), &DuplicatorPathController::get_danger_lv);
-    ClassDB::bind_method(D_METHOD("get_danger_escape_dir"), &DuplicatorPathController::get_danger_escape_dir);
+	ClassDB::bind_method(D_METHOD("set_cells", "t"), &DuplicatorPathController::set_cells);
+	ClassDB::bind_method(D_METHOD("get_cells"), &DuplicatorPathController::get_cells);
+    ClassDB::bind_method(D_METHOD("on_entity_move_finalized", "pos_t", "is_reversed", "resulting_entity"), &DuplicatorPathController::on_entity_move_finalized);
 
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "gv", PROPERTY_HINT_NODE_TYPE, "Node"), "set_gv", "get_gv");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world", PROPERTY_HINT_NODE_TYPE, "Node2D"), "set_world", "get_world");
@@ -43,6 +46,28 @@ void DuplicatorPathController::set_cells(TileMap* t) {
 
 TileMap* DuplicatorPathController::get_cells() {
     return cells;
+}
+
+// NOTE this function is run from the main thread, so set_is_busy() => get_action() won't be called until this function finishes
+// NOTE calling function must lock tile_mutex
+// NOTE godot signals emitted on the main thread are processed synchronously
+// decrement danger level if move succeeded and resulting entity is duplicator
+void DuplicatorPathController::on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity) {
+    int resulting_entity_id = resulting_entity->get("entity_id");
+
+    if (resulting_entity_id == EntityId::DUPLICATOR) {
+        DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(resulting_entity->get("path_controller"));
+
+        // ================ START CRITICAL SECTION ================
+        danger_mutex.lock();
+        path_controller->danger_mutex.lock();
+
+        path_controller->danger.level = max(0, danger.level - 1);
+
+        path_controller->danger_mutex.unlock();
+        danger_mutex.unlock();
+        // ================ END CRITICAL SECTION ================
+    }
 }
 
 
@@ -161,57 +186,64 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
     Vector2i min_pos_t = Vector2i(pos_t.x - LV_RADIUS, pos_t.y - LV_RADIUS);
     Vector2i lv_pos = pos_t - min_pos_t;
     vector<vector<uint32_t>> lv = vector<vector<uint32_t>>(LV_WIDTH, vector<uint32_t>(LV_WIDTH, StuffId::NONE));
-    unordered_map<Vector2i, Danger> neighbors;
     get_world_info(pos_t, min_pos_t, lv);
 
     // update danger
     update_danger(lv, min_pos_t, lv_pos);
 
-    // escape has highest priority
-    if (danger.level) {
+    // try escape
+    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
+    int src_tile_id = actions::get_tile_id(src_stuff_id);
+    int src_power = tile_id_to_val(src_tile_id).x;
+
+    // ================ START CRITICAL SECTION ================
+    danger_mutex.lock();
+    Danger temp_danger = danger;
+    danger_mutex.unlock();
+    // ================ END CRITICAL SECTION ================
+    if (temp_danger.level) {
         vector<EscapeAction> escape_actions;
-        
-        // try escape_dir
-        if (get_slide_push_count(lv, lv_pos, danger.escape_dir, false, true, true) != -1) {
-            --danger.level;
-            return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::SLIDE);
-        }
-        if (get_split_push_count(lv, lv_pos, danger.escape_dir, false, true, true) != -1) {
-            --danger.level;
-            return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::SPLIT);
-        }
 
-        // try dirs perpendicular to escape_dir
-        uniform_int_distribution<int> distribution{0, 1};
-        bool rand_bool = distribution(generator);
+        // check all dirs bc there is rare case where if dominant tile is on top of duplicator membrane and split-mergeable,
+        // sliding in -escape_dir can be a good move by pushing dominant tile out
+        for (auto [dir_id, dir] : DIRECTIONS) {
+            Vector2i curr_lv_pos = lv_pos + dir;
+            uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+            int dot_escape_dir = dot(dir, temp_danger.escape_dir);
 
-        for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
-            for (const pair<int, Vector2i>& dir_entry : DIRECTIONS) {
-                Vector2i dir = dir_entry.second;
+            for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
+                Vector3i action = Vector3i(dir.x, dir.y, action_id);
+                int action_push_count = get_action_push_count(lv, lv_pos, action, false, true, true);
 
-                if (!dot(danger.escape_dir, dir)) {
-                    if (rand_bool) {
-                        dir *= -1;
+                if (action_push_count != -1) {
+                    //find resulting power
+                    int resulting_power;
+                    if (!action_push_count) {
+                        resulting_power = src_power;
                     }
-                    Vector3i action = Vector3i(dir.x, dir.y, action_id);
-                    if (get_action_push_count(lv, lv_pos, action, false, true, true) != -1) {
-                        --danger.level;
-                        return action;
+                    else {
+                        int action_src_tile_id = (action.z == ActionId::SPLIT) ? get_splitted_tile_id(src_tile_id) : src_tile_id;
+                        int dest_tile_id = actions::get_tile_id(curr_stuff_id);
+                        int merged_tile_id = get_merged_tile_id(action_src_tile_id, dest_tile_id);
+                        resulting_power = tile_id_to_val(merged_tile_id).x;
                     }
+
+                    escape_actions.emplace_back(action, dot_escape_dir, resulting_power);
                 }
             }
         }
 
+        if (!escape_actions.empty()) {
+            sort(escape_actions.begin(), escape_actions.end());
+            return escape_actions[0].action;
+        }
+
         // wait
-        // NOTE there is rare case where if dominant tile is on top of duplicator membrane and split-mergeable,
-        // sliding in -escape_dir can be a good move by pushing dominant tile out
-        // ignore this case since duplicator shouldn't be that intelligent anyway
-        return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::NONE);
+        return Vector3i(0, 0, ActionId::NONE);
     }
 
     // hunt type-dominated, non-regular, no-type-change-mergeable neighbor
     // (don't die (become TileId::ZERO) for the hunt)
-    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
     vector<HuntAction> hunt_actions;
 
     for (auto& [dir_id, dir] : DIRECTIONS) {
@@ -226,12 +258,9 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
 
                 if (!get_action_push_count(lv, lv_pos, action, false, true, true)) {
                     // get power resulting from merge
-                    int src_tile_id = actions::get_tile_id(src_stuff_id);
-                    if (action.z == ActionId::SPLIT) {
-                        src_tile_id = get_splitted_tile_id(src_tile_id);
-                    }
+                    int action_src_tile_id = (action.z == ActionId::SPLIT) ? get_splitted_tile_id(src_tile_id) : src_tile_id;
                     int dest_tile_id = actions::get_tile_id(curr_stuff_id);
-                    int merged_tile_id = get_merged_tile_id(src_tile_id, dest_tile_id);
+                    int merged_tile_id = get_merged_tile_id(action_src_tile_id, dest_tile_id);
                     int resulting_power = tile_id_to_val(merged_tile_id).x;
 
                     // get target merge priority
@@ -250,31 +279,119 @@ Vector3i DuplicatorPathController::get_action(Vector2i pos_t) {
 
     // wander and reproduce
     // don't make wander action deterministic, even if conditions suggest that a move is very good
-    // generally prefer split over slide and high resulting pow over low
+    vector<WanderAction> wander_actions;
+
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        Vector2i curr_lv_pos = lv_pos + dir;
+        uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+
+        for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
+            Vector3i action = Vector3i(dir.x, dir.y, action_id);
+
+            int action_push_count = get_action_push_count(lv, lv_pos, action, false, true, true);
+            if (action_push_count != -1) {
+                //find resulting power
+                int resulting_power;
+                if (!action_push_count) {
+                    resulting_power = src_power;
+                }
+                else {
+                    int action_src_tile_id = (action.z == ActionId::SPLIT) ? get_splitted_tile_id(src_tile_id) : src_tile_id;
+                    int dest_tile_id = actions::get_tile_id(curr_stuff_id);
+                    int merged_tile_id = get_merged_tile_id(action_src_tile_id, dest_tile_id);
+                    resulting_power = tile_id_to_val(merged_tile_id).x;
+                }
+
+                wander_actions.emplace_back(action, resulting_power);
+            }
+        }
+    }
+
+    if (!wander_actions.empty()) {
+        sort(wander_actions.begin(), wander_actions.end());
+        return wander_actions[0].action;
+    }
+
+    return Vector3i(0, 0, ActionId::NONE);
 }
 
-// prefer slide over split
-// prefer randomly chosen perpendicular dir
-bool DuplicatorPathController::EscapeAction::operator<(const EscapeAction& other) const {
-    if (action.z != other.action.z) {
-        return action.z == ActionId::SPLIT;
+// NOTE change of plan, interpret "else" as "to a lesser degree"
+// prefer slide over split (always)
+// else prefer escape dir
+// else prefer higher resulting power
+// else prefer random
+DuplicatorPathController::EscapeAction::EscapeAction(Vector3i p_action, int p_dot_escape_dir, int p_resulting_power) :
+    action(p_action),
+    dot_escape_dir(p_dot_escape_dir),
+    resulting_power(p_resulting_power)
+{
+    if (dot_escape_dir == -1) {
+        weight -= 1000;
     }
+    else {
+        weight += (action.z == ActionId::SLIDE) * 1000;
+        weight += dot_escape_dir * 11;
+    }
+    uniform_int_distribution<int> dist(0, 20);
+    weight += dist(generator);
+}
+
+bool DuplicatorPathController::EscapeAction::operator<(const EscapeAction& other) const {
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 7;
+    int temp_weight = weight + resulting_power_bonus;
+    
+    if (temp_weight == other.weight) {
+        uniform_int_distribution<int> dist(0, 1);
+        return dist(generator);
+    }
+    return temp_weight > other.weight;
 }
 
 // prefer split over slide
 // else prefer higher resulting power
 // else prefer lower merge priority neighbor
-// else prefer randomly chosen neighbor
+// else prefer random
+DuplicatorPathController::HuntAction::HuntAction(Vector3i p_action, int p_resulting_power, int p_target_merge_priority) :
+    action(p_action),
+    resulting_power(p_resulting_power),
+    target_merge_priority(p_target_merge_priority)
+{
+    weight += (action.z == ActionId::SPLIT) * 10;
+    uniform_int_distribution<int> dist(0, 25);
+    weight += dist(generator);
+}
+
 bool DuplicatorPathController::HuntAction::operator<(const HuntAction& other) const {
-    if (action.z != other.action.z) {
-        return action.z == ActionId::SPLIT;
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 8;
+    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * 5;
+    int temp_weight = weight + resulting_power_bonus + merge_priority_bonus;
+
+    if (temp_weight == other.weight) {
+        uniform_int_distribution<int> dist(0, 1);
+        return dist(generator);
     }
-    if (resulting_power != other.resulting_power) {
-        return resulting_power > other.resulting_power;
+    return temp_weight > other.weight;
+}
+
+// prefer higher resulting power
+// else prefer split over slide
+// else prefer random
+DuplicatorPathController::WanderAction::WanderAction(Vector3i p_action, int p_resulting_power) :
+    action(p_action),
+    resulting_power(p_resulting_power)
+{
+    weight += (action.z == ActionId::SPLIT) * 6;
+    uniform_int_distribution<int> dist(0, 15);
+    weight += dist(generator);
+}
+
+bool DuplicatorPathController::WanderAction::operator<(const WanderAction& other) const {
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 5;
+    int temp_weight = weight + resulting_power_bonus;
+
+    if (temp_weight == other.weight) {
+        uniform_int_distribution<int> dist(0, 1);
+        return dist(generator);
     }
-    if (target_merge_priority != other.target_merge_priority) {
-        return target_merge_priority < other.target_merge_priority;
-    }
-    uniform_int_distribution<int> distribution{0, 1};
-    return distribution(generator);
+    return temp_weight > other.weight;
 }
