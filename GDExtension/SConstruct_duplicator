@@ -25,7 +25,7 @@ print(env['CXXFLAGS'])
 env.Append(CPPPATH="duplicator/")
 env.Append(CPPPATH="lib/")
 env.Append(CPPPATH="lib/actions/")
-src = Glob("duplicator/*.cpp")
+src = Glob("duplicator/*.cpp") + Glob("lib/actions/*.cpp")
 
 if env['platform'] == 'macos':
 	libpath = 'duplicator{}{}'.format( env['suffix'], env['SHLIBSUFFIX'] );

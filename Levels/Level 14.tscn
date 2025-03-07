@@ -52,5 +52,3 @@ layer_2/enabled = false
 [node name="TransitTiles" type="Node2D" parent="."]
 
 [node name="TrackingCam" parent="." instance=ExtResource("4_6gyhg")]
-
-[node name="DuplicatorPathController" type="DuplicatorPathController" parent="."]

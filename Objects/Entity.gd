@@ -34,10 +34,13 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 	self.pos_t = pos_t;
 	
 	# add path controller
-	#match entity_id:
-		#GV.EntityId.DUPLICATOR:
-			#path_controller = DuplicatorPathController.new();
-			#moved_for_path_controller.connect(path_controller.on_entity_move_finalized);
+	match entity_id:
+		GV.EntityId.DUPLICATOR:
+			path_controller = DuplicatorPathController.new();
+			path_controller.set_gv(GV);
+			path_controller.set_world(world);
+			path_controller.set_cells(world.get_node("Cells"));
+			moved_for_path_controller.connect(path_controller.on_entity_move_finalized);
 
 func has_premove():
 	return not premoves.is_empty();

@@ -1895,3 +1895,11 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	if new_pos != old_pos or (GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.FINISH_ACTION and pos_t != self.pos_t):
 		moved_for_tracking_cam.emit();
 '''
+
+'''
+	# test duplicator world
+	$DuplicatorPathController.set_gv(GV);
+	$DuplicatorPathController.set_world(self);
+	var test:float = $DuplicatorPathController.test_gv();
+	print(test);
+'''

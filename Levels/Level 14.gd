@@ -23,12 +23,6 @@ func _ready():
 	# init procgen
 	_on_tracking_cam_moved($TrackingCam.position);
 
-	# test duplicator world
-	$DuplicatorPathController.set_gv(GV);
-	$DuplicatorPathController.set_world(self);
-	var test:float = $DuplicatorPathController.test_gv();
-	print(test);
-
 func _input(event):
 	super._input(event);
 	
