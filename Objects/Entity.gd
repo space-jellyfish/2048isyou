@@ -17,8 +17,8 @@ signal moved_for_tracking_cam;
 signal moved_for_path_controller(pos_t:Vector2i, is_reversed:bool, resulting_entity:Entity);
 
 var world:World;
-var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
-var entity_id:int;
+var body:Node2D; #if null, refer to pos_t (entity is in TileMap)
+var entity_id:int; #should not change after init
 var pos_t:Vector2i;
 var premoves:Array[Premove];
 var is_busy:bool = false; #true if premoves are unable to be consumed
@@ -102,9 +102,9 @@ func try_premove(premove:Premove):
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
 
-func set_entity_id_and_body(entity_id:int, body:Node2D):
+func set_body(body:Node2D):
 	#check if no action required
-	if self.entity_id == entity_id and self.body == body:
+	if self.body == body:
 		return;
 	
 	#find parameters for change_keys() function
@@ -112,7 +112,7 @@ func set_entity_id_and_body(entity_id:int, body:Node2D):
 	var new_key:Variant = body if body else pos_t;
 	
 	#update dictionary keys
-	change_keys(self.entity_id, entity_id, old_key, new_key);
+	change_keys(old_key, new_key);
 	
 	#emit moved signal
 	var old_pos:Vector2 = get_position();
@@ -127,20 +127,19 @@ func set_entity_id_and_body(entity_id:int, body:Node2D):
 		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
 	
 	#update properties
-	self.entity_id = entity_id;
 	self.body = body;
 
 # NOTE body is set to null
-func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
+func set_pos_t(pos_t:Vector2i):
 	#check if no action required
-	if self.entity_id == entity_id and self.pos_t == pos_t and not body:
+	if self.pos_t == pos_t and not body:
 		return;
 	
 	#find parameters for change_keys() function
 	var old_key:Variant = body if body else self.pos_t;
 	
 	#update dictionary keys
-	change_keys(self.entity_id, entity_id, old_key, pos_t);
+	change_keys(old_key, pos_t);
 	
 	#emit moved signal
 	var old_pos:Vector2 = get_position();
@@ -153,13 +152,12 @@ func set_entity_id_and_pos_t(entity_id:int, pos_t:Vector2i):
 		body.moved_for_tracking_cam.disconnect(_on_body_moved_for_tracking_cam);
 	
 	#update properties
-	self.entity_id = entity_id;
 	self.pos_t = pos_t;
 	self.body = null;
 
-func change_keys(old_entity_id:int, new_entity_id:int, old_key:Variant, new_key:Variant):
-	world.remove_entity(old_entity_id, old_key);
-	world.add_entity(new_entity_id, new_key, self);
+func change_keys(old_key:Variant, new_key:Variant):
+	world.remove_entity(entity_id, old_key);
+	world.add_entity(entity_id, new_key, self);
 
 func set_is_busy(is_busy:bool):
 	self.is_busy = is_busy;

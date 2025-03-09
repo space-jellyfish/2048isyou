@@ -36,36 +36,17 @@ private:
         Vector2i escape_dir = DIRECTIONS.at(DirectionId::RIGHT);
     };
 
-    struct EscapeAction {
+    // to make final action non-deterministic, calculate a priority score in constructor
+    // and compare priority score in the operator overload
+    struct Action {
         int weight = 0;
         Vector3i action;
+        int resulting_power;
         int dot_escape_dir;
-        int resulting_power;
-        
-        EscapeAction(Vector3i p_action, int p_dot_escape_dir, int p_resulting_power);
-        bool operator<(const EscapeAction& other) const;
-    };
+        int target_merge_priority; //-1 if not merge or target isn't an entity
 
-    // to make final action non-deterministic, calculate a priority score in constructor of Action struct
-    // and compare priority score in the compare function 
-
-    struct HuntAction {
-        int weight = 0;
-        Vector3i action;
-        int resulting_power;
-        int target_merge_priority;
-
-        HuntAction(Vector3i p_action, int p_resulting_power, int p_target_merge_priority);
-        bool operator<(const HuntAction& other) const;
-    };
-
-    struct WanderAction {
-        int weight = 0;
-        Vector3i action;
-        int resulting_power;
-
-        WanderAction(Vector3i p_action, int p_resulting_power);
-        bool operator<(const WanderAction& other) const;
+        Action(Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger);
+        bool operator<(const Action& other) const;
     };
 
     // stuff from scene tree

@@ -90,7 +90,7 @@ void DuplicatorPathController::update_danger(vector<vector<uint32_t>>& lv, Vecto
             Vector2i curr_lv_pos = lv_pos + dir;
             // duplicator is safe if push_count is nonzero (not immediate merge where neighbor type_id is preserved)
             // lv width does not have to accommodate neighbor's tpl
-            if (!get_slide_push_count(lv, curr_lv_pos, -dir, false, true, true) || !get_split_push_count(lv, curr_lv_pos, -dir, false, true, true)) {
+            if (!get_slide_push_count(lv, curr_lv_pos, -dir, true, true, false) || !get_split_push_count(lv, curr_lv_pos, -dir, true, true, false)) {
                 danger.level = DANGER_LV_MAX;
                 danger.escape_dir = -dir;
                 break;
@@ -142,11 +142,11 @@ bool DuplicatorPathController::HuntAction::operator<(const HuntAction& other) co
     // escape has highest priority
     if (danger.level) {
         // try escape_dir
-        if (get_slide_push_count(lv, lv_pos, danger.escape_dir, false, true, true) != -1) {
+        if (get_slide_push_count(lv, lv_pos, danger.escape_dir, true, true, false) != -1) {
             --danger.level;
             return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::SLIDE);
         }
-        if (get_split_push_count(lv, lv_pos, danger.escape_dir, false, true, true) != -1) {
+        if (get_split_push_count(lv, lv_pos, danger.escape_dir, true, true, false) != -1) {
             --danger.level;
             return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::SPLIT);
         }
@@ -164,7 +164,7 @@ bool DuplicatorPathController::HuntAction::operator<(const HuntAction& other) co
                         dir *= -1;
                     }
                     Vector3i action = Vector3i(dir.x, dir.y, action_id);
-                    if (get_action_push_count(lv, lv_pos, action, false, true, true) != -1) {
+                    if (get_action_push_count(lv, lv_pos, action, true, true, false) != -1) {
                         --danger.level;
                         return action;
                     }
@@ -177,5 +177,175 @@ bool DuplicatorPathController::HuntAction::operator<(const HuntAction& other) co
         // sliding in -escape_dir can be a good move by pushing dominant tile out
         // ignore this case since duplicator shouldn't be that intelligent anyway
         return Vector3i(danger.escape_dir.x, danger.escape_dir.y, ActionId::NONE);
+    }
+*/
+
+/*
+                // check for type change
+                if ((!allow_type_change || !allow_entity_death) && get_type_id(get_merged_stuff_id(src_stuff_id, curr_stuff_id)) != src_type_id) {
+                    return -1;
+                }
+                //check for entity death via same-type merge
+                if (!allow_entity_death && curr_type_id == src_type_id) {
+                    return -1;
+                }
+
+const unordered_set<uint8_t> T_ENEMY = {TypeId::DUPLICATOR, TypeId::HOSTILE, TypeId::VOID, TypeId::SQUID};
+
+    // hunt type-dominated, non-regular, no-type-change-mergeable neighbor
+    // (don't die (become TileId::ZERO) for the hunt)
+    vector<HuntAction> hunt_actions;
+
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        Vector2i curr_lv_pos = lv_pos + dir;
+        uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+        uint8_t curr_type_id = actions::get_type_id(curr_stuff_id);
+
+        if (curr_type_id != TypeId::REGULAR && is_type_dominant(TypeId::DUPLICATOR, curr_type_id)) {
+
+            for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
+                Vector3i action = Vector3i(dir.x, dir.y, action_id);
+
+                if (!get_action_push_count(lv, lv_pos, action, true, true, false)) {
+                    // get power resulting from merge
+                    int action_src_tile_id = (action.z == ActionId::SPLIT) ? get_splitted_tile_id(src_tile_id) : src_tile_id;
+                    int dest_tile_id = actions::get_tile_id(curr_stuff_id);
+                    int merged_tile_id = get_merged_tile_id(action_src_tile_id, dest_tile_id);
+                    int resulting_power = tile_id_to_val(merged_tile_id).x;
+
+                    // get target merge priority
+                    int target_merge_priority = merge_priorities.at(curr_type_id);
+
+                    hunt_actions.emplace_back(action, resulting_power, target_merge_priority);
+                }
+            }
+        }
+    }
+
+    if (!hunt_actions.empty()) {
+        sort(hunt_actions.begin(), hunt_actions.end());
+        return hunt_actions[0].action;
+    }
+
+    struct HuntAction {
+        int weight = 0;
+        Vector3i action;
+        int resulting_power;
+        int target_merge_priority;
+
+        HuntAction(Vector3i p_action, int p_resulting_power, int p_target_merge_priority);
+        bool operator<(const HuntAction& other) const;
+    };
+
+// NOTE change of plan, interpret "else" as "to a lesser degree"
+// prefer slide over split (always)
+// else prefer escape dir
+// else prefer higher resulting power
+// else prefer random
+DuplicatorPathController::EscapeAction::EscapeAction(Vector3i p_action, int p_dot_escape_dir, int p_resulting_power) :
+    action(p_action),
+    dot_escape_dir(p_dot_escape_dir),
+    resulting_power(p_resulting_power)
+{
+    if (dot_escape_dir == -1) {
+        weight -= 1000;
+    }
+    else {
+        weight += (action.z == ActionId::SLIDE) * 1000;
+        weight += dot_escape_dir * 11;
+    }
+    uniform_int_distribution<int> dist(0, 20);
+    weight += dist(generator);
+}
+
+bool DuplicatorPathController::EscapeAction::operator<(const EscapeAction& other) const {
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 7;
+    int temp_weight = weight + resulting_power_bonus;
+    
+    if (temp_weight == other.weight) {
+        uniform_int_distribution<int> dist(0, 1);
+        return dist(generator);
+    }
+    return temp_weight > other.weight;
+}
+
+// prefer split over slide
+// else prefer higher resulting power
+// else prefer lower merge priority neighbor
+// else prefer random
+DuplicatorPathController::HuntAction::HuntAction(Vector3i p_action, int p_resulting_power, int p_target_merge_priority) :
+    action(p_action),
+    resulting_power(p_resulting_power),
+    target_merge_priority(p_target_merge_priority)
+{
+    weight += (action.z == ActionId::SPLIT) * 10;
+    uniform_int_distribution<int> dist(0, 25);
+    weight += dist(generator);
+}
+
+bool DuplicatorPathController::HuntAction::operator<(const HuntAction& other) const {
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 8;
+    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * 5;
+    int temp_weight = weight + resulting_power_bonus + merge_priority_bonus;
+
+    if (temp_weight == other.weight) {
+        uniform_int_distribution<int> dist(0, 1);
+        return dist(generator);
+    }
+    return temp_weight > other.weight;
+}
+
+    struct EscapeAction {
+        int weight = 0;
+        Vector3i action;
+        int dot_escape_dir;
+        int resulting_power;
+        
+        EscapeAction(Vector3i p_action, int p_dot_escape_dir, int p_resulting_power);
+        bool operator<(const EscapeAction& other) const;
+    };
+
+    if (temp_danger.level) {
+        vector<EscapeAction> escape_actions;
+
+        // check all dirs bc there is rare case where if dominant tile is on top of duplicator membrane and split-mergeable,
+        // sliding in -escape_dir can be a good move by pushing dominant tile out
+        for (auto [dir_id, dir] : DIRECTIONS) {
+            Vector2i curr_lv_pos = lv_pos + dir;
+            uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+            int dot_escape_dir = dot(dir, temp_danger.escape_dir);
+
+            for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
+                Vector3i action = Vector3i(dir.x, dir.y, action_id);
+                // allow merging into friendlies when escaping
+                // allow annihilation when escaping
+                // but don't voluntarily initiate non-annihilation self-death
+                int action_push_count = get_action_push_count(lv, lv_pos, action, true, true, true, false, true);
+
+                if (action_push_count != -1) {
+                    //find resulting power
+                    int resulting_power;
+                    if (!action_push_count) {
+                        resulting_power = src_power;
+                    }
+                    else {
+                        int action_src_tile_id = (action.z == ActionId::SPLIT) ? get_splitted_tile_id(src_tile_id) : src_tile_id;
+                        int dest_tile_id = actions::get_tile_id(curr_stuff_id);
+                        int merged_tile_id = get_merged_tile_id(action_src_tile_id, dest_tile_id);
+                        resulting_power = tile_id_to_val(merged_tile_id).x;
+                    }
+
+                    escape_actions.emplace_back(action, dot_escape_dir, resulting_power);
+                }
+            }
+        }
+
+        if (!escape_actions.empty()) {
+            sort(escape_actions.begin(), escape_actions.end());
+            return escape_actions[0].action;
+        }
+
+        // wait
+        return Vector3i(0, 0, ActionId::NONE);
     }
 */

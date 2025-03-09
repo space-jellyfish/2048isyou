@@ -189,9 +189,153 @@ const unordered_set<uint8_t> B_WALL_OR_BORDER = {BackId::BORDER_ROUND, BackId::B
 const unordered_set<uint8_t> B_SAVE_OR_GOAL = {BackId::SAVEPOINT, BackId::GOAL};
 const unordered_set<uint8_t> B_EMPTY = {BackId::EMPTY, BackId::BOARD_FRAME};
 const unordered_set<uint8_t> T_NONE_OR_REGULAR = {TypeId::NONE, TypeId::REGULAR};
-const unordered_set<uint8_t> T_ENEMY = {TypeId::DUPLICATOR, TypeId::HOSTILE, TypeId::VOID, TypeId::SQUID};
-const unordered_set<uint8_t> T_ENEMY_KILLABLE_BY_ZEROING = {TypeId::DUPLICATOR, TypeId::HOSTILE};
+const unordered_set<uint8_t> T_KILLABLE_BY_ZEROING = {TypeId::DUPLICATOR, TypeId::HOSTILE};
 const unordered_set<int> E_HAS_PATHFINDING = {EntityId::DUPLICATOR};
+const unordered_map<int, unordered_map<int, bool>> E_ENEMY = {
+    { EntityId::NONE, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, false},
+        {EntityId::DUPLICATOR, false},
+        {EntityId::HOSTILE, false},
+        {EntityId::VOID, false},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, false},
+        {EntityId::SQUID_CLUB, false},
+        {EntityId::STP_SPAWNING, false},
+        {EntityId::STP_SPAWNED, false},
+        {EntityId::SNAKE, false}
+    }},
+    { EntityId::PLAYER, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, true},
+        {EntityId::HOSTILE, true},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, true},
+        {EntityId::SQUID_CLUB, true},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::DUPLICATOR, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, false},
+        {EntityId::HOSTILE, false},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, true},
+        {EntityId::SQUID_CLUB, true},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::HOSTILE, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, false},
+        {EntityId::HOSTILE, false},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, true},
+        {EntityId::SQUID_CLUB, true},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::VOID, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, true},
+        {EntityId::HOSTILE, true},
+        {EntityId::VOID, false},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, true},
+        {EntityId::SQUID_CLUB, true},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::REGULAR, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, false},
+        {EntityId::DUPLICATOR, false},
+        {EntityId::HOSTILE, false},
+        {EntityId::VOID, false},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, false},
+        {EntityId::SQUID_CLUB, false},
+        {EntityId::STP_SPAWNING, false},
+        {EntityId::STP_SPAWNED, false},
+        {EntityId::SNAKE, false}
+    }},
+    { EntityId::SQUID_BODY, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, true},
+        {EntityId::HOSTILE, true},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, false},
+        {EntityId::SQUID_CLUB, false},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::SQUID_CLUB, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, true},
+        {EntityId::HOSTILE, true},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, false},
+        {EntityId::SQUID_CLUB, false},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::STP_SPAWNING, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, true},
+        {EntityId::HOSTILE, true},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, true},
+        {EntityId::SQUID_CLUB, true},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::STP_SPAWNED, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, true},
+        {EntityId::HOSTILE, true},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, true},
+        {EntityId::SQUID_CLUB, true},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, true}
+    }},
+    { EntityId::SNAKE, {
+        {EntityId::NONE, false},
+        {EntityId::PLAYER, true},
+        {EntityId::DUPLICATOR, true},
+        {EntityId::HOSTILE, true},
+        {EntityId::VOID, true},
+        {EntityId::REGULAR, false},
+        {EntityId::SQUID_BODY, true},
+        {EntityId::SQUID_CLUB, true},
+        {EntityId::STP_SPAWNING, true},
+        {EntityId::STP_SPAWNED, true},
+        {EntityId::SNAKE, false}
+    }}
+};
 
 const int TILE_ID_BITLEN = 5;
 const int TYPE_ID_BITLEN = 3;
@@ -255,12 +399,12 @@ bool is_compatible(uint8_t type_id, uint8_t back_id);
 bool is_navigable(Vector2i dir, uint16_t nav_id);
 
 int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir);
-int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav);
-int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav);
-int get_action_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector3i action, bool allow_type_change, bool check_back, bool check_nav);
+int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge);
+int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge);
+int get_action_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector3i action, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge);
 void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, int push_count);
-bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
-bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change);
+bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir);
+bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir);
 
 }
 

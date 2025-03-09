@@ -519,7 +519,7 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		if is_ids_mergeable(prev_tile_id, curr_tile_id):
 			if nearest_merge_push_count == -1:
 				nearest_merge_push_count = push_count;
-			if curr_tile_id != GV.TileId.ZERO or curr_type_id not in GV.T_NONE_OR_REGULAR:
+			if curr_tile_id != GV.TileId.ZERO or curr_type_id != GV.TypeId.REGULAR:
 				if prev_tile_id == GV.TileId.ZERO and curr_tile_id == GV.TileId.EMPTY:
 					return push_count; #bubble
 				return nearest_merge_push_count;
@@ -557,8 +557,8 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	var merged_tile_id:int = get_merged_tile_id(tile_id1, tile_id2);
 	var merged_type_id:int = type_id1 if is_type_preserved(type_id1, type_id2) else type_id2;
 	
-	# enemy death
-	if merged_tile_id == GV.TileId.ZERO and merged_type_id in GV.T_ENEMY_KILLABLE_BY_ZEROING:
+	# death
+	if merged_tile_id == GV.TileId.ZERO and merged_type_id in GV.T_KILLABLE_BY_ZEROING:
 		merged_type_id = GV.TypeId.REGULAR;
 	
 	return tile_and_type_id_to_atlas_coords(merged_tile_id, merged_type_id);
@@ -700,7 +700,8 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		if curr_type_id not in GV.T_NONE_OR_REGULAR:
 			var tile_entity:Entity = get_aligned_tile_entity(curr_type_id, curr_pos_t);
 			if tile_entity:
-				tile_entity.set_entity_id_and_body(curr_type_id, curr_tile);
+				assert(tile_entity.entity_id == curr_type_id);
+				tile_entity.set_body(curr_tile);
 			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
 
 		# splitting tile stuff
@@ -771,9 +772,10 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# update entity
 		if old_type_id not in GV.T_NONE_OR_REGULAR:
-			var tile_entity:Entity = get_entity(old_type_id, merge_pos_t);
+			var tile_entity:Entity = get_aligned_tile_entity(old_type_id, merge_pos_t);
 			if tile_entity:
-				tile_entity.set_entity_id_and_body(old_type_id, merging_tile);
+				assert(tile_entity.entity_id == old_type_id);
+				tile_entity.set_body(merging_tile);
 		
 		layer_mutexes[GV.LayerId.TILE].unlock();
 		# ================ END CRITICAL SECTION ================
@@ -803,9 +805,10 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 	
 	# update entity
 	if type_id not in GV.T_NONE_OR_REGULAR:
-		var tile_entity:Entity = get_entity(type_id, pos_t);
+		var tile_entity:Entity = get_aligned_tile_entity(type_id, pos_t);
 		if tile_entity:
-			tile_entity.set_entity_id_and_body(type_id, tile);
+			assert(tile_entity.entity_id == type_id);
+			tile_entity.set_body(tile);
 	
 	layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================

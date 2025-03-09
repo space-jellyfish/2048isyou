@@ -178,7 +178,7 @@ uint32_t get_merged_stuff_id(uint32_t src_stuff_id, uint32_t dest_stuff_id) {
     uint8_t merged_tile_id = get_merged_tile_id(src_tile_id, dest_tile_id);
     uint8_t merged_type_id = is_type_preserved(src_type_id, dest_type_id) ? src_type_id : dest_type_id;
 
-    if (merged_tile_id == TileId::ZERO && T_ENEMY_KILLABLE_BY_ZEROING.find(merged_type_id) != T_ENEMY_KILLABLE_BY_ZEROING.end()) {
+    if (merged_tile_id == TileId::ZERO && T_KILLABLE_BY_ZEROING.find(merged_type_id) != T_KILLABLE_BY_ZEROING.end()) {
         merged_type_id = TypeId::REGULAR;
     }
     return remove_type_id(remove_tile_id(dest_stuff_id)) + make_type_bits(merged_type_id) + make_tile_bits(merged_tile_id);
@@ -221,7 +221,8 @@ int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i 
 
 // assume pusher entity is the lv_pos tile
 // NOTE dist_to_lv_edge must be checked
-int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav) {
+// entity death includes both type change and merging into an entity of the same type
+int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge) {
     uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
     uint8_t src_type_id = get_type_id(src_stuff_id);
     Vector2i curr_lv_pos = lv_pos;
@@ -249,15 +250,36 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
         curr_tile_id = get_tile_id(curr_stuff_id);
 
         if (is_ids_mergeable(prev_tile_id, curr_tile_id)) {
-            //check for type change
-            if (!push_count && !allow_type_change && get_type_id(get_merged_stuff_id(src_stuff_id, curr_stuff_id)) != src_type_id) {
-                return -1;
+            // assume merge happens if curr_type_id is non-regular
+            if (!push_count) {
+                // check for type change
+                if (!allow_enemy_annihilation_type_change || !allow_other_type_change) {
+                    uint8_t merged_type_id = get_type_id(get_merged_stuff_id(src_stuff_id, curr_stuff_id));
+
+                    if (merged_type_id != src_type_id) {
+                        if (E_ENEMY.at(src_type_id).at(curr_type_id) && merged_type_id == TypeId::REGULAR) {
+                            if (!allow_enemy_annihilation_type_change) {
+                                return -1;
+                            }
+                        }
+                        else {
+                            if (!allow_other_type_change) {
+                                return -1;
+                            }
+                        }
+                    }
+                }
+
+                //check for same-type merge
+                if (!allow_same_type_merge && curr_type_id == src_type_id) {
+                    return -1;
+                }
             }
 
             if (nearest_merge_push_count == -1) {
                 nearest_merge_push_count = push_count;
             }
-            if (curr_tile_id != TileId::ZERO || T_NONE_OR_REGULAR.find(curr_type_id) == T_NONE_OR_REGULAR.end()) {
+            if (curr_tile_id != TileId::ZERO || curr_type_id != TypeId::REGULAR) {
                 if (prev_tile_id == TileId::ZERO && curr_tile_id == TileId::EMPTY) {
                     return push_count; //bubble
                 }
@@ -274,7 +296,7 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
     return -1;
 }
 
-int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change, bool check_back, bool check_nav) {
+int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge) {
     // check if split possible
     uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
     uint8_t src_tile_id = get_tile_id(src_stuff_id);
@@ -285,18 +307,18 @@ int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
 
     uint32_t splitted_stuff_id = remove_tile_id(src_stuff_id) + make_tile_bits(splitted_tile_id);
     lv[lv_pos.y][lv_pos.x] = splitted_stuff_id;
-    int push_count = get_slide_push_count(lv, lv_pos, dir, allow_type_change, check_back, check_nav);
+    int push_count = get_slide_push_count(lv, lv_pos, dir, check_back, check_nav, allow_enemy_annihilation_type_change, allow_other_type_change, allow_same_type_merge);
     lv[lv_pos.y][lv_pos.x] = src_stuff_id;
     return push_count;
 }
 
-int get_action_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector3i action, bool allow_type_change, bool check_back, bool check_nav) {
+int get_action_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector3i action, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge) {
     Vector2i dir = Vector2i(action.x, action.y);
     switch (action.z) {
         case ActionId::SLIDE:
-            return get_slide_push_count(lv, lv_pos, dir, allow_type_change, check_back, check_nav);
+            return get_slide_push_count(lv, lv_pos, dir, check_back, check_nav, allow_enemy_annihilation_type_change, allow_other_type_change, allow_same_type_merge);
         case ActionId::SPLIT:
-            return get_split_push_count(lv, lv_pos, dir, allow_type_change, check_back, check_nav);
+            return get_split_push_count(lv, lv_pos, dir, check_back, check_nav, allow_enemy_annihilation_type_change, allow_other_type_change, allow_same_type_merge);
         default:
             return -1;
     }
@@ -332,8 +354,8 @@ void perform_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, 
     lv[lv_pos.y][lv_pos.x] = remove_type_id(remove_tile_id(lv[lv_pos.y][lv_pos.x]));
 }
 
-bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change) {
-    int push_count = get_slide_push_count(lv, lv_pos, dir, allow_type_change, true, true);
+bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir) {
+    int push_count = get_slide_push_count(lv, lv_pos, dir, true, true, true, true, true);
     if (push_count != -1) {
         perform_slide(lv, lv_pos, dir, push_count);
         return true;
@@ -341,7 +363,7 @@ bool try_slide(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool
     return false;
 }
 
-bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool allow_type_change) {
+bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir) {
     // check if split possible
     uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
     uint8_t src_tile_id = get_tile_id(src_stuff_id);
@@ -352,7 +374,7 @@ bool try_split(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool
 
     uint32_t splitted_stuff_id = remove_tile_id(src_stuff_id) + make_tile_bits(splitted_tile_id);
     lv[lv_pos.y][lv_pos.x] = splitted_stuff_id;
-    bool initiated = try_slide(lv, lv_pos, dir, allow_type_change);
+    bool initiated = try_slide(lv, lv_pos, dir);
     if (initiated) {
         uint8_t src_type_id = get_type_id(src_stuff_id);
         uint8_t splitter_type_id = (duplicate_upon_split.at(src_type_id)) ? src_type_id : TypeId::REGULAR;

@@ -1885,7 +1885,7 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	var atlas_y:int = coords1.y if get_merge_priority(coords1.y) > get_merge_priority(coords2.y) else coords2.y;
 	var atlas_x:int = get_merged_tile_id(coords1.x + 1, coords2.x + 1) - 1;
 	#hostile death
-	if atlas_x == GV.TileId.ZERO - 1 and atlas_y in GV.T_ENEMY_KILLABLE_BY_ZEROING:
+	if atlas_x == GV.TileId.ZERO - 1 and atlas_y in GV.T_KILLABLE_BY_ZEROING:
 		atlas_y = GV.TypeId.REGULAR;
 	assert(atlas_y != -1 && atlas_x != -1);
 	return Vector2i(atlas_x, atlas_y);
@@ -1902,4 +1902,8 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	$DuplicatorPathController.set_world(self);
 	var test:float = $DuplicatorPathController.test_gv();
 	print(test);
+'''
+
+'''
+const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
 '''

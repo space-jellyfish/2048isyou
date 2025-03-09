@@ -106,7 +106,7 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	set_collision_mask_value(GV.CollisionId.DEFAULT, true);
 	if old_type_id != GV.TypeId.PLAYER and not (is_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
-	if old_type_id in GV.T_ENEMY:
+	if GV.E_ENEMY[GV.EntityId.PLAYER][old_type_id]:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
 	
 	is_aligned = false;
@@ -143,7 +143,7 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	set_collision_mask_value(GV.CollisionId.DEFAULT, true);
 	if old_type_id != GV.TypeId.PLAYER and not (is_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
-	if old_type_id in GV.T_ENEMY:
+	if GV.E_ENEMY[GV.EntityId.PLAYER][old_type_id]:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
 	
 	is_aligned = false;
@@ -380,9 +380,9 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# NOTE assume type did not change if not is_aligned
 	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
 		if is_merging and not is_reversed and is_self_entity_preserved:
-			tile_entity.set_entity_id_and_body(old_type_id, merger_tile);
+			tile_entity.set_body(merger_tile);
 		else:
-			tile_entity.set_entity_id_and_pos_t(new_type_id, pos_t);
+			tile_entity.set_pos_t(pos_t);
 		
 		# emit moved for tracking cam
 		# NOTE this should be done after "remove self entity" so no pan is triggered if agent dies
