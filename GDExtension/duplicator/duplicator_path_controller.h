@@ -53,7 +53,7 @@ private:
     Node* gv = nullptr;
     Node2D* world = nullptr;
     TileMap* cells = nullptr;
-    Node* entity = nullptr;
+    Ref<RefCounted> entity = nullptr;
 
     static const int DANGER_LV_MAX = 2;
     int LV_RADIUS = tile_push_limits.at(EntityId::DUPLICATOR) + 1;
@@ -73,8 +73,8 @@ public:
     Node2D* get_world();
     void set_cells(TileMap* p_cells);
     TileMap* get_cells();
-    void set_entity(Node* p_entity);
-    Node* get_entity();
+    void set_entity(Ref<RefCounted> p_entity);
+    Ref<RefCounted> get_entity();
     void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
 
     // these require tile_mutex
