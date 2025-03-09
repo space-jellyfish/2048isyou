@@ -26,7 +26,7 @@ void DuplicatorPathController::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "gv", PROPERTY_HINT_NODE_TYPE, "Node"), "set_gv", "get_gv");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world", PROPERTY_HINT_NODE_TYPE, "Node2D"), "set_world", "get_world");
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "cells", PROPERTY_HINT_NODE_TYPE, "TileMap"), "set_cells", "get_cells");
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "entity", PROPERTY_HINT_NODE_TYPE, "Node"), "set_entity", "get_entity");
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "entity", PROPERTY_HINT_NODE_TYPE, "RefCounted"), "set_entity", "get_entity");
 }
 
 void DuplicatorPathController::set_gv(Node* p_gv) {
@@ -53,11 +53,11 @@ TileMap* DuplicatorPathController::get_cells() {
     return cells;
 }
 
-void DuplicatorPathController::set_entity(Node* p_entity) {
+void DuplicatorPathController::set_entity(Ref<RefCounted> p_entity) {
     entity = p_entity;
 }
 
-Node* DuplicatorPathController::get_entity() {
+Ref<RefCounted> DuplicatorPathController::get_entity() {
     return entity;
 }
 

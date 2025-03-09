@@ -10,7 +10,6 @@
 # clear premoves if entity dies or last premove failed
 # roaming entities can try new premoves before the old ones finish
 class_name Entity
-extends Node #for _process()
 
 # emitted when body emits moved or set_body/set_pos_t changes entity position
 # assumes body has a moved signal
@@ -205,7 +204,7 @@ func get_pos_t() -> Variant:
 	else:
 		return pos_t;
 
-func _process(delta: float) -> void:
+func _process():
 	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
 		WorkerThreadPool.wait_for_task_completion(task_id);
 		

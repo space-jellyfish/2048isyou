@@ -74,6 +74,12 @@ func _ready():
 	for layer_id in GV.LayerId.values():
 		layer_mutexes.push_back(Mutex.new());
 
+func _process(delta: float) -> void:
+	# call entity _process()es bc they don't have it as RefCounted
+	for typed_entities in entities.values():
+		for entity in typed_entities.values():
+			entity._process();
+
 func set_level_name():
 	if has_node("LevelName"):
 		game.current_level_name = $LevelName;
@@ -660,9 +666,6 @@ func get_aligned_tile_entity(entity_id:int, pos_t:Vector2i) -> Entity:
 	return get_entity(entity_id, pos_t);
 
 func remove_entity(entity_id:int, key:Variant):
-	var entity:Entity = get_entity(entity_id, key);
-	if entity:
-		entity.queue_free();
 	entities[entity_id].erase(key);
 
 func add_entity(entity_id:int, key:Variant, entity:Entity):
