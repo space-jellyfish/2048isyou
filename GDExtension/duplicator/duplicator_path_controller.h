@@ -53,6 +53,7 @@ private:
     Node* gv = nullptr;
     Node2D* world = nullptr;
     TileMap* cells = nullptr;
+    Node* entity = nullptr;
 
     static const int DANGER_LV_MAX = 2;
     int LV_RADIUS = tile_push_limits.at(EntityId::DUPLICATOR) + 1;
@@ -66,12 +67,14 @@ protected:
 
 public:
     // registered with GDScript
-    void set_gv(Node* _gv);
+    void set_gv(Node* p_gv);
     Node* get_gv();
-    void set_world(Node2D* w);
+    void set_world(Node2D* p_world);
     Node2D* get_world();
-    void set_cells(TileMap* t);
+    void set_cells(TileMap* p_cells);
     TileMap* get_cells();
+    void set_entity(Node* p_entity);
+    Node* get_entity();
     void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
 
     // these require tile_mutex
@@ -84,7 +87,7 @@ public:
     void get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv);
     void update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos);
     void update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos);
-    Vector3i get_action(Vector2i pos_t);
+    void get_actions(Vector2i pos_t);
 };
 
 #endif

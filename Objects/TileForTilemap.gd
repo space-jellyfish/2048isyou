@@ -419,20 +419,6 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	world.layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
 	
-	# set self entity not busy
-	if tile_entity and prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
-		tile_entity.set_is_busy(false);
-	
-	# set splitter/merger entity not busy
-	if is_merging:
-		var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
-		if merger_tile_entity:
-			merger_tile_entity.set_is_busy(false);
-	if is_splitted and not is_reversed:
-		var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
-		if splitter_tile_entity:
-			splitter_tile_entity.set_is_busy(false);
-			
 	# update tilemap NAV layer
 	if is_aligned and move_transit_id == GV.TransitId.NONE:
 		if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and was_aligned:
@@ -446,6 +432,20 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 				world.remove_nav_id(merger_tile.pos_t, GV.NavId.ALL);
 			if is_splitted:
 				world.remove_nav_id(splitter_tile.pos_t, GV.NavId.ALL);
+	
+	# set self entity not busy
+	if tile_entity and prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
+		tile_entity.set_is_busy(false);
+	
+	# set splitter/merger entity not busy
+	if is_merging:
+		var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
+		if merger_tile_entity:
+			merger_tile_entity.set_is_busy(false);
+	if is_splitted and not is_reversed:
+		var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
+		if splitter_tile_entity:
+			splitter_tile_entity.set_is_busy(false);
 	
 	# return to pool or update misc. properties to prepare for next transition
 	if is_poolable:

@@ -42,5 +42,9 @@ func step(delta:float):
 			#slide if slide_dir and player_dir agree
 			# this means player can guide itself to alignment if it cuts a tile really thin on the corner
 			if (slide_dir.x && slide_dir.x == dir.x) or (slide_dir.y && slide_dir.y == dir.y):
+				pass;
 				# add premove using self.premove_priority
-				tile.world.add_premove()
+				#var tile_entity:Entity = tile.world.get_entity(tile.old_type_id, tile);
+				#var pushed_tile_entity:Entity = tile.world.get_aligned_tile_entity()
+				#var premove:Premove = Premove.new(tile_entity, )
+				#tile_entity.add_premove();
