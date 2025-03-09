@@ -2,7 +2,7 @@
 # affects one or more tiles (need not be aligned)
 class_name Premove
 
-var tile_entity:Entity;
+var tile_entity:Entity; #required bc src tile might not be aligned
 var dir:Vector2i;
 var action_id:int;
 

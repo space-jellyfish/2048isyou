@@ -589,26 +589,27 @@ var max_shift_dists:Dictionary = {
 	TypeId.SQUID : 8,
 }
 
-# whether all instances of entity should move in sync
-var move_sync:Dictionary = {
-	EntityId.NONE : false,
-	EntityId.PLAYER : false,
-	EntityId.DUPLICATOR : false,
-	EntityId.HOSTILE : false,
-	EntityId.VOID : false,
-	EntityId.REGULAR : false,
-	EntityId.SQUID_BODY : false,
-	EntityId.SQUID_CLUB : false,
-	EntityId.STP_SPAWNING : false,
-	EntityId.STP_SPAWNED : false,
-	EntityId.SNAKE : false,
+# if not null, all instances of entity should move in sync
+# TODO pause these when pause menu is opened to avoid the np bug
+var global_action_timers:Dictionary = {
+	EntityId.NONE : null,
+	EntityId.PLAYER : null,
+	EntityId.DUPLICATOR : null,
+	EntityId.HOSTILE : null,
+	EntityId.VOID : null,
+	EntityId.REGULAR : null,
+	EntityId.SQUID_BODY : null,
+	EntityId.SQUID_CLUB : null,
+	EntityId.STP_SPAWNING : null,
+	EntityId.STP_SPAWNED : null,
+	EntityId.SNAKE : null,
 }
 
 # in seconds
 # NOTE use 0 to let entity try premoves as fast as *physically* possible, as determined by TILE_WIDTH and TILE_SLIDE_SPEED
 # NOTE extend to use Vector2i(entity_id, action_id) as key if necessary
 # NOTE phase should be delayed if ThreadPool couldn't finish pathfinding on time
-var move_cooldowns:Dictionary = {
+var action_cooldowns:Dictionary = {
 	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
 	EntityId.DUPLICATOR : 14,
@@ -622,8 +623,8 @@ var move_cooldowns:Dictionary = {
 	EntityId.SNAKE : 0, #speed should oscillate for realistic movement
 }
 
-# max random deviation from premove_interval, in seconds
-var move_cooldown_deviations:Dictionary = {
+# max positive deviation from action_cooldown, in seconds
+var action_cooldown_deviations:Dictionary = {
 	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
 	EntityId.DUPLICATOR : 3,

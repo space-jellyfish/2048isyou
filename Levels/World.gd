@@ -660,6 +660,9 @@ func get_aligned_tile_entity(entity_id:int, pos_t:Vector2i) -> Entity:
 	return get_entity(entity_id, pos_t);
 
 func remove_entity(entity_id:int, key:Variant):
+	var entity:Entity = get_entity(entity_id, key);
+	if entity:
+		entity.queue_free();
 	entities[entity_id].erase(key);
 
 func add_entity(entity_id:int, key:Variant, entity:Entity):

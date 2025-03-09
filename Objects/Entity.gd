@@ -10,6 +10,7 @@
 # clear premoves if entity dies or last premove failed
 # roaming entities can try new premoves before the old ones finish
 class_name Entity
+extends Node #for _process()
 
 # emitted when body emits moved or set_body/set_pos_t changes entity position
 # assumes body has a moved signal
@@ -25,9 +26,14 @@ var is_busy:bool = false; #true if premoves are unable to be consumed
 # controls entity movement/behavior
 # path_controller functions should be multithreaded for performance
 var path_controller:RefCounted;
+var action_timer:Timer;
+var task_id:int;
+var is_task_active:bool = false;
+var actions:Array[Vector3i];
 
 
 func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
+	assert(entity_id not in GV.T_NONE_OR_REGULAR);
 	self.world = world;
 	self.body = body;
 	self.entity_id = entity_id;
@@ -42,16 +48,36 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 		path_controller.set_gv(GV);
 		path_controller.set_world(world);
 		path_controller.set_cells(world.get_node("Cells"));
+		path_controller.set_entity(self);
 		moved_for_path_controller.connect(path_controller.on_entity_move_finalized);
+	
+	# action timer stuff
+	if entity_id in GV.E_HAS_PATHFINDING:
+		if GV.global_action_timers[entity_id]:
+			action_timer = GV.global_action_timers[entity_id];
+		else:
+			action_timer = Timer.new();
+		
+		action_timer.timeout.connect(_on_action_timer_timeout);
+		action_timer.start(get_initial_action_cooldown());
 
-func has_premove():
-	return not premoves.is_empty();
+func get_initial_action_cooldown() -> float:
+	return randf_range(0, GV.action_cooldowns[entity_id]);
+
+func get_action_cooldown() -> float:
+	return GV.action_cooldowns[entity_id] + randf_range(0, GV.action_cooldown_deviations[entity_id]);
+
+func _on_action_timer_timeout():
+	if is_premove_possible():
+		world.add_curr_frame_premove_entity(self);
+
+func is_premove_possible() -> bool:
+	return not is_busy and (not action_timer or action_timer.is_stopped) and premoves;
 
 func add_premove(premove:Premove):
 	premoves.push_back(premove);
 	
-	#if premove added or last move finished
-	if not is_busy:
+	if is_premove_possible():
 		world.add_curr_frame_premove_entity(self);
 
 func clear_premoves():
@@ -62,15 +88,11 @@ func is_roaming():
 
 func try_curr_frame_premoves():
 	if is_roaming():
-		#roaming, consume all premoves
-		while premoves:
-			var premove:Premove = premoves.pop_front();
-			try_premove(premove);
+		clear_premoves();
 	else:
 		#aligned, consume first premove
 		if premoves:
-			var premove:Premove = premoves.pop_front();
-			try_premove(premove);
+			try_premove(premoves.pop_front());
 
 func try_premove(premove:Premove):
 	var initiated:bool = false;
@@ -161,9 +183,14 @@ func change_keys(old_key:Variant, new_key:Variant):
 
 func set_is_busy(is_busy:bool):
 	self.is_busy = is_busy;
-	if not is_busy and premoves:
+	
+	if is_premove_possible():
 		world.add_curr_frame_premove_entity(self);
-		
+	elif not is_busy and not premoves and entity_id in GV.E_HAS_PATHFINDING and get_pos_t() != null:
+		# start pathfinding
+		task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
+		is_task_active = true;
+
 func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
@@ -173,7 +200,21 @@ func get_position() -> Vector2:
 func get_pos_t() -> Variant:
 	if body:
 		if body is TileForTilemap and body.is_aligned:
-				return body.pos_t;
+			return body.pos_t;
 		return null;
 	else:
 		return pos_t;
+
+func _process(delta: float) -> void:
+	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
+		WorkerThreadPool.wait_for_task_completion(task_id);
+		
+		# populate premoves
+		for action in actions:
+			var premove := Premove.new(self, Vector2i(action.x, action.y), action.z);
+			add_premove(premove);
+		
+		# reset stuff
+		actions.clear();
+		is_task_active = false;
+	
