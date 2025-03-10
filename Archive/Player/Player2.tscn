@@ -1,11 +1,13 @@
 [gd_scene load_steps=8 format=3 uid="uid://ci03u2bmtlyor"]
 
-[ext_resource type="Script" path="res://Archive/Player/Player2.gd" id="1_0tyd7"]
-[ext_resource type="Texture2D" path="res://Sprites/2_0_dark.png" id="2_jff4t"]
-[ext_resource type="Script" path="res://FSM/FiniteStateMachine.gd" id="3_xmhy7"]
-[ext_resource type="Script" path="res://Archive/Player/Player2 States/snap_idle.gd" id="4_4p73p"]
-[ext_resource type="Script" path="res://Archive/Player/Player2 States/snap_sliding.gd" id="5_atcle"]
-[ext_resource type="Script" path="res://Archive/Player/Player2 States/snap_merging.gd" id="6_r66q3"]
+[ext_resource type="Script" uid="uid://b16bu8i15v6hl" path="res://Archive/Player/Player2.gd" id="1_0tyd7"]
+[ext_resource type="Script" uid="uid://drgowotr43sf7" path="res://FSM/FiniteStateMachine.gd" id="3_xmhy7"]
+[ext_resource type="Script" uid="uid://c0yljaimwhnso" path="res://Archive/Player/Player2 States/snap_idle.gd" id="4_4p73p"]
+[ext_resource type="Script" uid="uid://bgc25yrme5gqt" path="res://Archive/Player/Player2 States/snap_sliding.gd" id="5_atcle"]
+[ext_resource type="Script" uid="uid://cihdcpkdh7iil" path="res://Archive/Player/Player2 States/snap_merging.gd" id="6_r66q3"]
+
+[sub_resource type="Resource" id="Resource_pulvj"]
+metadata/__load_path__ = "res://Sprites/2_0_dark.png"
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_qrr8t"]
 size = Vector2(224, 224)
@@ -18,7 +20,7 @@ script = ExtResource("1_0tyd7")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(20, 20)
-texture = ExtResource("2_jff4t")
+texture = SubResource("Resource_pulvj")
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
 position = Vector2(20, 20)

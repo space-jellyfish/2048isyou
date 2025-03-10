@@ -1,6 +1,6 @@
 [gd_scene load_steps=9 format=3 uid="uid://bs5pnnv5k17ao"]
 
-[ext_resource type="Script" path="res://Objects/TileForFSM.gd" id="1_ywtkn"]
+[ext_resource type="Script" uid="uid://0k6s66ufjkax" path="res://Objects/TileForFSM.gd" id="1_ywtkn"]
 [ext_resource type="PackedScene" uid="uid://b5xshtev3l7ey" path="res://Objects/TileFSM.tscn" id="2_1xuwc"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_xcrd5"]
