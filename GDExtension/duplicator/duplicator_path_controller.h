@@ -68,10 +68,14 @@ protected:
 	static void _bind_methods();
 
 public:
-    DuplicatorPathController();
-    ~DuplicatorPathController();
+    // these require tile_mutex lock
+    uint8_t get_tile_id(Vector2i pos_t);
+    uint8_t get_type_id(Vector2i pos_t);
+    uint8_t get_back_id(Vector2i pos_t);
+    uint16_t get_nav_id(Vector2i pos_t);
+    uint32_t get_stuff_id(Vector2i pos_t);
 
-    // registered with GDScript
+    // getter/setters
     void set_gv(Node* p_gv);
     Node* get_gv();
     void set_world(Node2D* p_world);
@@ -80,18 +84,14 @@ public:
     TileMap* get_cells();
     void set_entity(Ref<RefCounted> p_entity);
     Ref<RefCounted> get_entity();
-    void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
 
-    // these require tile_mutex
-    uint8_t get_tile_id(Vector2i pos_t);
-    uint8_t get_type_id(Vector2i pos_t);
-    uint8_t get_back_id(Vector2i pos_t);
-    uint16_t get_nav_id(Vector2i pos_t);
-    uint32_t get_stuff_id(Vector2i pos_t);
-
+    DuplicatorPathController();
+    ~DuplicatorPathController();
+    
     void get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv);
     void update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos);
     void update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos);
+    void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
     void get_actions(Vector2i pos_t);
 };
 
