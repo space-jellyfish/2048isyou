@@ -29,6 +29,7 @@ var action_timer:Timer;
 var task_id:int;
 var is_task_active:bool = false;
 var actions:Array[Vector3i];
+var is_initial_pathfind:bool = true;
 
 
 func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
@@ -51,6 +52,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 		moved_for_path_controller.connect(path_controller.on_entity_move_finalized);
 	
 	# action timer stuff
+	# assume Entity isn't init until world ready
 	if entity_id in GV.E_HAS_PATHFINDING:
 		if GV.global_action_timers[entity_id]:
 			action_timer = GV.global_action_timers[entity_id];
@@ -58,6 +60,8 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 			action_timer = Timer.new();
 		
 		action_timer.timeout.connect(_on_action_timer_timeout);
+		world.get_node("ActionTimers").add_child(action_timer);
+		assert(action_timer.is_inside_tree());
 		action_timer.start(get_initial_action_cooldown());
 
 func get_initial_action_cooldown() -> float:
@@ -69,6 +73,9 @@ func get_action_cooldown() -> float:
 func _on_action_timer_timeout():
 	if is_premove_possible():
 		world.add_curr_frame_premove_entity(self);
+	elif is_initial_pathfind:
+		set_is_busy(false); # to find initial move
+		is_initial_pathfind = false;
 
 func is_premove_possible() -> bool:
 	return not is_busy and (not action_timer or action_timer.is_stopped) and premoves;
@@ -119,6 +126,10 @@ func try_premove(premove:Premove):
 	else:
 		print("premoves cleared")
 		clear_premoves();
+	
+	if entity_id in GV.E_HAS_PATHFINDING:
+		assert(action_timer.is_stopped());
+		action_timer.start(get_action_cooldown());
 
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
@@ -185,10 +196,18 @@ func set_is_busy(is_busy:bool):
 	
 	if is_premove_possible():
 		world.add_curr_frame_premove_entity(self);
-	elif not is_busy and not premoves and entity_id in GV.E_HAS_PATHFINDING and get_pos_t() != null:
-		# start pathfinding
-		task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
-		is_task_active = true;
+	elif entity_id in GV.E_HAS_PATHFINDING and not is_busy and not premoves and get_pos_t() != null:
+		# start pathfinding in new thread
+		#task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
+		#is_task_active = true;
+		
+		# debug pathfinding in main thread
+		print("get before it")
+		path_controller.get_actions(get_pos_t());
+		print("get over it")
+		for action in actions:
+			var premove := Premove.new(self, Vector2i(action.x, action.y), action.z);
+			add_premove(premove);
 
 func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
@@ -217,3 +236,7 @@ func _process():
 		actions.clear();
 		is_task_active = false;
 	
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		if action_timer:
+			action_timer.queue_free();

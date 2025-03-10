@@ -690,7 +690,7 @@ var messages:Dictionary = {
 
 
 func dir_to_dir_id(dir:Vector2i) -> int:
-	return 1.5 * dir.x - 0.5 * dir.y + 1.5;
+	return int(1.5 * dir.x - 0.5 * dir.y + 1.5);
 
 func world_to_pos_t(pos:Vector2) -> Vector2i:
 	return (pos / TILE_WIDTH).floor();

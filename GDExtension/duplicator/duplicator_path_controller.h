@@ -29,7 +29,7 @@ class DuplicatorPathController : public RefCounted {
 
 private:
     // random generator stuff for tiebreaking
-    static thread_local mt19937 generator;
+    mt19937 generator;
 
     struct Danger {
         int level = 0;
@@ -39,13 +39,15 @@ private:
     // to make final action non-deterministic, calculate a priority score in constructor
     // and compare priority score in the operator overload
     struct Action {
+        DuplicatorPathController* dpc;
         int weight = 0;
+
         Vector3i action;
         int resulting_power;
         int dot_escape_dir;
         int target_merge_priority; //-1 if not merge or target isn't an entity
-
-        Action(Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger);
+    
+        Action(DuplicatorPathController* p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger);
         bool operator<(const Action& other) const;
     };
 
@@ -66,6 +68,9 @@ protected:
 	static void _bind_methods();
 
 public:
+    DuplicatorPathController();
+    ~DuplicatorPathController();
+
     // registered with GDScript
     void set_gv(Node* p_gv);
     Node* get_gv();

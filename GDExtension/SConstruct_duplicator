@@ -12,20 +12,29 @@ env = SConscript("godot-cpp/SConstruct")
 # - CPPDEFINES are for pre-processor defines
 # - LINKFLAGS are for linking flags
 
+# Set compiler flags based on build type
+if env['target'] == 'template_debug':
+    env.Append(CXXFLAGS=['-g', '-O0'])
+else:
+    env.Append(CXXFLAGS=['-O3'])
+
 if env['CC'] == 'clang':
     env.Append(CXXFLAGS=['-stdlib=libc++', '-std=c++17'])
     env.Append(LINKFLAGS=['-stdlib=libc++'])
 elif env['CC'] == 'gcc':
     env.Append(CXXFLAGS=['-stdlib=libstdc++', '/std:c++17'])
     env.Append(LINKFLAGS=['-stdlib=libstdc++'])
-#env.Append(CXXFLAGS=["-O3"])
-print(env['CXXFLAGS'])
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
+# SCons does not natively support wildcards like ** for recursive directory inclusion
 env.Append(CPPPATH="duplicator/")
-env.Append(CPPPATH="lib/")
 env.Append(CPPPATH="lib/actions/")
-src = Glob("duplicator/*.cpp") + Glob("lib/actions/*.cpp")
+env.Append(CPPPATH="lib/open_list_hog/")
+env.Append(CPPPATH="lib/open_list_warthog/")
+src = Glob("duplicator/*.cpp")
+src += Glob("lib/actions/*.cpp")
+src += Glob("lib/open_list_hog/*.cpp")
+src += Glob("lib/open_list_warthog/*.cpp")
 
 if env['platform'] == 'macos':
 	libpath = 'duplicator{}{}'.format( env['suffix'], env['SHLIBSUFFIX'] );

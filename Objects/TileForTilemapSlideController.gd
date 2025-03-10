@@ -52,8 +52,12 @@ func step(delta:float):
 		
 	elif collision:
 		var collider:Node2D = collision.get_collider();
+		
+		# try to catch the ultra rare bug
+		if remaining_dist == 40 and collider is TileMap:
+			assert(false);
 	
-		#check if collision requires handling (front tile handles self reverse logic)
+		# check if collision requires handling (front tile handles self reverse logic)
 		if collider != tile.front_tile and Vector2(dir).dot(collision.get_normal()):
 			#bounce self if collider can't bounce; collider should call its own bounce
 			if collider is TileForTilemap:

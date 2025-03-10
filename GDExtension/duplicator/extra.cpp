@@ -349,3 +349,17 @@ bool DuplicatorPathController::HuntAction::operator<(const HuntAction& other) co
         return Vector3i(0, 0, ActionId::NONE);
     }
 */
+
+/*
+DuplicatorPathController::DuplicatorPathController() {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        set_process_mode(Node::ProcessMode::PROCESS_MODE_DISABLED);
+    }
+}
+*/
+
+/*
+        assert(curr_lv_pos.y >= 0 && curr_lv_pos.y < lv.size());
+        assert(curr_lv_pos.x >= 0 && curr_lv_pos.x < lv[0].size());
+
+*/

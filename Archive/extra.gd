@@ -1907,3 +1907,9 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 '''
 const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
 '''
+
+'''
+func pc_placeholder():
+	print("PLACEHOLDER")
+	actions.push_back(Vector3i.ZERO);
+'''
