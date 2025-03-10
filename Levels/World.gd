@@ -296,6 +296,7 @@ func generate_cell(pos_t:Vector2i):
 	var n_type:float = randf();
 	if n_type < GV.P_GEN_DUPLICATOR:
 		type_id = GV.TypeId.DUPLICATOR;
+		print("DUP GENERATED")
 	elif n_type < GV.P_GEN_HOSTILE:
 		type_id = GV.TypeId.HOSTILE;
 	
