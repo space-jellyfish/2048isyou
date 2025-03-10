@@ -347,6 +347,8 @@ func _input(event):
 	if event.is_action_pressed("debug"):
 		player.add_premove(Premove.new(player, Vector2i(-1, 0), GV.ActionId.SPLIT))
 		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SPLIT))
+		print(get_atlas_coords(GV.LayerId.TILE, Vector2i(-47, -8)));
+		print($Cells.get_cell_atlas_coords(GV.LayerId.TILE, Vector2i(-47, -8)))
 		#print(entities[0][Vector2i(1, 0)].is_busy)
 
 # NOTE for multithreading: sequential consistency is unnecessary for pathfinder, only data integrity matters

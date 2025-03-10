@@ -1,6 +1,9 @@
 #include <godot_cpp/variant/vector2i.hpp>
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/mutex.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+#include <godot_cpp/godot.hpp>
+#include <godot_cpp/classes/engine.hpp>
 #include "actions.h"
 #include "duplicator_path_controller.h"
 
@@ -8,8 +11,6 @@ using namespace std;
 using namespace godot;
 using namespace actions;
 
-
-thread_local mt19937 DuplicatorPathController::generator{random_device{}()};
 
 void DuplicatorPathController::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_gv", "p_gv"), &DuplicatorPathController::set_gv);
@@ -27,6 +28,16 @@ void DuplicatorPathController::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world", PROPERTY_HINT_NODE_TYPE, "Node2D"), "set_world", "get_world");
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "cells", PROPERTY_HINT_NODE_TYPE, "TileMap"), "set_cells", "get_cells");
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "entity", PROPERTY_HINT_NODE_TYPE, "RefCounted"), "set_entity", "get_entity");
+}
+
+DuplicatorPathController::DuplicatorPathController() {
+    UtilityFunctions::print("DPC INIT");
+    random_device rd;
+    generator = mt19937(rd());
+}
+
+DuplicatorPathController::~DuplicatorPathController() {
+
 }
 
 void DuplicatorPathController::set_gv(Node* p_gv) {
@@ -262,7 +273,7 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
                 int dot_escape_dir = dot(dir, temp_danger.escape_dir);
                 int target_merge_priority = (!action_push_count && T_NONE_OR_REGULAR.find(curr_type_id) == T_NONE_OR_REGULAR.end()) ? merge_priorities.at(curr_type_id) : -1;
 
-                actions.emplace_back(action, resulting_power, dot_escape_dir, target_merge_priority, temp_danger.level);
+                actions.emplace_back(this, action, resulting_power, dot_escape_dir, target_merge_priority, temp_danger.level);
             }
         }
     }
@@ -282,7 +293,8 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
 // else prefer escape dir over perp dir
 // else prefer higher resulting power
 // else prefer split over slide
-DuplicatorPathController::Action::Action(Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger) :
+DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger) :
+    dpc(p_dpc),
     action(p_action),
     resulting_power(p_resulting_power),
     dot_escape_dir(p_dot_escape_dir),
@@ -308,7 +320,7 @@ DuplicatorPathController::Action::Action(Vector3i p_action, int p_resulting_powe
 
     // random term for unpredictability
     uniform_int_distribution<int> dist(0, 15);
-    weight += dist(generator);
+    weight += dist(dpc->generator);
 }
 
 bool DuplicatorPathController::Action::operator<(const Action& other) const {
@@ -319,7 +331,7 @@ bool DuplicatorPathController::Action::operator<(const Action& other) const {
     // tiebreaking
     if (temp_weight == other.weight) {
         uniform_int_distribution<int> dist(0, 1);
-        return dist(generator);
+        return dist(dpc->generator);
     }
     return temp_weight > other.weight;
 }

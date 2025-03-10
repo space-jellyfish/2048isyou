@@ -1,0 +1,612 @@
+admin@Phausenheimac:~/Desktop/2048isyou/GDExtension$ scons -f SConstruct_duplicator
+scons: Reading SConscript files ...
+Auto-detected 8 CPU cores available for build parallelism. Using 7 cores by default. You can override it with the -j argument.
+Building for architecture universal on platform macos
+-std=c++17 -stdlib=libc++ -std=c++17
+scons: done reading SConscript files.
+scons: Building targets ...
+scons: `godot-cpp/bin/libgodot-cpp.macos.template_debug.universal.a' is up to date.
+clang++ -o duplicator/duplicator_path_controller.os -c -std=c++17 -stdlib=libc++ -std=c++17 -arch x86_64 -arch arm64 -O2 -fPIC -DMACOS_ENABLED -DUNIX_ENABLED -DDEBUG_ENABLED -DDEBUG_METHODS_ENABLED -Igodot-cpp/gdextension -Igodot-cpp/include -Igodot-cpp/gen/include -Iduplicator -Ilib -Ilib/actions duplicator/duplicator_path_controller.cpp
+clang++ -o duplicator/register_types.os -c -std=c++17 -stdlib=libc++ -std=c++17 -arch x86_64 -arch arm64 -O2 -fPIC -DMACOS_ENABLED -DUNIX_ENABLED -DDEBUG_ENABLED -DDEBUG_METHODS_ENABLED -Igodot-cpp/gdextension -Igodot-cpp/include -Igodot-cpp/gen/include -Iduplicator -Ilib -Ilib/actions duplicator/register_types.cpp
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1712:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/memory:848:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/allocator.h:165:28: error: no matching constructor for initialization of 'DuplicatorPathController::Action'
+        ::new ((void*)__p) _Up(_VSTD::forward<_Args>(__args)...);
+                           ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/allocator_traits.h:290:13: note: in instantiation of function template specialization 'std::allocator<DuplicatorPathController::Action>::construct<DuplicatorPathController::Action, godot::Vector3i &, int &, int &, int &, int &>' requested here
+        __a.construct(__p, _VSTD::forward<_Args>(__args)...);
+            ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/vector:808:21: note: in instantiation of function template specialization 'std::allocator_traits<std::allocator<DuplicatorPathController::Action>>::construct<DuplicatorPathController::Action, godot::Vector3i &, int &, int &, int &, int &, void>' requested here
+    __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__tx.__pos_),
+                    ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/vector:1597:9: note: in instantiation of function template specialization 'std::vector<DuplicatorPathController::Action>::__construct_one_at_end<godot::Vector3i &, int &, int &, int &, int &>' requested here
+        __construct_one_at_end(_VSTD::forward<_Args>(__args)...);
+        ^
+duplicator/duplicator_path_controller.cpp:285:25: note: in instantiation of function template specialization 'std::vector<DuplicatorPathController::Action>::emplace_back<godot::Vector3i &, int &, int &, int &, int &>' requested here
+                actions.emplace_back(action, resulting_power, dot_escape_dir, target_merge_priority, temp_danger.level);
+                        ^
+duplicator/duplicator_path_controller.cpp:306:35: note: candidate constructor not viable: requires 6 arguments, but 5 were provided
+DuplicatorPathController::Action::Action(DuplicatorPathController& p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger) :
+                                  ^
+duplicator/duplicator_path_controller.h:41:12: note: candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 5 were provided
+    struct Action {
+           ^
+duplicator/duplicator_path_controller.h:41:12: note: candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 5 were provided
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1760:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/make_heap.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:59:18: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+        *__start = _Ops::__iter_move(__child_i);
+                 ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/make_heap.h:37:14: note: in instantiation of function template specialization 'std::__sift_down<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        std::__sift_down<_AlgPolicy>(__first, __comp_ref, __n, __first + __start);
+             ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:39:8: note: in instantiation of function template specialization 'std::__make_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  std::__make_heap<_AlgPolicy>(__first, __middle, __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:681:10: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1760:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/make_heap.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:77:14: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+    *__start = _VSTD::move(__top);
+             ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:114:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/swap_ranges.h:12:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:12:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iter_swap.h:26:27: error: no matching function for call to 'swap'
+    _NOEXCEPT_(_NOEXCEPT_(swap(*declval<_ForwardIterator1>(), *declval<_ForwardIterator2>()))) {
+                          ^~~~
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:448:36: note: expanded from macro '_NOEXCEPT_'
+#    define _NOEXCEPT_(x) noexcept(x)
+                                   ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:448:36: note: expanded from macro '_NOEXCEPT_'
+#    define _NOEXCEPT_(x) noexcept(x)
+                                   ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:138:10: note: in instantiation of exception specification for 'iter_swap<std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::iter_swap(std::forward<_Iter1>(__a), std::forward<_Iter2>(__b));
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:47:33: note: in instantiation of function template specialization 'std::_IterOps<std::_ClassicAlgPolicy>::iter_swap<std::__wrap_iter<DuplicatorPathController::Action *> &, std::__wrap_iter<DuplicatorPathController::Action *> &>' requested here
+          _IterOps<_AlgPolicy>::iter_swap(__i, __first);
+                                ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:681:10: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:33:85: note: candidate template ignored: requirement 'is_move_assignable<DuplicatorPathController::Action>::value' was not satisfied [with _Tp = DuplicatorPathController::Action]
+inline _LIBCPP_INLINE_VISIBILITY __swap_result_t<_Tp> _LIBCPP_CONSTEXPR_AFTER_CXX17 swap(_Tp& __x, _Tp& __y)
+                                                                                    ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:42:1: note: candidate template ignored: could not match '_Tp[_Np]' against 'DuplicatorPathController::Action'
+swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
+^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:16:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:48:11: error: no matching function for call to '__sift_down'
+          std::__sift_down<_AlgPolicy>(__first, __comp, __len, __first);
+          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:681:10: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:26:1: note: candidate template ignored: substitution failure [with _AlgPolicy = std::_ClassicAlgPolicy, _Compare = std::__less<DuplicatorPathController::Action> &, _RandomAccessIterator = std::__wrap_iter<DuplicatorPathController::Action *>]
+__sift_down(_RandomAccessIterator __first, _Compare&& __comp,
+^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:103:17: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+        *__hole = _IterOps<_AlgPolicy>::__iter_move(__child_i);
+                ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/pop_heap.h:41:41: note: in instantiation of function template specialization 'std::__floyd_sift_down<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    _RandomAccessIterator __hole = std::__floyd_sift_down<_AlgPolicy>(__first, __comp_ref, __len);
+                                        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort_heap.h:35:10: note: in instantiation of function template specialization 'std::__pop_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__pop_heap<_AlgPolicy>(__first, __last, __comp_ref, __n);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:52:8: note: in instantiation of function template specialization 'std::__sort_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  std::__sort_heap<_AlgPolicy>(std::move(__first), std::move(__middle), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:681:10: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:16:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:17:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort_heap.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/pop_heap.h:45:15: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+      *__hole = std::move(__top);
+              ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort_heap.h:35:10: note: in instantiation of function template specialization 'std::__pop_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__pop_heap<_AlgPolicy>(__first, __last, __comp_ref, __n);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:52:8: note: in instantiation of function template specialization 'std::__sort_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  std::__sort_heap<_AlgPolicy>(std::move(__first), std::move(__middle), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:681:10: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:114:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/swap_ranges.h:12:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:12:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iter_swap.h:27:3: error: no matching function for call to 'swap'
+  swap(*__a, *__b);
+  ^~~~
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:138:10: note: in instantiation of function template specialization 'std::iter_swap<std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::iter_swap(std::forward<_Iter1>(__a), std::forward<_Iter2>(__b));
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:681:10: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, std::__wrap_iter<DuplicatorPathController::Action *>, std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:33:85: note: candidate template ignored: requirement 'is_move_assignable<DuplicatorPathController::Action>::value' was not satisfied [with _Tp = DuplicatorPathController::Action]
+inline _LIBCPP_INLINE_VISIBILITY __swap_result_t<_Tp> _LIBCPP_CONSTEXPR_AFTER_CXX17 swap(_Tp& __x, _Tp& __y)
+                                                                                    ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:42:1: note: candidate template ignored: could not match '_Tp[_Np]' against 'DuplicatorPathController::Action'
+swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
+^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:114:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/swap_ranges.h:12:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:12:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iter_swap.h:26:27: error: no matching function for call to 'swap'
+    _NOEXCEPT_(_NOEXCEPT_(swap(*declval<_ForwardIterator1>(), *declval<_ForwardIterator2>()))) {
+                          ^~~~
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:448:36: note: expanded from macro '_NOEXCEPT_'
+#    define _NOEXCEPT_(x) noexcept(x)
+                                   ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:448:36: note: expanded from macro '_NOEXCEPT_'
+#    define _NOEXCEPT_(x) noexcept(x)
+                                   ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:138:10: note: in instantiation of exception specification for 'iter_swap<DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+    std::iter_swap(std::forward<_Iter1>(__a), std::forward<_Iter2>(__b));
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:437:31: note: in instantiation of function template specialization 'std::_IterOps<std::_ClassicAlgPolicy>::iter_swap<DuplicatorPathController::Action *&, DuplicatorPathController::Action *&>' requested here
+        _IterOps<_AlgPolicy>::iter_swap(__first, __last);
+                              ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:33:85: note: candidate template ignored: requirement 'is_move_assignable<DuplicatorPathController::Action>::value' was not satisfied [with _Tp = DuplicatorPathController::Action]
+inline _LIBCPP_INLINE_VISIBILITY __swap_result_t<_Tp> _LIBCPP_CONSTEXPR_AFTER_CXX17 swap(_Tp& __x, _Tp& __y)
+                                                                                    ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:42:1: note: candidate template ignored: could not match '_Tp[_Np]' against 'DuplicatorPathController::Action'
+swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
+^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:114:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/swap_ranges.h:12:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:12:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iter_swap.h:27:3: error: no matching function for call to 'swap'
+  swap(*__a, *__b);
+  ^~~~
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/iterator_operations.h:138:10: note: in instantiation of function template specialization 'std::iter_swap<DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+    std::iter_swap(std::forward<_Iter1>(__a), std::forward<_Iter2>(__b));
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:33:85: note: candidate template ignored: requirement 'is_move_assignable<DuplicatorPathController::Action>::value' was not satisfied [with _Tp = DuplicatorPathController::Action]
+inline _LIBCPP_INLINE_VISIBILITY __swap_result_t<_Tp> _LIBCPP_CONSTEXPR_AFTER_CXX17 swap(_Tp& __x, _Tp& __y)
+                                                                                    ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__utility/swap.h:42:1: note: candidate template ignored: could not match '_Tp[_Np]' against 'DuplicatorPathController::Action'
+swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
+^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:325:14: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+        *__j = _Ops::__iter_move(__k);
+             ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:453:12: note: in instantiation of function template specialization 'std::__insertion_sort_3<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+      std::__insertion_sort_3<_AlgPolicy, _Compare>(__first, __last, __comp);
+           ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:328:12: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+      *__j = _VSTD::move(__t);
+           ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1760:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/make_heap.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:59:18: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+        *__start = _Ops::__iter_move(__child_i);
+                 ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/make_heap.h:37:14: note: in instantiation of function template specialization 'std::__sift_down<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+        std::__sift_down<_AlgPolicy>(__first, __comp_ref, __n, __first + __start);
+             ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:39:8: note: in instantiation of function template specialization 'std::__make_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__make_heap<_AlgPolicy>(__first, __middle, __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:459:12: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+      std::__partial_sort<_AlgPolicy, _Compare>(__first, __last, __last, __comp);
+           ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1760:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/make_heap.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:77:14: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+    *__start = _VSTD::move(__top);
+             ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:16:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:48:11: error: no matching function for call to '__sift_down'
+          std::__sift_down<_AlgPolicy>(__first, __comp, __len, __first);
+          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:459:12: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+      std::__partial_sort<_AlgPolicy, _Compare>(__first, __last, __last, __comp);
+           ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:26:1: note: candidate template ignored: substitution failure [with _AlgPolicy = std::_ClassicAlgPolicy, _Compare = std::__less<DuplicatorPathController::Action> &, _RandomAccessIterator = DuplicatorPathController::Action *]
+__sift_down(_RandomAccessIterator __first, _Compare&& __comp,
+^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sift_down.h:103:17: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+        *__hole = _IterOps<_AlgPolicy>::__iter_move(__child_i);
+                ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/pop_heap.h:41:41: note: in instantiation of function template specialization 'std::__floyd_sift_down<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    _RandomAccessIterator __hole = std::__floyd_sift_down<_AlgPolicy>(__first, __comp_ref, __len);
+                                        ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort_heap.h:35:10: note: in instantiation of function template specialization 'std::__pop_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, DuplicatorPathController::Action *>' requested here
+    std::__pop_heap<_AlgPolicy>(__first, __last, __comp_ref, __n);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:52:8: note: in instantiation of function template specialization 'std::__sort_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__sort_heap<_AlgPolicy>(std::move(__first), std::move(__middle), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:459:12: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+      std::__partial_sort<_AlgPolicy, _Compare>(__first, __last, __last, __comp);
+           ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:16:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:17:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort_heap.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/pop_heap.h:45:15: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+      *__hole = std::move(__top);
+              ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort_heap.h:35:10: note: in instantiation of function template specialization 'std::__pop_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action>, DuplicatorPathController::Action *>' requested here
+    std::__pop_heap<_AlgPolicy>(__first, __last, __comp_ref, __n);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:52:8: note: in instantiation of function template specialization 'std::__sort_heap<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__sort_heap<_AlgPolicy>(std::move(__first), std::move(__middle), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/partial_sort.h:67:27: note: in instantiation of function template specialization 'std::__partial_sort_impl<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+                          ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:459:12: note: in instantiation of function template specialization 'std::__partial_sort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *, DuplicatorPathController::Action *>' requested here
+      std::__partial_sort<_AlgPolicy, _Compare>(__first, __last, __last, __comp);
+           ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:377:14: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+        *__j = _Ops::__iter_move(__k);
+             ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:575:24: note: in instantiation of function template specialization 'std::__insertion_sort_incomplete<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+      bool __fs = std::__insertion_sort_incomplete<_WrappedComp>(__first, __i, __wrapped_comp);
+                       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:627:8: note: in instantiation of function template specialization 'std::__introsort<std::_ClassicAlgPolicy, std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+  std::__introsort<_AlgPolicy, _Compare>(__first, __last, __comp, __depth_limit);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:687:10: note: in instantiation of function template specialization 'std::__sort<std::__less<DuplicatorPathController::Action> &, DuplicatorPathController::Action *>' requested here
+    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+         ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:694:8: note: in instantiation of function template specialization 'std::__sort_impl<std::_ClassicAlgPolicy, std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::__sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
+       ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:700:8: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>, std::__less<DuplicatorPathController::Action>>' requested here
+  std::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+       ^
+duplicator/duplicator_path_controller.cpp:291:9: note: in instantiation of function template specialization 'std::sort<std::__wrap_iter<DuplicatorPathController::Action *>>' requested here
+        sort(actions.begin(), actions.end());
+        ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+In file included from duplicator/duplicator_path_controller.cpp:2:
+In file included from godot-cpp/gen/include/godot_cpp/classes/ref_counted.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/object.hpp:36:
+In file included from godot-cpp/include/godot_cpp/core/property_info.hpp:38:
+In file included from godot-cpp/include/godot_cpp/variant/variant.hpp:41:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/array:127:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/algorithm:1774:
+In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/nth_element.h:15:
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/sort.h:380:12: error: object of type 'DuplicatorPathController::Action' cannot be assigned because its copy assignment operator is implicitly deleted
+      *__j = _VSTD::move(__t);
+           ^
+duplicator/duplicator_path_controller.h:42:35: note: copy assignment operator of 'Action' is implicitly deleted because field 'dpc' is of reference type 'DuplicatorPathController &'
+        DuplicatorPathController& dpc;
+                                  ^
+19 errors generated.
+scons: *** [duplicator/duplicator_path_controller.os] Error 1
+scons: building terminated because of errors.
+admin@Phausenheimac:~/Desktop/2048isyou/GDExtension$ 
