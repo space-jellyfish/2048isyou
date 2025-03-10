@@ -30,15 +30,31 @@ void DuplicatorPathController::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "entity", PROPERTY_HINT_NODE_TYPE, "RefCounted"), "set_entity", "get_entity");
 }
 
-DuplicatorPathController::DuplicatorPathController() {
-    UtilityFunctions::print("DPC INIT");
-    random_device rd;
-    generator = mt19937(rd());
+
+uint8_t DuplicatorPathController::get_tile_id(Vector2i pos_t) {
+    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::TILE, pos_t);
+    return atlas_coords_to_tile_id(atlas_coords);
 }
 
-DuplicatorPathController::~DuplicatorPathController() {
-
+uint8_t DuplicatorPathController::get_type_id(Vector2i pos_t) {
+    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::TILE, pos_t);
+    return atlas_coords_to_type_id(atlas_coords);
 }
+
+uint8_t DuplicatorPathController::get_back_id(Vector2i pos_t) {
+    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::BACK, pos_t);
+    return atlas_coords_to_back_id(atlas_coords);
+}
+
+uint16_t DuplicatorPathController::get_nav_id(Vector2i pos_t) {
+    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::NAV, pos_t);
+    return atlas_coords_to_nav_id(atlas_coords);
+}
+
+uint32_t DuplicatorPathController::get_stuff_id(Vector2i pos_t) {
+    return make_tile_bits(get_tile_id(pos_t)) + make_type_bits(get_type_id(pos_t)) + make_back_bits(get_back_id(pos_t)) + make_nav_bits(get_nav_id(pos_t));
+}
+
 
 void DuplicatorPathController::set_gv(Node* p_gv) {
     gv = p_gv;
@@ -72,51 +88,15 @@ Ref<RefCounted> DuplicatorPathController::get_entity() {
     return entity;
 }
 
-// NOTE this function is run from the main thread, so set_is_busy() => get_actions() won't be called until this function finishes
-// NOTE calling function must lock tile_mutex
-// NOTE godot signals emitted on the main thread are processed synchronously
-// decrement danger level if move succeeded and resulting entity is duplicator
-void DuplicatorPathController::on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity) {
-    int resulting_entity_id = resulting_entity->get("entity_id");
 
-    if (resulting_entity_id == EntityId::DUPLICATOR) {
-        DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(resulting_entity->get("path_controller"));
-
-        // ================ START CRITICAL SECTION ================
-        danger_mutex.lock();
-        path_controller->danger_mutex.lock();
-
-        path_controller->danger.level = max(0, danger.level - 1);
-
-        path_controller->danger_mutex.unlock();
-        danger_mutex.unlock();
-        // ================ END CRITICAL SECTION ================
-    }
+DuplicatorPathController::DuplicatorPathController() {
+    UtilityFunctions::print("DPC INIT");
+    random_device rd;
+    generator = mt19937(rd());
 }
 
+DuplicatorPathController::~DuplicatorPathController() {
 
-uint8_t DuplicatorPathController::get_tile_id(Vector2i pos_t) {
-    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::TILE, pos_t);
-    return atlas_coords_to_tile_id(atlas_coords);
-}
-
-uint8_t DuplicatorPathController::get_type_id(Vector2i pos_t) {
-    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::TILE, pos_t);
-    return atlas_coords_to_type_id(atlas_coords);
-}
-
-uint8_t DuplicatorPathController::get_back_id(Vector2i pos_t) {
-    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::BACK, pos_t);
-    return atlas_coords_to_back_id(atlas_coords);
-}
-
-uint16_t DuplicatorPathController::get_nav_id(Vector2i pos_t) {
-    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::NAV, pos_t);
-    return atlas_coords_to_nav_id(atlas_coords);
-}
-
-uint32_t DuplicatorPathController::get_stuff_id(Vector2i pos_t) {
-    return make_tile_bits(get_tile_id(pos_t)) + make_type_bits(get_type_id(pos_t)) + make_back_bits(get_back_id(pos_t)) + make_nav_bits(get_nav_id(pos_t));
 }
 
 
@@ -132,7 +112,7 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
         Vector2i curr_lv_pos = curr_pos_t - min_pos_t;
         lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t);
     }
-    for (int dy = 0; dy <= lv.size(); ++dy) {
+    for (int dy = 0; dy < lv.size(); ++dy) {
         Vector2i curr_pos_t = Vector2i(pos_t.x, min_pos_t.y + dy);
         Vector2i curr_lv_pos = curr_pos_t - min_pos_t;
         lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t);
@@ -213,16 +193,39 @@ void DuplicatorPathController::update_neighbor_dangers(Vector2i min_pos_t, Vecto
     }
 }
 
+// NOTE this function is run from the main thread, so set_is_busy() => get_actions() won't be called until this function finishes
+// NOTE calling function must lock tile_mutex
+// NOTE godot signals emitted on the main thread are processed synchronously
+// decrement danger level if move succeeded and resulting entity is duplicator
+void DuplicatorPathController::on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity) {
+    int resulting_entity_id = resulting_entity->get("entity_id");
+
+    if (resulting_entity_id == EntityId::DUPLICATOR) {
+        DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(resulting_entity->get("path_controller"));
+
+        // ================ START CRITICAL SECTION ================
+        danger_mutex.lock();
+        path_controller->danger_mutex.lock();
+
+        path_controller->danger.level = max(0, danger.level - 1);
+
+        path_controller->danger_mutex.unlock();
+        danger_mutex.unlock();
+        // ================ END CRITICAL SECTION ================
+    }
+}
+
 // action dir should be normalized
 void DuplicatorPathController::get_actions(Vector2i pos_t) {
     // get answer buffer
     Array entity_actions = entity->get("actions");
 
     // get world info
-    Vector2i min_pos_t = Vector2i(pos_t.x - LV_RADIUS, pos_t.y - LV_RADIUS);
-    Vector2i lv_pos = pos_t - min_pos_t;
+    Vector2i lv_pos = Vector2i(LV_RADIUS, LV_RADIUS);
+    Vector2i min_pos_t = pos_t - lv_pos;
     vector<vector<uint32_t>> lv = vector<vector<uint32_t>>(LV_WIDTH, vector<uint32_t>(LV_WIDTH, StuffId::NONE));
     get_world_info(pos_t, min_pos_t, lv);
+    UtilityFunctions::print("HERE");
 
     // ================ START CRITICAL SECTION ================
     danger_mutex.lock();
@@ -233,6 +236,7 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
     // update danger
     // NOTE danger level is unchanged if no dangerous neighbors detected
     update_danger(lv, min_pos_t, lv_pos);
+    UtilityFunctions::print("HORY");
 
     // try escape
     uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];

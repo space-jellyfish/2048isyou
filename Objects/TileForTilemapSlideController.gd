@@ -55,6 +55,9 @@ func step(delta:float):
 		
 		# try to catch the ultra rare bug
 		if remaining_dist == 40 and collider is TileMap:
+			print(collision.get_position());
+			print(collision.get_normal());
+			print(tile.world.get_atlas_coords(GV.LayerId.TILE, tile.pos_t));
 			assert(false);
 	
 		# check if collision requires handling (front tile handles self reverse logic)

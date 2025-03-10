@@ -80,10 +80,14 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	new_type_id = old_type_id;
 	velocity = Vector2.ZERO;
 	was_aligned = is_aligned;
+	
+	# delay movement by one frame to wait for tilemap collider update
+	await world.get_tree().physics_frame;
 	move_controller = TileForTilemapSlideController.new(self, dir);
+	is_aligned = false;
 	
 	# add NAV wall for pathfinder
-	if is_aligned:
+	if was_aligned:
 		world.add_nav_id(pos_t, GV.NAV_UNITS[dir]);
 		world.add_nav_id(pos_t + dir, GV.NavId.ALL);
 	else:
@@ -104,12 +108,10 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 	
 	set_collision_mask_value(GV.CollisionId.DEFAULT, true);
-	if old_type_id != GV.TypeId.PLAYER and not (is_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
+	if old_type_id != GV.TypeId.PLAYER and not (was_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if GV.E_ENEMY[GV.EntityId.PLAYER][old_type_id]:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
-	
-	is_aligned = false;
 
 func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	#print("initialize shift")
@@ -121,7 +123,11 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	new_type_id = old_type_id;
 	velocity = Vector2.ZERO;
 	was_aligned = is_aligned;
+
+	# delay movement by one frame to wait for tilemap collider update
+	await world.get_tree().physics_frame;
 	move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
+	is_aligned = false;
 	
 	# add NAV wall for pathfinder
 	world.add_nav_id(pos_t, GV.NAV_UNITS[dir]);
@@ -141,12 +147,10 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 	
 	set_collision_mask_value(GV.CollisionId.DEFAULT, true);
-	if old_type_id != GV.TypeId.PLAYER and not (is_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
+	if old_type_id != GV.TypeId.PLAYER and not (was_aligned and world.get_back_id(pos_t) == GV.BackId.MEMBRANE):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if GV.E_ENEMY[GV.EntityId.PLAYER][old_type_id]:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
-	
-	is_aligned = false;
 
 func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
 	#print("initialize split")
@@ -159,6 +163,9 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
+	
+	# delay movement by one frame to wait for tilemap collider update
+	await world.get_tree().physics_frame;
 	
 	# add NAV wall for pathfinder
 	world.add_nav_id(pos_t, GV.NavId.ALL);
@@ -190,6 +197,10 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
+	
+	# delay movement by one frame to wait for tilemap collider update
+	# TODO if tile is both converting and sliding, and one of them finalizes while await is happening, world will be reset to null
+	await world.get_tree().physics_frame;
 	
 	# add NAV wall for pathfinder
 	world.add_nav_id(pos_t, GV.NavId.ALL);

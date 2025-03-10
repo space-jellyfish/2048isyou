@@ -682,7 +682,7 @@ func add_entity(entity_id:int, key:Variant, entity:Entity):
 # NOTE problem: collision persists after clearing TileMap cell
 # add_child via call_deferred doesn't work bc it's already in idle time so the tiles still get added immediately
 # add tile via await get_tree().physics_frame doesn't work bc tile might not exist during render
-func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):	
+func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
 	#add sliding tiles
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
