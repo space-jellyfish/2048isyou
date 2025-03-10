@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://cxvw7i8bgukix"]
 
-[ext_resource type="Script" path="res://Camera/TrackingCam.gd" id="1_tn13t"]
+[ext_resource type="Script" uid="uid://dmkevcl0jg70x" path="res://Camera/TrackingCam.gd" id="1_tn13t"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_kiq20"]
 size = Vector2(880, 480)

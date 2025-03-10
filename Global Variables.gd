@@ -28,8 +28,8 @@ const WORLD_MIN_POS_T:Vector2i = BORDER_MIN_POS_T + Vector2i.ONE; #leave gap for
 const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
-const LEVEL_COUNT:int = 17;
-var current_level_index:int = 14;
+const LEVEL_COUNT:int = 4;
+var current_level_index:int = 0;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
