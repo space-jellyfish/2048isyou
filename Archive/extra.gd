@@ -1928,3 +1928,19 @@ func pc_placeholder():
 
 
 '''
+
+'''
+	#callback
+	if not premove_callback_upcoming:
+		call_deferred("try_curr_frame_premoves");
+		premove_callback_upcoming = true;
+'''
+
+'''
+		# try to catch the ultra rare bug
+		if remaining_dist == 40 and collider is TileMap:
+			print(collision.get_position());
+			print(collision.get_normal());
+			print(tile.world.get_atlas_coords(GV.LayerId.TILE, tile.pos_t));
+			assert(false);
+'''

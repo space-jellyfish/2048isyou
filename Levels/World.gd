@@ -95,15 +95,16 @@ func save():
 func _exit_tree():
 	#print_orphan_nodes();
 	pass;
+
+func _physics_process(delta: float) -> void:
+	if premove_callback_upcoming:
+		try_curr_frame_premoves();
+		premove_callback_upcoming = false;
 	
 func add_curr_frame_premove_entity(entity:Entity):
 	#add to entities_with_curr_frame_premoves
 	entities_with_curr_frame_premoves[entity.entity_id][entity] = true;
-	
-	#callback
-	if not premove_callback_upcoming:
-		call_deferred("try_curr_frame_premoves");
-		premove_callback_upcoming = true;
+	premove_callback_upcoming = true;
 
 # call deferred so that premove priority is respected
 func try_curr_frame_premoves():
@@ -117,8 +118,6 @@ func try_curr_frame_premoves():
 			# if it fails, premoves will be cleared
 			# if it succeeds, entity will be busy
 			typed_entities.erase(entity);
-				
-	premove_callback_upcoming = false;
 
 func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
 	var local_pos:Vector2 = $TrackingCam.position - GV.VIEWPORT_RESOLUTION/2 + viewport_pos;
