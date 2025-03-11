@@ -1944,3 +1944,14 @@ func pc_placeholder():
 			print(tile.world.get_atlas_coords(GV.LayerId.TILE, tile.pos_t));
 			assert(false);
 '''
+
+'''
+		# animation should be started from action_func
+		# same for sound effects
+		# same for $Cells update
+
+		# update player-position-related stats from action_func since player can be pushed (bc push/slide weights adjustable from game settings)
+		# these include player_pos_t, is_player_alive
+		
+		# update player_last_dir; this is used by enemies to predict player movement, so only player-initiated actions count
+'''
