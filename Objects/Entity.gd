@@ -35,6 +35,8 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 	assert(entity_id not in GV.T_NONE_OR_REGULAR);
 	self.world = world;
 	self.body = body;
+	if body:
+		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
 	self.entity_id = entity_id;
 	self.pos_t = pos_t;
 	
