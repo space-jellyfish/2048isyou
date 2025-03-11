@@ -78,9 +78,18 @@ func initialize_roam(atlas_coords:Vector2i):
 # delay movement by one frame to wait for tilemap collider update
 func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i, is_splitted:bool, is_merging:bool, p_temp_back_tile:TileForTilemap):
 	#print("initialize slide")
+	temp_back_tile = p_temp_back_tile;
+	
+	# sprites (static frame)
+	if conversion_transit_id == GV.TransitId.NONE:
+		curr_sprite = TileForTilemapSprite.new(self, tile_sheet, atlas_coords, GV.ZId.DEFAULT, 1);
+		add_child(curr_sprite);
+	elif conversion_transit_id == GV.TransitId.MERGE:
+		prev_sprite.z_index = GV.ZId.COMBINING_OLD_MOVING;
+		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
+	
 	# ensure finalize_transit() will do the right thing if called during await
 	# (make the correct return-to-pool, update-self-entity-key decisions)
-	temp_back_tile = p_temp_back_tile;
 	is_initializing_transit = true;
 	await world.get_tree().physics_frame;
 	is_initializing_transit = false;
@@ -116,14 +125,6 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 		#TODO
 		pass;
 	
-	# sprites
-	if conversion_transit_id == GV.TransitId.NONE:
-		curr_sprite = TileForTilemapSprite.new(self, tile_sheet, atlas_coords, GV.ZId.DEFAULT, 1, [], null);
-		add_child(curr_sprite);
-	elif conversion_transit_id == GV.TransitId.MERGE:
-		prev_sprite.z_index = GV.ZId.COMBINING_OLD_MOVING;
-		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
-	
 	# collision layers and masks
 	# don't set MEMBRANE mask if src_back_id is MEMBRANE (REGULAR can get inside MEMBRANE via player splitting)
 	clear_collision_values();
@@ -134,9 +135,21 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if GV.E_ENEMY[GV.EntityId.PLAYER][old_type_id]:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
+	
+	# sprite animators
+	#curr_sprite.add_animators([], null);
 
 func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	#print("initialize shift")
+	
+	# sprites (static frame)
+	if conversion_transit_id == GV.TransitId.NONE:
+		curr_sprite = TileForTilemapSprite.new(self, tile_sheet, atlas_coords, GV.ZId.DEFAULT, 1);
+		add_child(curr_sprite);
+	elif conversion_transit_id == GV.TransitId.MERGE:
+		prev_sprite.z_index = GV.ZId.COMBINING_OLD_MOVING;
+		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
+	
 	is_initializing_transit = true;
 	await world.get_tree().physics_frame;
 	is_initializing_transit = false;
@@ -156,14 +169,6 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	world.add_nav_id(pos_t, GV.NAV_UNITS[dir]);
 	world.add_nav_id(pos_t + dir, GV.NavId.ALL);
 	
-	# sprites
-	if conversion_transit_id == GV.TransitId.NONE:
-		curr_sprite = TileForTilemapSprite.new(self, tile_sheet, atlas_coords, GV.ZId.DEFAULT, 1, [], null);
-		add_child(curr_sprite);
-	elif conversion_transit_id == GV.TransitId.MERGE:
-		prev_sprite.z_index = GV.ZId.COMBINING_OLD_MOVING;
-		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
-	
 	# collision layers and masks
 	# don't set MEMBRANE mask if src_back_id is MEMBRANE (REGULAR can get inside MEMBRANE via player splitting)
 	clear_collision_values();
@@ -174,9 +179,25 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 		set_collision_mask_value(GV.CollisionId.MEMBRANE, true);
 	if GV.E_ENEMY[GV.EntityId.PLAYER][old_type_id]:
 		set_collision_mask_value(GV.CollisionId.SAVE_OR_GOAL, true);
+	
+	# sprite animators
+	#curr_sprite.add_animators([], null);
 
 func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
 	#print("initialize split")
+	
+	# sprites (static frame)
+	if prev_sprite:
+		prev_sprite.queue_free();
+		prev_sprite = null;
+	if curr_sprite:
+		curr_sprite.queue_free();
+		curr_sprite = null;
+	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, 1);
+	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, 0);
+	add_child(prev_sprite);
+	add_child(curr_sprite);
+	
 	is_initializing_transit = true;
 	await world.get_tree().physics_frame;
 	is_initializing_transit = false;
@@ -194,24 +215,29 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	# add NAV wall for pathfinder
 	world.add_nav_id(pos_t, GV.NavId.ALL);
 	
-	# sprites
+	# collision layers and masks
+	clear_collision_values();
+	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
+	
+	# sprite animators
+	prev_sprite.add_animators([GV.ConversionAnimatorId.DWING_FADE_OUT, GV.ConversionAnimatorId.DWING], governor_tile);
+	curr_sprite.add_animators([GV.ConversionAnimatorId.DWING_FADE_IN, GV.ConversionAnimatorId.DWING], governor_tile);
+
+func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
+	#print("initialize merge")
+	
+	# sprites (static frame)
 	if prev_sprite:
 		prev_sprite.queue_free();
 		prev_sprite = null;
 	if curr_sprite:
 		curr_sprite.queue_free();
 		curr_sprite = null;
-	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, 1, [GV.ConversionAnimatorId.DWING_FADE_OUT, GV.ConversionAnimatorId.DWING], governor_tile);
-	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, 0, [GV.ConversionAnimatorId.DWING_FADE_IN, GV.ConversionAnimatorId.DWING], governor_tile);
+	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, 1);
+	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, 0);
 	add_child(prev_sprite);
 	add_child(curr_sprite);
 	
-	# collision layers and masks
-	clear_collision_values();
-	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
-
-func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
-	#print("initialize merge")
 	is_initializing_transit = true;
 	await world.get_tree().physics_frame;
 	is_initializing_transit = false;
@@ -229,21 +255,13 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	# add NAV wall for pathfinder
 	world.add_nav_id(pos_t, GV.NavId.ALL);
 	
-	# sprites
-	if prev_sprite:
-		prev_sprite.queue_free();
-		prev_sprite = null;
-	if curr_sprite:
-		curr_sprite.queue_free();
-		curr_sprite = null;
-	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, 1, [GV.ConversionAnimatorId.DUANG_FADE_OUT, GV.ConversionAnimatorId.DUANG], governor_tile);
-	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, 0, [GV.ConversionAnimatorId.DUANG_FADE_IN, GV.ConversionAnimatorId.DUANG], governor_tile);
-	add_child(prev_sprite);
-	add_child(curr_sprite);
-	
 	# collision layers and masks
 	clear_collision_values();
 	set_collision_layer_value(GV.CollisionId.DEFAULT, true);
+	
+	# sprite animators
+	prev_sprite.add_animators([GV.ConversionAnimatorId.DUANG_FADE_OUT, GV.ConversionAnimatorId.DUANG], governor_tile);
+	curr_sprite.add_animators([GV.ConversionAnimatorId.DUANG_FADE_IN, GV.ConversionAnimatorId.DUANG], governor_tile);
 
 func _ready() -> void:
 	collision_shape.scale = GV.PLAYER_COLLIDER_SCALE * Vector2.ONE;
@@ -515,7 +533,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			clear_collision_values();
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		
-		if conversion_transit_id == GV.TransitId.NONE:
+		if not is_initializing_transit and conversion_transit_id == GV.TransitId.NONE:
 			if prev_sprite:
 				prev_sprite.queue_free();
 				prev_sprite = null;
