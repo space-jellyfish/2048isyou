@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://dmkevcl0jg70x" path="res://Camera/TrackingCam.gd" id="1_tn13t"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_kiq20"]
-size = Vector2(880, 480)
+size = Vector2(800, 440)
 
 [node name="TrackingCam" type="Camera2D"]
 script = ExtResource("1_tn13t")
