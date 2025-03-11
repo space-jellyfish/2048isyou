@@ -591,6 +591,10 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, ch
 # returns true if slide is initiated
 # if is_splitted, assume atlas_coord at pos_t is already splitted with keep_type = true
 func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only:bool, is_splitted:bool=false, unsplit_atlas_coords=Vector2i.ZERO) -> bool:
+	# check if busy (pushed by another entity)
+	if tile_entity.is_busy:
+		return false;
+	
 	# check if not aligned
 	var pos_t:Variant = tile_entity.get_pos_t();
 	if pos_t == null:
@@ -599,8 +603,7 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 			tile.initialize_slide(pusher_entity.entity_id, dir, tile.atlas_coords, false, false, null);
 		return true;
 	
-	if not is_tile(pos_t): # moving due to another entity
-		return false;
+	assert(is_tile(pos_t));
 	
 	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir, true, false);
 	if push_count != -1:
@@ -612,6 +615,10 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	return false;
 
 func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only:bool) -> bool:
+	# check if busy (pushed by another entity)
+	if tile_entity.is_busy:
+		return false;
+	
 	# check if not aligned
 	var pos_t:Variant = tile_entity.get_pos_t();
 	if pos_t == null:
@@ -619,8 +626,7 @@ func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 			game.show_message(GV.MessageId.SPLIT_NA);
 		return false;
 	
-	if not is_tile(pos_t):
-		return false;
+	assert(is_tile(pos_t));
 	
 	#check if split possible
 	var src_coords:Vector2i = get_atlas_coords(GV.LayerId.TILE, pos_t);
@@ -641,6 +647,10 @@ func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 
 #update player_pos_t
 func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only:bool) -> bool:
+	# check if busy (pushed by another entity)
+	if tile_entity.is_busy:
+		return false;
+	
 	# check if not aligned
 	var pos_t:Variant = tile_entity.get_pos_t();
 	if pos_t == null:
@@ -648,8 +658,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 			game.show_message(GV.MessageId.SHIFT_NA);
 		return false;
 	
-	if not is_tile(pos_t):
-		return false;
+	assert(is_tile(pos_t));
 	
 	var target_distance:int = get_shift_target_dist(pos_t, dir, true, false);
 	if target_distance:
@@ -713,6 +722,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			if tile_entity:
 				assert(tile_entity.entity_id == curr_type_id);
 				tile_entity.set_body(curr_tile);
+				tile_entity.set_is_busy(true);
 				
 				if tile_entity != pusher_entity:
 					tile_entity.clear_premoves();
@@ -732,7 +742,9 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			
 			# add entity if duplicated
 			if splitter_type_id not in GV.T_NONE_OR_REGULAR:
-				add_entity(splitter_type_id, splitting_tile, Entity.new(self, splitting_tile, splitter_type_id, Vector2i()));
+				var tile_entity:Entity = Entity.new(self, splitting_tile, splitter_type_id, Vector2i());
+				tile_entity.set_is_busy(true);
+				add_entity(splitter_type_id, splitting_tile, tile_entity);
 		
 		layer_mutexes[GV.LayerId.TILE].unlock();
 		# ================ END CRITICAL SECTION ================
@@ -790,6 +802,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			if tile_entity:
 				assert(tile_entity.entity_id == old_type_id);
 				tile_entity.set_body(merging_tile);
+				tile_entity.set_is_busy(true);
 				
 				assert(tile_entity != pusher_entity);
 				tile_entity.clear_premoves();
@@ -826,6 +839,7 @@ func animate_shift(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, target_di
 		if tile_entity:
 			assert(tile_entity.entity_id == type_id);
 			tile_entity.set_body(tile);
+			tile_entity.set_is_busy(true);
 			
 			if tile_entity != pusher_entity:
 				tile_entity.clear_premoves();

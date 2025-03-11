@@ -158,10 +158,7 @@ func consume_premove():
 		pass;
 	
 	if initiated:
-		# squid club not busy after pushing a tile
-		if not is_roaming():
-			set_is_busy(true);
-		
+		pass;
 	else:
 		clear_premoves();
 	

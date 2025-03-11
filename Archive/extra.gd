@@ -1955,3 +1955,10 @@ func pc_placeholder():
 		
 		# update player_last_dir; this is used by enemies to predict player movement, so only player-initiated actions count
 '''
+
+'''
+	if initiated:
+		# squid club not busy after pushing a tile
+		if not is_roaming():
+			set_is_busy(true);
+'''
