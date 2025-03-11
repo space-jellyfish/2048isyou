@@ -87,8 +87,9 @@ public:
 
     DuplicatorPathController();
     ~DuplicatorPathController();
-    
+
     void get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv);
+    int get_neighbor_duplicator_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos);
     void update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos);
     void update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos);
     void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
