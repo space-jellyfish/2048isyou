@@ -125,7 +125,6 @@ func try_pathfind():
 		
 		# debug pathfinding in main thread
 		path_controller.get_actions(get_pos_t());
-		print("actions found: ", actions);
 		for action in actions:
 			var premove := Premove.new(self, Vector2i(action.x, action.y), action.z);
 			add_premove(premove);
@@ -140,6 +139,7 @@ func clear_premoves():
 
 # NOTE roaming entity can push multiple tiles (consume multiple premoves) in a single frame
 func try_curr_frame_premoves():
+	assert(not action_timer or action_timer.is_stopped());
 	assert(is_aligned());
 	if premoves:
 		consume_premove();
@@ -163,11 +163,7 @@ func consume_premove():
 			set_is_busy(true);
 		
 	else:
-		print("PREMOVES CLEARED")
 		clear_premoves();
-	
-	# wait for current premove frame to end before calling try_premove()
-	await world.get_tree().physics_frame;
 	
 	# start action timer
 	if entity_id in GV.E_HAS_PATHFINDING:

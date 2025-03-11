@@ -112,12 +112,12 @@ func try_curr_frame_premoves():
 		var typed_entities:Dictionary = entities_with_curr_frame_premoves[entity_id];
 		
 		for entity in typed_entities.keys():
-			entity.try_curr_frame_premoves();
-			
-			# always remove entity after trying premove
+			# always remove entity before trying premove
 			# if it fails, premoves will be cleared
 			# if it succeeds, entity will be busy
 			typed_entities.erase(entity);
+			
+			entity.try_curr_frame_premoves();
 
 func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
 	var local_pos:Vector2 = $TrackingCam.position - GV.VIEWPORT_RESOLUTION/2 + viewport_pos;
@@ -298,7 +298,7 @@ func generate_cell(pos_t:Vector2i):
 	# tile type
 	var type_id:int = GV.TypeId.REGULAR;
 	var n_type:float = randf();
-	if n_type < GV.P_GEN_DUPLICATOR:
+	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
 		type_id = GV.TypeId.DUPLICATOR;
 		print("DUP GENERATED")
 	elif n_type < GV.P_GEN_HOSTILE:
