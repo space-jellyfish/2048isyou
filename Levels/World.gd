@@ -518,8 +518,7 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 		var curr_back_id:int = get_back_id(curr_pos_t);
 		
 		if (check_back and not is_compatible(prev_type_id, curr_back_id)) or \
-		(check_nav and not is_navigable(dir, get_nav_id(curr_pos_t))) or \
-		GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
+		(check_nav and not is_navigable(dir, get_nav_id(curr_pos_t))):
 			return nearest_merge_push_count;
 		
 		#push/merge logic
@@ -534,7 +533,8 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 					return push_count; #bubble
 				return nearest_merge_push_count;
 		
-		if push_count == GV.tile_push_limits[pusher_entity.entity_id]:
+		if push_count == GV.tile_push_limits[pusher_entity.entity_id] or \
+		GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
 			return nearest_merge_push_count;
 		push_count += 1;
 	return -1;

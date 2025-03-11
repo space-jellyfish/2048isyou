@@ -7,6 +7,8 @@ var curr_search_id:int;
 func _ready():
 	super._ready();
 	
+	add_entity(GV.EntityId.DUPLICATOR, Vector2i(12, 5), Entity.new(self, null, GV.EntityId.DUPLICATOR, Vector2i(12, 5)))
+	
 	#connect sa_search_id_selector
 	game.sa_search_id_selector.item_selected.connect(_on_option_button_item_selected);
 

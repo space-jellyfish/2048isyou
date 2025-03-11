@@ -1,3 +1,4 @@
+#include <godot_cpp/variant/utility_functions.hpp>
 #include "actions.h"
 
 using namespace std;
@@ -241,8 +242,7 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
         uint8_t curr_back_id = get_back_id(curr_stuff_id);
 
         if ((check_back && !is_compatible(prev_type_id, curr_back_id)) ||
-        (check_nav && !is_navigable(dir, get_nav_id(curr_stuff_id))) ||
-        push_weights.at(src_type_id) < slide_weights.at(curr_type_id)) {
+        (check_nav && !is_navigable(dir, get_nav_id(curr_stuff_id)))) {
             return nearest_merge_push_count;
         }
 
@@ -287,12 +287,12 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
             }
         }
 
-        if (push_count == tile_push_limits.at(src_type_id)) {
+        if (push_count == tile_push_limits.at(src_type_id) ||
+        push_weights.at(src_type_id) < slide_weights.at(curr_type_id)) {
             return nearest_merge_push_count;
         }
         push_count += 1;
     }
-
     return -1;
 }
 
