@@ -21,12 +21,18 @@ var is_splitted:bool = false;
 var pusher_entity_id:int = GV.EntityId.NONE;
 var move_transit_id:int = GV.TransitId.NONE;
 var conversion_transit_id:int = GV.TransitId.NONE;
+var is_initializing_transit:bool = false;
 var is_aligned:bool = true;
 var was_aligned:bool = true; #at start of move transit
 # if is_aligned, represents current pos_t
 # if was_aligned, represents src_pos_t
 # since pos_t should be invalid during ROAM, is_aligned should be false during ROAM
 var pos_t:Vector2i;
+
+var temp_front_tile:TileForTilemap;
+var temp_back_tile:TileForTilemap;
+var temp_merger_tile:TileForTilemap;
+var temp_splitter_tile:TileForTilemap;
 
 @onready var collision_shape:CollisionPolygon2D = get_node("CollisionPolygon2D");
 
@@ -43,12 +49,14 @@ func initialize(world:World, tile_sheet:CompressedTexture2D, pos_t:Vector2i):
 	position = GV.pos_t_to_world(pos_t);
 
 func set_merger_tile(tile:TileForTilemap):
-	self.merger_tile = tile;
-	add_collision_exception_with(tile);
+	merger_tile = tile;
+	if tile:
+		add_collision_exception_with(tile);
 
 func set_splitter_tile(tile:TileForTilemap):
-	self.splitter_tile = tile;
-	add_collision_exception_with(tile);
+	splitter_tile = tile;
+	if tile:
+		add_collision_exception_with(tile);
 
 func clear_collision_values():
 	for collision_id in GV.CollisionId.values():
@@ -67,22 +75,36 @@ func initialize_roam(atlas_coords:Vector2i):
 	move_controller = TileForTilemapRoamController.new();
 
 # does not require tile to be aligned
-func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i, back_tile:TileForTilemap, is_splitted:bool, is_merging:bool):
+# delay movement by one frame to wait for tilemap collider update
+func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i, is_splitted:bool, is_merging:bool, p_temp_back_tile:TileForTilemap):
 	#print("initialize slide")
+	# ensure finalize_transit() will do the right thing if called during await
+	# (make the correct return-to-pool, update-self-entity-key decisions)
+	temp_back_tile = p_temp_back_tile;
+	is_initializing_transit = true;
+	await world.get_tree().physics_frame;
+	is_initializing_transit = false;
+	
 	assert(not move_controller);
 	move_transit_id = GV.TransitId.SLIDE;
 	self.pusher_entity_id = pusher_entity_id;
 	self.is_splitted = is_splitted;
 	self.is_merging = is_merging;
 	self.atlas_coords = atlas_coords;
-	self.back_tile = back_tile;
+	
+	front_tile = temp_front_tile;
+	back_tile = temp_back_tile;
+	set_merger_tile(temp_merger_tile);
+	set_splitter_tile(temp_splitter_tile);
+	temp_front_tile = null;
+	temp_back_tile = null;
+	temp_merger_tile = null;
+	temp_splitter_tile = null;
+	
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
 	velocity = Vector2.ZERO;
 	was_aligned = is_aligned;
-	
-	# delay movement by one frame to wait for tilemap collider update
-	await world.get_tree().physics_frame;
 	move_controller = TileForTilemapSlideController.new(self, dir);
 	is_aligned = false;
 	
@@ -115,6 +137,10 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 
 func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	#print("initialize shift")
+	is_initializing_transit = true;
+	await world.get_tree().physics_frame;
+	is_initializing_transit = false;
+	
 	assert(not move_controller);
 	assert(is_aligned);
 	move_transit_id = GV.TransitId.SHIFT;
@@ -123,9 +149,6 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	new_type_id = old_type_id;
 	velocity = Vector2.ZERO;
 	was_aligned = is_aligned;
-
-	# delay movement by one frame to wait for tilemap collider update
-	await world.get_tree().physics_frame;
 	move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
 	is_aligned = false;
 	
@@ -154,6 +177,10 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 
 func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
 	#print("initialize split")
+	is_initializing_transit = true;
+	await world.get_tree().physics_frame;
+	is_initializing_transit = false;
+	
 	assert(not move_controller);
 	assert(not is_merging);
 	assert(not is_splitted);
@@ -163,9 +190,6 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
-	
-	# delay movement by one frame to wait for tilemap collider update
-	await world.get_tree().physics_frame;
 	
 	# add NAV wall for pathfinder
 	world.add_nav_id(pos_t, GV.NavId.ALL);
@@ -188,6 +212,10 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 
 func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, governor_tile:TileForTilemap):
 	#print("initialize merge")
+	is_initializing_transit = true;
+	await world.get_tree().physics_frame;
+	is_initializing_transit = false;
+	
 	assert(not move_controller);
 	assert(not is_merging);
 	assert(not is_splitted);
@@ -197,10 +225,6 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
-	
-	# delay movement by one frame to wait for tilemap collider update
-	# TODO if tile is both converting and sliding, and one of them finalizes while await is happening, world will be reset to null
-	await world.get_tree().physics_frame;
 	
 	# add NAV wall for pathfinder
 	world.add_nav_id(pos_t, GV.NavId.ALL);
@@ -351,6 +375,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 
 	# update transit_ids
 	if prev_transit_id == move_transit_id:
+		assert(not is_initializing_transit);
 		move_transit_id = GV.TransitId.NONE;
 	else:
 		assert(conversion_transit_id == prev_transit_id);
@@ -389,16 +414,16 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	
 	# set self entity key
 	# NOTE assume type did not change if not is_aligned
-	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
+	if not is_initializing_transit and tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
 		if is_merging and not is_reversed and is_self_entity_preserved:
 			tile_entity.set_body(merger_tile);
 		else:
 			tile_entity.set_pos_t(pos_t);
 		
-		# emit moved for tracking cam
-		# NOTE this should be done after "remove self entity" so no pan is triggered if agent dies
-		if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
-			tile_entity.moved_for_tracking_cam.emit();
+	# emit moved for tracking cam
+	# NOTE this should be done after "remove self entity" so no pan is triggered if agent dies (tile_entity must be checked)
+	if tile_entity and is_aligned and prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT]:
+		tile_entity.moved_for_tracking_cam.emit();
 	
 	# remove merger/splitter entity
 	# if governor and merger_tile have the same type, merger entity is kept
@@ -408,14 +433,15 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		world.remove_entity(splitter_tile.old_type_id, splitter_tile);
 	
 	# update tilemap TILE layer
-	var is_poolable:bool = is_aligned and conversion_transit_id == GV.TransitId.NONE and move_transit_id == GV.TransitId.NONE;
+	var is_poolable:bool = not is_initializing_transit and is_aligned and conversion_transit_id == GV.TransitId.NONE and move_transit_id == GV.TransitId.NONE;
 	if is_poolable:
 		if (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or (is_merging and is_reversed) or (not is_merging and prev_transit_id != GV.TransitId.SPLIT):
 			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
 			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
 	
 	# update tiles_in_transient and AltId TILE
-	if not is_reversed:
+	# if is_initializing_transit, transient tile would've already been removed
+	if not is_initializing_transit and not is_reversed:
 		if prev_transit_id in [GV.TransitId.MERGE, GV.TransitId.SPLIT]:
 			world.remove_tile_in_transient(self);
 		else:
