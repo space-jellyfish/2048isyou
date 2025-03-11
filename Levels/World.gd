@@ -492,7 +492,7 @@ func is_navigable(dir:Vector2i, nav_id:int) -> bool:
 	return (nav_id & (GV.NAV_BIT_BLOCK << GV.dir_to_dir_id(dir))) == 0;
 
 # -1 if slide not possible
-# NOTE try_premove should not check NAV because a slide blocked in NAV can still succeed due to rounded corners
+# NOTE try_action() should not check NAV because a slide blocked in NAV can still succeed due to rounded corners
 # plus initiating the slide provides auditory fb for player
 func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool):
 	var curr_pos_t:Vector2i = src_pos_t;

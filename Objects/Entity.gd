@@ -19,13 +19,13 @@ signal moved_for_path_controller(pos_t:Vector2i, is_reversed:bool, resulting_ent
 var world:World;
 var body:Node2D; #if null, refer to pos_t (entity is in TileMap)
 var entity_id:int; #should not change after init
-var pos_t:Vector2i;
+var pos_t:Vector2i; #NOTE invalid if body not null
 var premoves:Array[Premove];
 var is_busy:bool = false; #true if premoves are unable to be consumed
 # controls entity movement/behavior
 # path_controller functions should be multithreaded for performance
 var path_controller:RefCounted;
-var action_timer:Timer;
+var action_timer:Timer; #null if entity doesn't have pathfinding
 var task_id:int;
 var is_task_active:bool = false;
 var actions:Array[Vector3i];
@@ -66,27 +66,56 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 		assert(action_timer.is_inside_tree());
 		action_timer.start(get_initial_action_cooldown());
 
+func _process():
+	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
+		WorkerThreadPool.wait_for_task_completion(task_id);
+		
+		# populate premoves
+		for action in actions:
+			var premove := Premove.new(self, Vector2i(action.x, action.y), action.z);
+			add_premove(premove);
+		
+		# reset stuff
+		actions.clear();
+		is_task_active = false;
+		try_pathfind();
+	
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		if action_timer:
+			action_timer.queue_free();
+
+# min wait time until initial action
 func get_initial_action_cooldown() -> float:
 	return randf_range(0, GV.action_cooldowns[entity_id]);
 
+# min wait time between consecutive initiated actions
 func get_action_cooldown() -> float:
 	return GV.action_cooldowns[entity_id] + randf_range(0, GV.action_cooldown_deviations[entity_id]);
 
 func _on_action_timer_timeout():
-	print("ACTION TIMER TIMEOUT", action_timer.is_stopped())
-	
-	if is_premove_possible():
-		world.add_curr_frame_premove_entity(self);
+	try_premove();
+	try_pathfind();
+
+func set_is_busy(is_busy:bool):
+	self.is_busy = is_busy;
+	try_premove();
 	try_pathfind();
 
 func is_premove_possible() -> bool:
 	return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves;
 
-func is_pathfind_possible() -> bool:
-	return entity_id in GV.E_HAS_PATHFINDING and not premoves and not is_task_active and get_pos_t() != null;
+func is_pathfind_warranted() -> bool:
+	if entity_id not in GV.E_HAS_PATHFINDING or is_task_active or is_busy or not is_aligned():
+		return false;
+	return action_timer.is_stopped() and not premoves;
+
+func try_premove():
+	if is_premove_possible():
+		world.add_curr_frame_premove_entity(self);
 
 func try_pathfind():
-	if is_pathfind_possible():
+	if is_pathfind_warranted():
 		# start pathfinding in new thread
 		#task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
 		#is_task_active = true;
@@ -101,26 +130,21 @@ func try_pathfind():
 
 func add_premove(premove:Premove):
 	premoves.push_back(premove);
-	
-	if is_premove_possible():
-		world.add_curr_frame_premove_entity(self);
+	try_premove();
 
 func clear_premoves():
 	premoves.clear();
-	
-func is_roaming():
-	return entity_id == GV.EntityId.SQUID_CLUB or (entity_id == GV.EntityId.PLAYER and not GV.snap_mode);
 
+# NOTE roaming entity can push multiple tiles (consume multiple premoves) in a single frame
 func try_curr_frame_premoves():
-	if is_roaming():
-		clear_premoves();
-	else:
-		#aligned, consume first premove
-		if premoves:
-			try_premove(premoves.pop_front());
+	assert(is_aligned());
+	if premoves:
+		consume_premove();
 
-func try_premove(premove:Premove):
+func consume_premove():
+	var premove:Premove = premoves.pop_front();
 	var initiated:bool = false;
+	
 	if premove.action_id == GV.ActionId.SLIDE:
 		initiated = world.try_slide(self, premove.tile_entity, premove.dir, false);
 	elif premove.action_id == GV.ActionId.SPLIT:
@@ -131,27 +155,20 @@ func try_premove(premove:Premove):
 		return;
 	
 	if initiated:
-		# animation should be started from action_func
-		# same for sound effects
-		# same for $Cells update
-
-		# update player-position-related stats from action_func since player can be pushed (bc push priority adjustable from game settings)
-		# these include player_pos_t, is_player_alive
+		# start action timer
+		if entity_id in GV.E_HAS_PATHFINDING:
+			assert(action_timer.is_stopped());
+			action_timer.start(get_action_cooldown());
 		
-		# update player_last_dir; this is used by enemies to predict player movement, so only player-initiated actions count
-		#if not is_roaming():
-		set_is_busy(true);
+		# squid club not busy after pushing a tile
+		if not is_roaming():
+			set_is_busy(true);
 		
 	else:
-		print("premoves cleared")
+		print("PREMOVES CLEARED")
 		clear_premoves();
 	
-	if entity_id in GV.E_HAS_PATHFINDING:
-		assert(action_timer.is_stopped());
-		action_timer.start(get_action_cooldown());
-
-func is_tile() -> bool:
-	return not body or body is TileForTilemap;
+	try_pathfind();
 
 func set_body(body:Node2D):
 	#check if no action required
@@ -210,20 +227,23 @@ func change_keys(old_key:Variant, new_key:Variant):
 	world.remove_entity(entity_id, old_key);
 	world.add_entity(entity_id, new_key, self);
 
-func set_is_busy(is_busy:bool):
-	self.is_busy = is_busy;
-	
-	if not is_busy:
-		if is_premove_possible():
-			world.add_curr_frame_premove_entity(self);
-		try_pathfind();
-
 func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
 func get_position() -> Vector2:
 	return body.position if body else GV.pos_t_to_world(pos_t);
 
+func is_tile() -> bool:
+	return not body or body is TileForTilemap;
+
+func is_aligned() -> bool:
+	return not body or (body is TileForTilemap and body.is_aligned);
+
+func is_roaming():
+	#return entity_id == GV.EntityId.SQUID_CLUB or (entity_id == GV.EntityId.PLAYER and not GV.snap_mode);
+	return not is_aligned();
+
+# returns pos_t if is_aligned else null
 func get_pos_t() -> Variant:
 	if body:
 		if body is TileForTilemap and body.is_aligned:
@@ -231,21 +251,3 @@ func get_pos_t() -> Variant:
 		return null;
 	else:
 		return pos_t;
-
-func _process():
-	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
-		WorkerThreadPool.wait_for_task_completion(task_id);
-		
-		# populate premoves
-		for action in actions:
-			var premove := Premove.new(self, Vector2i(action.x, action.y), action.z);
-			add_premove(premove);
-		
-		# reset stuff
-		actions.clear();
-		is_task_active = false;
-	
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE:
-		if action_timer:
-			action_timer.queue_free();
