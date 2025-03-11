@@ -122,6 +122,21 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
     // ================ END CRITICAL SECTION ================
 }
 
+int DuplicatorPathController::get_neighbor_duplicator_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos) {
+    int ans = 0;
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        if (get_dist_to_lv_edge(lv, lv_pos, dir) > 0) {
+            Vector2i curr_lv_pos = lv_pos + dir;
+            uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+            uint8_t curr_type_id = actions::get_type_id(curr_stuff_id);
+            if (curr_type_id == TypeId::DUPLICATOR) {
+                ++ans;
+            }
+        }
+    }
+    return ans;
+}
+
 // check all four neighbors for tiles with higher merge priority, or other duplicators from which danger can be inherited
 // danger_lv is set to DANGER_LV_MAX if adjacent to a higher-merge-priority tile, or neighbor.danger_lv - 1 if adjacent to another duplicator
 // danger_escape_dir is set to point away from souce of highest danger_lv, or any one if there are multiple
@@ -198,20 +213,23 @@ void DuplicatorPathController::update_neighbor_dangers(Vector2i min_pos_t, Vecto
 // NOTE godot signals emitted on the main thread are processed synchronously
 // decrement danger level if move succeeded and resulting entity is duplicator
 void DuplicatorPathController::on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity) {
-    int resulting_entity_id = resulting_entity->get("entity_id");
+    if (resulting_entity != nullptr) {
+        int resulting_entity_id = resulting_entity->get("entity_id");
 
-    if (resulting_entity_id == EntityId::DUPLICATOR) {
-        DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(resulting_entity->get("path_controller"));
-
-        // ================ START CRITICAL SECTION ================
-        danger_mutex.lock();
-        path_controller->danger_mutex.lock();
-
-        path_controller->danger.level = max(0, danger.level - 1);
-
-        path_controller->danger_mutex.unlock();
-        danger_mutex.unlock();
-        // ================ END CRITICAL SECTION ================
+        if (resulting_entity_id == EntityId::DUPLICATOR) {
+            DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(resulting_entity->get("path_controller"));
+            assert(path_controller != nullptr);
+    
+            // ================ START CRITICAL SECTION ================
+            danger_mutex.lock();
+            path_controller->danger_mutex.lock();
+    
+            path_controller->danger.level = max(0, danger.level - 1);
+    
+            path_controller->danger_mutex.unlock();
+            danger_mutex.unlock();
+            // ================ END CRITICAL SECTION ================
+        }
     }
 }
 
@@ -236,14 +254,13 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
     // NOTE danger level is unchanged if no dangerous neighbors detected
     update_danger(lv, min_pos_t, lv_pos);
 
-    // try escape
-    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
-    int src_tile_id = actions::get_tile_id(src_stuff_id);
-    int src_power = tile_id_to_val(src_tile_id).x;
-
     // escape, hunt, wander, reproduce
     // don't make action deterministic, even if conditions suggest that a move is very good
     // don't merge with friendly tiles unless escaping
+    uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
+    int src_tile_id = actions::get_tile_id(src_stuff_id);
+    int src_power = tile_id_to_val(src_tile_id).x;
+    int neighbor_duplicator_count = get_neighbor_duplicator_count(lv, lv_pos);
     vector<Action> actions;
 
     for (auto& [dir_id, dir] : DIRECTIONS) {
@@ -253,7 +270,8 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
 
         for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
             Vector3i action = Vector3i(dir.x, dir.y, action_id);
-            int action_push_count = get_action_push_count(lv, lv_pos, action, true, true, true, false, temp_danger.level);
+            int action_push_count = get_action_push_count(lv, lv_pos, action, true, true, true, false, temp_danger.level || neighbor_duplicator_count >= 3);
+            //UtilityFunctions::print(action, action_push_count);
 
             // don't move in -escape_dir if danger_level not in [0, DANGER_LV_MAX]
             if (temp_danger.level != 0 && temp_danger.level != DANGER_LV_MAX && dir == -temp_danger.escape_dir) {
@@ -319,7 +337,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
     weight += (target_merge_priority != -1) * 1000;
 
     // wander-related stuff
-    weight += (action.z == ActionId::SPLIT) * 2;
+    weight += (action.z == ActionId::SPLIT) * 1;
 
     // random term for unpredictability
     uniform_int_distribution<int> dist(0, 10);
@@ -327,7 +345,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
 }
 
 bool DuplicatorPathController::Action::operator<(const Action& other) const {
-    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 7;
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 8;
     int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * 3;
     int temp_weight = weight + resulting_power_bonus + merge_priority_bonus;
 

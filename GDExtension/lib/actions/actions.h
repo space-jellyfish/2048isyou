@@ -124,7 +124,7 @@ enum NavId {
 const unordered_map<int, int> tile_push_limits = {
     {EntityId::NONE,            0},
 	{EntityId::PLAYER,          2},
-	{EntityId::DUPLICATOR,      1},
+	{EntityId::DUPLICATOR,      0},
 	{EntityId::HOSTILE,         1},
 	{EntityId::VOID,            3},
 	{EntityId::REGULAR,         0},
