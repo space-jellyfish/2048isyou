@@ -606,7 +606,7 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	if push_count != -1:
 		if not test_only:
 			# start animation
-			animate_slide(pusher_entity.entity_id, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
+			animate_slide(pusher_entity, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
 			
 		return true;
 	return false;
@@ -655,7 +655,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	if target_distance:
 		if not test_only:
 			#update tile_id and player stats during animation
-			animate_shift(pusher_entity.entity_id, pos_t, dir, target_distance);
+			animate_shift(pusher_entity, pos_t, dir, target_distance);
 		
 		return true;
 	return false;
@@ -679,12 +679,12 @@ func add_entity(entity_id:int, key:Variant, entity:Entity):
 # tile with TransitId.MERGE is created but doesn't start animating yet
 # sliding (governor) tiles are added before splitting/merging (governed) tiles,
 # so by tree order, position/remaining_dist is updated before SpriteAnimator.step()
-# update affected entities
+# update keys of affected entities and clear their premoves
 # NOTE problem: collision persists after clearing TileMap cell
 # add_child via call_deferred doesn't work bc it's already in idle time so the tiles still get added immediately
 # add tile via await get_tree().physics_frame
 # defer initialize_*() not add_child() to ensure tile renders
-func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
+func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
 	#add sliding tiles
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -713,6 +713,9 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 			if tile_entity:
 				assert(tile_entity.entity_id == curr_type_id);
 				tile_entity.set_body(curr_tile);
+				
+				if tile_entity != pusher_entity:
+					tile_entity.clear_premoves();
 			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
 
 		# splitting tile stuff
@@ -735,7 +738,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		# ================ END CRITICAL SECTION ================
 		
 		# non-critical sliding tile stuff
-		curr_tile.initialize_slide(pusher_entity_id, dir, curr_atlas_coords, curr_splitted, curr_merging, back_tile);
+		curr_tile.initialize_slide(pusher_entity.entity_id, dir, curr_atlas_coords, curr_splitted, curr_merging, back_tile);
 		if not curr_tile.is_inside_tree():
 			$TransitTiles.add_child(curr_tile);
 		else:
@@ -787,6 +790,9 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 			if tile_entity:
 				assert(tile_entity.entity_id == old_type_id);
 				tile_entity.set_body(merging_tile);
+				
+				assert(tile_entity != pusher_entity);
+				tile_entity.clear_premoves();
 		
 		layer_mutexes[GV.LayerId.TILE].unlock();
 		# ================ END CRITICAL SECTION ================
@@ -803,7 +809,7 @@ func animate_slide(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, tile_push
 		# play sound
 		merging_tile.get_node("Audio/Combine").play();
 
-func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_dist:int):
+func animate_shift(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, target_dist:int):
 	# ================ START CRITICAL SECTION ================
 	layer_mutexes[GV.LayerId.TILE].lock();
 	# get atlas_coords and erase from tilemap
@@ -820,6 +826,9 @@ func animate_shift(pusher_entity_id:int, pos_t:Vector2i, dir:Vector2i, target_di
 		if tile_entity:
 			assert(tile_entity.entity_id == type_id);
 			tile_entity.set_body(tile);
+			
+			if tile_entity != pusher_entity:
+				tile_entity.clear_premoves();
 	
 	layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
