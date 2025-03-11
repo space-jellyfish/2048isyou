@@ -1913,3 +1913,18 @@ func pc_placeholder():
 	print("PLACEHOLDER")
 	actions.push_back(Vector3i.ZERO);
 '''
+
+'''
+	# delay movement by one frame to wait for tilemap collider update
+	# TODO if tile is both converting and sliding, and one of them finalizes while await is happening, world will be reset to null
+	await world.get_tree().physics_frame;
+'''
+
+'''
+		player.add_premove(Premove.new(player, Vector2i(-1, 0), GV.ActionId.SPLIT))
+		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SPLIT))
+		print(get_atlas_coords(GV.LayerId.TILE, Vector2i(-47, -8)));
+		print($Cells.get_cell_atlas_coords(GV.LayerId.TILE, Vector2i(-47, -8)))
+
+
+'''
