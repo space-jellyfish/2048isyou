@@ -612,7 +612,7 @@ var global_action_timers:Dictionary = {
 var action_cooldowns:Dictionary = {
 	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
-	EntityId.DUPLICATOR : 14,
+	EntityId.DUPLICATOR : 4, #14,
 	EntityId.HOSTILE : 0.8,
 	EntityId.VOID : 0.5,
 	EntityId.REGULAR : 0,

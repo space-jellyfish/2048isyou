@@ -351,6 +351,7 @@ func _input(event):
 			update_last_input_premove(event, GV.ActionId.SLIDE);
 	if event.is_action_pressed("debug"):
 		print(entities[GV.EntityId.PLAYER])
+		print(entities[GV.EntityId.DUPLICATOR])
 
 # NOTE for multithreading: sequential consistency is unnecessary for pathfinder, only data integrity matters
 # NOTE include_transient isn't a parameter bc atlas_coords of transient tile should always match tilemap
