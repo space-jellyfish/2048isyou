@@ -9,8 +9,12 @@ func _ready():
 	#randomize();
 	#tile_noise.set_seed(2);
 	#wall_noise.set_seed(2);
-	tile_noise.set_seed(randi());
-	wall_noise.set_seed(randi());
+	var tile_seed:int = randi();
+	var wall_seed:int = randi();
+	print("tile seed: ", tile_seed);
+	print("wall seed: ", wall_seed);
+	tile_noise.set_seed(tile_seed);
+	wall_noise.set_seed(wall_seed);
 	tile_noise.set_frequency(0.07); #default 0.01
 	wall_noise.set_frequency(0.03);
 	tile_noise.set_fractal_octaves(3); #number of layers, default 5
