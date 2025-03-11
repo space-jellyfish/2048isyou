@@ -138,9 +138,9 @@ func clear_premoves():
 	premoves.clear();
 
 # NOTE roaming entity can push multiple tiles (consume multiple premoves) in a single frame
+# NOTE cannot assert is_aligned() bc tile might've been pushed by another entity (and squid club isn't aligned)
 func try_curr_frame_premoves():
 	assert(not action_timer or action_timer.is_stopped());
-	assert(is_aligned());
 	if premoves:
 		consume_premove();
 
