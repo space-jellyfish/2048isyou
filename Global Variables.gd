@@ -29,7 +29,7 @@ const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
 const LEVEL_COUNT:int = 4;
-var current_level_index:int = 0;
+var current_level_index:int = 2;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
@@ -609,6 +609,7 @@ var global_action_timers:Dictionary = {
 # NOTE use 0 to let entity try premoves as fast as *physically* possible, as determined by TILE_WIDTH and TILE_SLIDE_SPEED
 # NOTE extend to use Vector2i(entity_id, action_id) as key if necessary
 # NOTE phase should be delayed if ThreadPool couldn't finish pathfinding on time
+const UNINITIATED_PREMOVE_COOLDOWN_DISCOUNT:float = 0.5;
 var action_cooldowns:Dictionary = {
 	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
@@ -627,7 +628,7 @@ var action_cooldowns:Dictionary = {
 var action_cooldown_deviations:Dictionary = {
 	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
-	EntityId.DUPLICATOR : 3,
+	EntityId.DUPLICATOR : 0.5, #3,
 	EntityId.HOSTILE : 0,
 	EntityId.VOID : 0,
 	EntityId.REGULAR : 0,

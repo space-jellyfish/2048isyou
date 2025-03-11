@@ -90,8 +90,11 @@ func get_initial_action_cooldown() -> float:
 	return randf_range(0, GV.action_cooldowns[entity_id]);
 
 # min wait time between consecutive initiated actions
-func get_action_cooldown() -> float:
-	return GV.action_cooldowns[entity_id] + randf_range(0, GV.action_cooldown_deviations[entity_id]);
+func get_action_cooldown(last_premove_initiated:bool) -> float:
+	var cd:float = GV.action_cooldowns[entity_id] + randf_range(0, GV.action_cooldown_deviations[entity_id]);
+	if not last_premove_initiated:
+		cd *= GV.UNINITIATED_PREMOVE_COOLDOWN_DISCOUNT;
+	return cd;
 
 func _on_action_timer_timeout():
 	try_premove();
@@ -155,11 +158,6 @@ func consume_premove():
 		pass;
 	
 	if initiated:
-		# start action timer
-		if entity_id in GV.E_HAS_PATHFINDING:
-			assert(action_timer.is_stopped());
-			action_timer.start(get_action_cooldown());
-		
 		# squid club not busy after pushing a tile
 		if not is_roaming():
 			set_is_busy(true);
@@ -168,7 +166,13 @@ func consume_premove():
 		print("PREMOVES CLEARED")
 		clear_premoves();
 	
-	try_pathfind();
+	# wait for current premove frame to end before calling try_premove()
+	await world.get_tree().physics_frame;
+	
+	# start action timer
+	if entity_id in GV.E_HAS_PATHFINDING:
+		assert(action_timer.is_stopped());
+		action_timer.start(get_action_cooldown(initiated));
 
 func set_body(body:Node2D):
 	#check if no action required
