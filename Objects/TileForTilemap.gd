@@ -119,7 +119,7 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	
 	# add NAV wall for pathfinder
 	if was_aligned:
-		world.add_nav_id(pos_t, GV.NAV_UNITS[dir]);
+		world.add_nav_id(pos_t, GV.NAV_UNITS[-dir]);
 		world.add_nav_id(pos_t + dir, GV.NavId.ALL);
 	else:
 		#TODO
@@ -166,7 +166,7 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	is_aligned = false;
 	
 	# add NAV wall for pathfinder
-	world.add_nav_id(pos_t, GV.NAV_UNITS[dir]);
+	world.add_nav_id(pos_t, GV.NAV_UNITS[-dir]);
 	world.add_nav_id(pos_t + dir, GV.NavId.ALL);
 	
 	# collision layers and masks
@@ -477,12 +477,9 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# update tilemap NAV layer
 	if is_aligned and move_transit_id == GV.TransitId.NONE:
 		if prev_transit_id in [GV.TransitId.SLIDE, GV.TransitId.SHIFT] and was_aligned:
-			if is_reversed:
-				world.remove_nav_id(pos_t, GV.NAV_UNITS[-move_controller.dir]);
-				world.remove_nav_id(pos_t - move_controller.dir, GV.NavId.ALL);
-			else:
-				world.remove_nav_id(pos_t, GV.NavId.ALL);
-				world.remove_nav_id(pos_t - move_controller.dir, GV.NAV_UNITS[move_controller.dir]);
+			world.remove_nav_id(pos_t, GV.NavId.ALL);
+			world.remove_nav_id(pos_t - move_controller.dir, GV.NAV_UNITS[-move_controller.dir]);
+			
 			if is_merging:
 				world.remove_nav_id(merger_tile.pos_t, GV.NavId.ALL);
 			if is_splitted:

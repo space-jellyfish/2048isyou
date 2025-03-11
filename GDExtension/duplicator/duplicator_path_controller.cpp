@@ -225,7 +225,6 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
     Vector2i min_pos_t = pos_t - lv_pos;
     vector<vector<uint32_t>> lv = vector<vector<uint32_t>>(LV_WIDTH, vector<uint32_t>(LV_WIDTH, StuffId::NONE));
     get_world_info(pos_t, min_pos_t, lv);
-    UtilityFunctions::print("HERE");
 
     // ================ START CRITICAL SECTION ================
     danger_mutex.lock();
@@ -236,7 +235,6 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
     // update danger
     // NOTE danger level is unchanged if no dangerous neighbors detected
     update_danger(lv, min_pos_t, lv_pos);
-    UtilityFunctions::print("HORY");
 
     // try escape
     uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];
@@ -288,6 +286,7 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
     }
     else {
         entity_actions.push_back(Vector3i(0, 0, ActionId::NONE));
+        UtilityFunctions::print("WAIT");
     }
     entity->set("actions", entity_actions);
 }
@@ -312,7 +311,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
         }
         else {
             weight += (action.z == ActionId::SLIDE) * 2000;
-            weight += dot_escape_dir * 10;
+            weight += dot_escape_dir * 3;
         }
     }
 
@@ -320,10 +319,10 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
     weight += (target_merge_priority != -1) * 1000;
 
     // wander-related stuff
-    weight += (action.z == ActionId::SPLIT) * 6;
+    weight += (action.z == ActionId::SPLIT) * 2;
 
     // random term for unpredictability
-    uniform_int_distribution<int> dist(0, 15);
+    uniform_int_distribution<int> dist(0, 10);
     weight += dist(dpc->generator);
 }
 
