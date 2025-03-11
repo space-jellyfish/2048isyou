@@ -152,7 +152,7 @@ func consume_premove():
 	elif premove.action_id == GV.ActionId.SHIFT:
 		initiated = world.try_shift(self, premove.tile_entity, premove.dir, false);
 	elif premove.action_id == GV.ActionId.NONE:
-		return;
+		pass;
 	
 	if initiated:
 		# start action timer
