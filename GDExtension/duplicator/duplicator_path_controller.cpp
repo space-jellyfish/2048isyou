@@ -189,7 +189,7 @@ void DuplicatorPathController::update_neighbor_dangers(Vector2i min_pos_t, Vecto
         tile_mutex->lock();
         uint8_t curr_type_id = get_type_id(curr_pos_t);
         if (curr_type_id == TypeId::DUPLICATOR) {
-            Ref<RefCounted> curr_tile_entity = world->call("get_aligned_tile_entity", curr_type_id, curr_pos_t);
+            Ref<RefCounted> curr_tile_entity = world->call("get_aligned_tile_entity", curr_type_id, nullptr, curr_pos_t);
             DuplicatorPathController* path_controller = RefCounted::cast_to<DuplicatorPathController>(curr_tile_entity->get("path_controller"));
             // ================ START CRITICAL SECTION ================
             danger_mutex.lock();
