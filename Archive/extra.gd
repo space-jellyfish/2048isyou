@@ -1962,3 +1962,16 @@ func pc_placeholder():
 		if not is_roaming():
 			set_is_busy(true);
 '''
+
+'''
+	# update tiles_in_transient and AltId TILE
+	# if is_initializing_transit, transient tile would've already been removed
+	if not is_initializing_transit and not is_reversed:
+
+var debug_entity:Entity;
+
+	debug_entity = world.get_aligned_tile_entity(world.atlas_coords_to_type_id(atlas_coords), pos_t);
+	assert(not debug_entity or debug_entity.is_busy);
+
+# NOTE if is_aligned assert(world.is_tile(pos_t)) is invalid bc animate_*() might've erased cell already
+'''

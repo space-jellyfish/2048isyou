@@ -694,7 +694,7 @@ func add_entity(entity_id:int, key:Variant, entity:Entity):
 # add tile via await get_tree().physics_frame
 # defer initialize_*() not add_child() to ensure tile renders
 func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
-	#add sliding tiles
+	# SLIDING TILES
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
 	var merge_pos_t:Vector2i = pos_t + (tile_push_count + 1) * dir;
@@ -721,14 +721,14 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			var tile_entity:Entity = get_aligned_tile_entity(curr_type_id, curr_pos_t);
 			if tile_entity:
 				assert(tile_entity.entity_id == curr_type_id);
-				tile_entity.set_body(curr_tile);
 				tile_entity.set_is_busy(true);
+				tile_entity.set_body(curr_tile);
 				
 				if tile_entity != pusher_entity:
 					tile_entity.clear_premoves();
 			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
 
-		# splitting tile stuff
+		# SPLITTING TILE
 		var splitting_tile:TileForTilemap;
 		var splitter_atlas_coords:Vector2i;
 		if curr_splitted:
@@ -784,7 +784,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 		curr_tile.temp_back_tile.temp_front_tile = curr_tile;
 		curr_tile = curr_tile.temp_back_tile;
 	
-	# add merging tile (without starting the animation)
+	# MERGING TILE (without starting the animation)
 	if is_merging:
 		# ================ START CRITICAL SECTION ================
 		layer_mutexes[GV.LayerId.TILE].lock();
@@ -801,8 +801,8 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			var tile_entity:Entity = get_aligned_tile_entity(old_type_id, merge_pos_t);
 			if tile_entity:
 				assert(tile_entity.entity_id == old_type_id);
-				tile_entity.set_body(merging_tile);
 				tile_entity.set_is_busy(true);
+				tile_entity.set_body(merging_tile);
 				
 				assert(tile_entity != pusher_entity);
 				tile_entity.clear_premoves();
@@ -838,8 +838,8 @@ func animate_shift(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, target_di
 		var tile_entity:Entity = get_aligned_tile_entity(type_id, pos_t);
 		if tile_entity:
 			assert(tile_entity.entity_id == type_id);
-			tile_entity.set_body(tile);
 			tile_entity.set_is_busy(true);
+			tile_entity.set_body(tile);
 			
 			if tile_entity != pusher_entity:
 				tile_entity.clear_premoves();
