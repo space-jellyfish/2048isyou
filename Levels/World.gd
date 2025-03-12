@@ -300,7 +300,6 @@ func generate_cell(pos_t:Vector2i):
 	var n_type:float = randf();
 	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
 		type_id = GV.TypeId.DUPLICATOR;
-		print("DUP GENERATED")
 	elif n_type < GV.P_GEN_HOSTILE:
 		type_id = GV.TypeId.HOSTILE;
 	
@@ -350,8 +349,11 @@ func _input(event):
 		else:
 			update_last_input_premove(event, GV.ActionId.SLIDE);
 	if event.is_action_pressed("debug"):
-		print(entities[GV.EntityId.PLAYER])
-		print(entities[GV.EntityId.DUPLICATOR])
+		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
+		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
+		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
+		#print(entities[GV.EntityId.PLAYER])
+		#print(entities[GV.EntityId.DUPLICATOR])
 
 # NOTE for multithreading: sequential consistency is unnecessary for pathfinder, only data integrity matters
 # NOTE include_transient isn't a parameter bc atlas_coords of transient tile should always match tilemap
@@ -597,6 +599,7 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	
 	# check if not aligned
 	var pos_t:Variant = tile_entity.get_pos_t();
+	assert(pos_t != null); # NOTE remove this when roaming is added
 	if pos_t == null:
 		if not test_only:
 			var tile:TileForTilemap = tile_entity.body;
@@ -607,10 +610,10 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	
 	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir, true, false);
 	if push_count != -1:
+		print("slide init")
 		if not test_only:
 			# start animation
 			animate_slide(pusher_entity, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
-			
 		return true;
 	return false;
 
@@ -621,6 +624,7 @@ func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	
 	# check if not aligned
 	var pos_t:Variant = tile_entity.get_pos_t();
+	assert(pos_t != null); # NOTE remove this when roaming is added
 	if pos_t == null:
 		if not test_only and pusher_entity.entity_id == GV.EntityId.PLAYER:
 			game.show_message(GV.MessageId.SPLIT_NA);
@@ -653,6 +657,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	
 	# check if not aligned
 	var pos_t:Variant = tile_entity.get_pos_t();
+	assert(pos_t != null); # NOTE remove this when roaming is added
 	if pos_t == null:
 		if not test_only and pusher_entity.entity_id == GV.EntityId.PLAYER:
 			game.show_message(GV.MessageId.SHIFT_NA);
@@ -672,10 +677,18 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 func get_entity(entity_id:int, key:Variant):
 	return entities[entity_id].get(key);
 
-func get_aligned_tile_entity(entity_id:int, pos_t:Vector2i) -> Entity:
-	var tile:TileForTilemap = get_tile_in_transient(pos_t);
+# tries tile, then tiles_in_transient, then pos_t
+# NOTE does not assume non-null tile must be entity key
+func get_aligned_tile_entity(entity_id:int, tile:TileForTilemap, pos_t:Vector2i) -> Entity:
 	if tile:
-		return get_entity(entity_id, tile);
+		var entity:Entity = get_entity(entity_id, tile);
+		if entity:
+			return entity;
+	
+	var transient_tile:TileForTilemap = get_tile_in_transient(pos_t);
+	if transient_tile:
+		return get_entity(entity_id, transient_tile);
+	
 	return get_entity(entity_id, pos_t);
 
 func remove_entity(entity_id:int, key:Variant):
@@ -718,7 +731,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# update entity
 		if curr_type_id not in GV.T_NONE_OR_REGULAR:
-			var tile_entity:Entity = get_aligned_tile_entity(curr_type_id, curr_pos_t);
+			var tile_entity:Entity = get_aligned_tile_entity(curr_type_id, curr_tile, curr_pos_t);
 			if tile_entity:
 				assert(tile_entity.entity_id == curr_type_id);
 				tile_entity.set_is_busy(true);
@@ -726,6 +739,8 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 				
 				if tile_entity != pusher_entity:
 					tile_entity.clear_premoves();
+			elif dist_to_src == 0:
+				print("aligned tile entity not found: ", curr_pos_t);
 			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
 
 		# SPLITTING TILE
@@ -798,7 +813,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 		
 		# update entity
 		if old_type_id not in GV.T_NONE_OR_REGULAR:
-			var tile_entity:Entity = get_aligned_tile_entity(old_type_id, merge_pos_t);
+			var tile_entity:Entity = get_aligned_tile_entity(old_type_id, merging_tile, merge_pos_t);
 			if tile_entity:
 				assert(tile_entity.entity_id == old_type_id);
 				tile_entity.set_is_busy(true);
@@ -835,7 +850,7 @@ func animate_shift(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, target_di
 	
 	# update entity
 	if type_id not in GV.T_NONE_OR_REGULAR:
-		var tile_entity:Entity = get_aligned_tile_entity(type_id, pos_t);
+		var tile_entity:Entity = get_aligned_tile_entity(type_id, tile, pos_t);
 		if tile_entity:
 			assert(tile_entity.entity_id == type_id);
 			tile_entity.set_is_busy(true);

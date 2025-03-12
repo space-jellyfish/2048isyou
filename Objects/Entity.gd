@@ -97,12 +97,13 @@ func get_action_cooldown(last_premove_initiated:bool) -> float:
 	return cd;
 
 func _on_action_timer_timeout():
-	if not is_busy and is_aligned():
-		assert(world.is_tile(get_pos_t()));
+	#if not is_busy and is_aligned():
+		#assert(world.is_tile(get_pos_t()));
 	try_premove();
 	try_pathfind();
 
 func set_is_busy(is_busy:bool):
+	print("\tbusy ", is_busy)
 	self.is_busy = is_busy;
 	try_premove();
 	try_pathfind();
@@ -119,9 +120,11 @@ func is_pathfind_warranted() -> bool:
 	return action_timer.is_stopped() and not premoves;
 
 func try_premove():
+	print("try premove");
 	if is_premove_possible():
 		if not is_busy and is_aligned():
 			assert(world.is_tile(get_pos_t()));
+		print("\tscheduled");
 		world.add_curr_frame_premove_entity(self);
 
 func try_pathfind():
@@ -138,6 +141,7 @@ func try_pathfind():
 		actions.clear();
 
 func add_premove(premove:Premove):
+	print("add premove")
 	premoves.push_back(premove);
 	try_premove();
 

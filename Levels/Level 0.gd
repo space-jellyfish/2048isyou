@@ -35,3 +35,6 @@ func _input(event):
 			curr_goal_pos = viewport_to_tile_pos(event.position);
 			print("set curr_goal_pos to ", curr_goal_pos);
 			return;
+
+func _on_bgm_finished() -> void:
+	$bgm.play();
