@@ -90,7 +90,7 @@ Ref<RefCounted> DuplicatorPathController::get_entity() {
 
 
 DuplicatorPathController::DuplicatorPathController() {
-    UtilityFunctions::print("DPC INIT");
+    //UtilityFunctions::print("DPC INIT");
     random_device rd;
     generator = mt19937(rd());
 }
@@ -211,7 +211,7 @@ void DuplicatorPathController::update_neighbor_dangers(Vector2i min_pos_t, Vecto
 // NOTE this function is run from the main thread, so set_is_busy() => get_actions() won't be called until this function finishes
 // NOTE calling function must lock tile_mutex
 // NOTE godot signals emitted on the main thread are processed synchronously
-// decrement danger level if move succeeded and resulting entity is duplicator
+// always decrement danger level if it's nonzero (update_danger() will keep danger level updated)
 void DuplicatorPathController::on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity) {
     if (resulting_entity != nullptr) {
         int resulting_entity_id = resulting_entity->get("entity_id");
@@ -304,7 +304,7 @@ void DuplicatorPathController::get_actions(Vector2i pos_t) {
     }
     else {
         entity_actions.push_back(Vector3i(0, 0, ActionId::NONE));
-        UtilityFunctions::print("WAIT");
+        //UtilityFunctions::print("WAIT");
     }
     entity->set("actions", entity_actions);
 }

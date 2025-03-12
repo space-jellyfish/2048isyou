@@ -97,6 +97,8 @@ func get_action_cooldown(last_premove_initiated:bool) -> float:
 	return cd;
 
 func _on_action_timer_timeout():
+	if not is_busy and is_aligned():
+		assert(world.is_tile(get_pos_t()));
 	try_premove();
 	try_pathfind();
 
@@ -104,6 +106,9 @@ func set_is_busy(is_busy:bool):
 	self.is_busy = is_busy;
 	try_premove();
 	try_pathfind();
+	
+	if not is_busy and is_aligned():
+		assert(world.is_tile(get_pos_t()));
 
 func is_premove_possible() -> bool:
 	return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves;
@@ -115,6 +120,8 @@ func is_pathfind_warranted() -> bool:
 
 func try_premove():
 	if is_premove_possible():
+		if not is_busy and is_aligned():
+			assert(world.is_tile(get_pos_t()));
 		world.add_curr_frame_premove_entity(self);
 
 func try_pathfind():
@@ -147,6 +154,9 @@ func try_curr_frame_premoves():
 func consume_premove():
 	var premove:Premove = premoves.pop_front();
 	var initiated:bool = false;
+	
+	if not is_busy and is_aligned():
+		assert(world.is_tile(get_pos_t()));
 	
 	if premove.action_id == GV.ActionId.SLIDE:
 		initiated = world.try_slide(self, premove.tile_entity, premove.dir, false);
@@ -194,6 +204,9 @@ func set_body(body:Node2D):
 	#update properties
 	self.body = body;
 
+	if not is_busy and is_aligned():
+		assert(world.is_tile(get_pos_t()));
+
 # NOTE body is set to null
 func set_pos_t(pos_t:Vector2i):
 	#check if no action required
@@ -219,6 +232,9 @@ func set_pos_t(pos_t:Vector2i):
 	#update properties
 	self.pos_t = pos_t;
 	self.body = null;
+	
+	if not is_busy and is_aligned():
+		assert(world.is_tile(get_pos_t()));
 
 func change_keys(old_key:Variant, new_key:Variant):
 	world.remove_entity(entity_id, old_key);

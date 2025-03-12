@@ -363,3 +363,5 @@ DuplicatorPathController::DuplicatorPathController() {
         assert(curr_lv_pos.x >= 0 && curr_lv_pos.x < lv[0].size());
 
 */
+
+// decrement danger level if move succeeded and resulting entity is duplicator
