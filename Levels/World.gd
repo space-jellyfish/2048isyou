@@ -298,7 +298,7 @@ func generate_cell(pos_t:Vector2i):
 	# tile type
 	var type_id:int = GV.TypeId.REGULAR;
 	var n_type:float = randf();
-	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
+	if n_type < GV.P_GEN_DUPLICATOR:
 		type_id = GV.TypeId.DUPLICATOR;
 		print("DUP GENERATED")
 	elif n_type < GV.P_GEN_HOSTILE:

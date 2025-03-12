@@ -9,8 +9,8 @@ func _ready():
 	#randomize();
 	#tile_noise.set_seed(2);
 	#wall_noise.set_seed(2);
-	var tile_seed:int = randi();
-	var wall_seed:int = randi();
+	var tile_seed:int = 1120085444#randi();
+	var wall_seed:int = 3280762145#randi();
 	print("tile seed: ", tile_seed);
 	print("wall seed: ", wall_seed);
 	tile_noise.set_seed(tile_seed);
@@ -35,3 +35,7 @@ func _input(event):
 			curr_goal_pos = viewport_to_tile_pos(event.position);
 			print("set curr_goal_pos to ", curr_goal_pos);
 			return;
+
+
+func _on_bgm_finished() -> void:
+	$bgm.play();
