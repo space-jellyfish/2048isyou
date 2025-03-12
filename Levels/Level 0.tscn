@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://bv6q31jc36kmy"]
+[gd_scene load_steps=6 format=3 uid="uid://bv6q31jc36kmy"]
 
 [ext_resource type="Script" uid="uid://s4g8y6tppcfq" path="res://Levels/Level 0.gd" id="1_qtly1"]
 [ext_resource type="Theme" uid="uid://cq8prl3lt5y1y" path="res://Themes/main_theme.tres" id="2_y4jbc"]
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="3_f5ir1"]
 [ext_resource type="PackedScene" uid="uid://cxvw7i8bgukix" path="res://Camera/TrackingCam.tscn" id="4_0atuu"]
+[ext_resource type="AudioStream" uid="uid://dm0rymrotjg1g" path="res://Audio/mapf.mp3" id="5_0atuu"]
 
 [node name="World" type="Node2D"]
 process_mode = 1
@@ -54,3 +55,10 @@ layer_2/enabled = false
 [node name="TrackingCam" parent="." instance=ExtResource("4_0atuu")]
 
 [node name="ActionTimers" type="Node2D" parent="."]
+
+[node name="bgm" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_0atuu")
+volume_db = -13.897
+autoplay = true
+
+[connection signal="finished" from="bgm" to="." method="_on_bgm_finished"]
