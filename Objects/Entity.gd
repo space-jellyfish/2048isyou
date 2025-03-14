@@ -15,6 +15,7 @@ class_name Entity
 # assumes body has a moved signal
 signal moved_for_tracking_cam;
 signal moved_for_path_controller(pos_t:Vector2i, is_reversed:bool, resulting_entity:Entity);
+signal died(killer_entity:Entity);
 
 var world:World;
 var body:Node2D; #if null, refer to pos_t (entity is in TileMap)
@@ -79,11 +80,14 @@ func _process():
 		actions.clear();
 		is_task_active = false;
 		try_pathfind();
-	
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE:
-		if action_timer:
-			action_timer.queue_free();
+
+func die(killer_entity:Entity) -> void:
+	if action_timer:
+		action_timer.queue_free();
+	world.remove_entity(entity_id, body if body else pos_t);
+	if self == world.player:
+		world.player = null;
+	died.emit(killer_entity);
 
 # min wait time until initial action
 func get_initial_action_cooldown() -> float:
@@ -103,7 +107,6 @@ func _on_action_timer_timeout():
 	try_pathfind();
 
 func set_is_busy(is_busy:bool):
-	print("\tbusy ", is_busy)
 	self.is_busy = is_busy;
 	try_premove();
 	try_pathfind();
@@ -120,11 +123,9 @@ func is_pathfind_warranted() -> bool:
 	return action_timer.is_stopped() and not premoves;
 
 func try_premove():
-	print("try premove");
 	if is_premove_possible():
 		if not is_busy and is_aligned():
 			assert(world.is_tile(get_pos_t()));
-		print("\tscheduled");
 		world.add_curr_frame_premove_entity(self);
 
 func try_pathfind():
@@ -141,7 +142,6 @@ func try_pathfind():
 		actions.clear();
 
 func add_premove(premove:Premove):
-	print("add premove")
 	premoves.push_back(premove);
 	try_premove();
 
@@ -158,6 +158,7 @@ func try_curr_frame_premoves():
 func consume_premove():
 	var premove:Premove = premoves.pop_front();
 	var initiated:bool = false;
+	print("consume premove ", premove.dir, premove.action_id);
 	
 	if not is_busy and is_aligned():
 		assert(world.is_tile(get_pos_t()));

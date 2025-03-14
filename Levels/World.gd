@@ -40,7 +40,7 @@ var tile_pool:Array[TileForTilemap];
 
 # for tiles with finished governor but unfinished split/merge animation
 # tiles should be removed from ~ upon starting move
-var tiles_in_transient:Dictionary; #Dictionary[pos_t, TileForTilemap]
+var aligned_tiles_in_transient:Dictionary; #Dictionary[pos_t, TileForTilemap]
 
 # mutexes
 var layer_mutexes:Array;
@@ -124,6 +124,7 @@ func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
 	return $Cells.local_to_map(local_pos);
 
 func get_pooled_tile(pos_t:Vector2i) -> TileForTilemap:
+	print("get pooled tile at ", pos_t);
 	var tile:TileForTilemap;
 	if not tile_pool.is_empty():
 		tile = tile_pool.pop_back();
@@ -135,6 +136,7 @@ func get_pooled_tile(pos_t:Vector2i) -> TileForTilemap:
 	return tile;
 
 func return_pooled_tile(tile:TileForTilemap):
+	print("return pooled tile at ", tile.pos_t);
 	#assert(not tile.is_inside_tree());
 	#assert(tile.prev_sprite == null);
 	#assert(tile.curr_sprite == null);
@@ -187,23 +189,28 @@ func return_pooled_tile(tile:TileForTilemap):
 	
 	tile_pool.append(tile);
 
-func add_tile_in_transient(tile:TileForTilemap):
-	tiles_in_transient[tile.pos_t] = tile;
+func add_aligned_tile_in_transient(tile:TileForTilemap):
+	aligned_tiles_in_transient[tile.pos_t] = tile;
 
-func remove_tile_in_transient(tile:TileForTilemap):
-	tiles_in_transient.erase(tile.pos_t);
+func remove_aligned_tile_in_transient(tile:TileForTilemap):
+	aligned_tiles_in_transient.erase(tile.pos_t);
 
-func get_tile_in_transient(pos_t:Vector2i) -> TileForTilemap:
-	var tile:TileForTilemap = tiles_in_transient.get(pos_t); #Dictionary read is thread-safe
-	return tile;
+func get_aligned_tile_in_transient(pos_t:Vector2i) -> TileForTilemap:
+	return aligned_tiles_in_transient.get(pos_t); #Dictionary read is thread-safe
 
 func get_transit_tile(pos_t:Vector2i, include_transient:bool, remove_transient:bool = true) -> TileForTilemap:
+	print("get transit tile at ", pos_t);
+	assert(not is_tile(pos_t))
+	
 	if include_transient:
-		var tile:TileForTilemap = get_tile_in_transient(pos_t);
+		var tile:TileForTilemap = get_aligned_tile_in_transient(pos_t);
 		if tile:
 			if remove_transient:
-				remove_tile_in_transient(tile);
+				remove_aligned_tile_in_transient(tile);
 			return tile;
+	
+	for tile in $TransitTiles.get_children():
+		assert(not (include_transient and tile.is_aligned and tile.pos_t == pos_t));
 	
 	return get_pooled_tile(pos_t);
 
@@ -300,6 +307,7 @@ func generate_cell(pos_t:Vector2i):
 	var n_type:float = randf();
 	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
 		type_id = GV.TypeId.DUPLICATOR;
+		print("DUP GEN")
 	elif n_type < GV.P_GEN_HOSTILE:
 		type_id = GV.TypeId.HOSTILE;
 	
@@ -327,7 +335,10 @@ func get_event_dir(event:InputEventKey) -> Vector2i:
 		return GV.DIRECTIONS[GV.DirectionId.RIGHT];
 	return Vector2i.ZERO;
 
-func update_last_input_premove(event:InputEventKey, action_id:int):
+func add_premove_from_input(event:InputEventKey, action_id:int):
+	if not player:
+		return;
+	
 	var dir:Vector2i = get_event_dir(event);
 	if dir != Vector2i.ZERO:
 		# check NAV ids
@@ -343,11 +354,11 @@ func update_last_input_premove(event:InputEventKey, action_id:int):
 func _input(event):
 	if event is InputEventKey and event.pressed:
 		if event.is_command_or_control_pressed():
-			update_last_input_premove(event, GV.ActionId.SPLIT);
+			add_premove_from_input(event, GV.ActionId.SPLIT);
 		elif event.shift_pressed:
-			update_last_input_premove(event, GV.ActionId.SHIFT);
+			add_premove_from_input(event, GV.ActionId.SHIFT);
 		else:
-			update_last_input_premove(event, GV.ActionId.SLIDE);
+			add_premove_from_input(event, GV.ActionId.SLIDE);
 	if event.is_action_pressed("debug"):
 		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
 		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
@@ -367,7 +378,7 @@ func get_atlas_coords(layer_id:int, pos_t:Vector2i) -> Vector2i:
 # NOTE for consistency, tilemap should still be updated if include_transient set
 func set_atlas_coords(layer_id:int, pos_t:Vector2i, source_id:int, coords:Vector2i, alternative_id:int = 0, include_transient:bool = false):
 	if include_transient and layer_id == GV.LayerId.TILE and source_id == GV.TileSetSourceId.TILE:
-		var tile:TileForTilemap = get_tile_in_transient(pos_t);
+		var tile:TileForTilemap = get_aligned_tile_in_transient(pos_t);
 		if tile:
 			tile.atlas_coords = coords;
 	layer_mutexes[layer_id].lock();
@@ -677,7 +688,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 func get_entity(entity_id:int, key:Variant):
 	return entities[entity_id].get(key);
 
-# tries tile, then tiles_in_transient, then pos_t
+# tries tile, then aligned_tiles_in_transient, then pos_t
 # NOTE does not assume non-null tile must be entity key
 func get_aligned_tile_entity(entity_id:int, tile:TileForTilemap, pos_t:Vector2i) -> Entity:
 	if tile:
@@ -685,7 +696,7 @@ func get_aligned_tile_entity(entity_id:int, tile:TileForTilemap, pos_t:Vector2i)
 		if entity:
 			return entity;
 	
-	var transient_tile:TileForTilemap = get_tile_in_transient(pos_t);
+	var transient_tile:TileForTilemap = get_aligned_tile_in_transient(pos_t);
 	if transient_tile:
 		return get_entity(entity_id, transient_tile);
 	
@@ -707,6 +718,7 @@ func add_entity(entity_id:int, key:Variant, entity:Entity):
 # add tile via await get_tree().physics_frame
 # defer initialize_*() not add_child() to ensure tile renders
 func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
+	print("erase tiles")
 	# SLIDING TILES
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -741,7 +753,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 					tile_entity.clear_premoves();
 			elif dist_to_src == 0:
 				print("aligned tile entity not found: ", curr_pos_t);
-			# else curr_tile is inside tiles_in_transient, so entity key is already up to date
+			# else curr_tile is inside aligned_tiles_in_transient, so entity key is already up to date
 
 		# SPLITTING TILE
 		var splitting_tile:TileForTilemap;

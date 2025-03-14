@@ -52,6 +52,18 @@ func step(delta:float):
 		
 	elif collision:
 		var collider:Node2D = collision.get_collider();
+		
+		# try to catch the ultra rare bug
+		if remaining_dist == 40 and collider is TileMap:
+			print(collision.get_position());
+			print(collision.get_normal());
+			print(tile.world.get_atlas_coords(GV.LayerId.TILE, tile.pos_t));
+			assert(false);
+		if remaining_dist == 40 and collider is TileForTilemap:
+			print("collider tile: ", collider);
+			print(collision.get_normal());
+			print(tile.pos_t, collider.pos_t);
+			print(tile.position, collider.position);
 	
 		# check if collision requires handling (front tile handles self reverse logic)
 		if collider != tile.front_tile and Vector2(dir).dot(collision.get_normal()):

@@ -29,7 +29,7 @@ const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
 const LEVEL_COUNT:int = 4;
-var current_level_index:int = 2;
+var current_level_index:int = 0;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
@@ -86,7 +86,6 @@ const PLAYER_SPAWN_INVINCIBILITY_TIME:float = 0.25;
 
 const SNAP_TOLERANCE:float = 0.1; #epsilon; in px
 const COLLISION_TEST_DISTANCE:float = 0.4;
-const PLAYER_COLLIDER_SCALE:float = 0.98;
 const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;
@@ -801,12 +800,3 @@ func _ready():
 	#fill sorted entity_id lists
 	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY = premove_priorities.keys();
 	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY.sort_custom(func(a, b): return premove_priorities[a] > premove_priorities[b]);
-	
-#	#init physics enabler size
-#	set_tile_push_limit(abilities["tile_push_limit"]);
-#
-#	#scale shapecasts (bc inspector can't handle precise floats)
-#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
-#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
-#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
-#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;

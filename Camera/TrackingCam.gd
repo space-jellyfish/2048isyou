@@ -18,8 +18,10 @@ func set_target_entity(target_entity:Entity, transition:bool):
 	#connect/disconnect target_entity.moved
 	if self.target_entity:
 		self.target_entity.moved_for_tracking_cam.disconnect(_on_target_entity_moved);
+		self.target_entity.died.disconnect(_on_target_entity_died);
 	if target_entity:
 		target_entity.moved_for_tracking_cam.connect(_on_target_entity_moved);
+		target_entity.died.connect(_on_target_entity_died);
 	
 	#set
 	self.target_entity = target_entity;
@@ -49,6 +51,9 @@ func _on_target_entity_moved():
 	var target_entity_pos:Vector2 = target_entity.get_position();
 	if not is_in_area(target_entity_pos):
 		transition(target_entity_pos, not target_entity.is_roaming());
+
+func _on_target_entity_died(killer_entity:Entity):
+	set_target_entity(killer_entity, true);
 
 # assume transition has been triggered (target_entity_pos is outside area)
 func transition(target_entity_pos:Vector2, cardinal_only:bool):
