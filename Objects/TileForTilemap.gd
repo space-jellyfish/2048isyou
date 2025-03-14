@@ -29,11 +29,6 @@ var was_aligned:bool = true; #at start of move transit
 # since pos_t should be invalid during ROAM, is_aligned should be false during ROAM
 var pos_t:Vector2i;
 
-var temp_front_tile:TileForTilemap;
-var temp_back_tile:TileForTilemap;
-var temp_merger_tile:TileForTilemap;
-var temp_splitter_tile:TileForTilemap;
-
 @onready var collision_shape:CollisionPolygon2D = get_node("CollisionPolygon2D");
 
 
@@ -49,19 +44,33 @@ func initialize(world:World, tile_sheet:CompressedTexture2D, pos_t:Vector2i):
 	position = GV.pos_t_to_world(pos_t);
 
 func set_merger_tile(tile:TileForTilemap):
+	assert(tile);
 	merger_tile = tile;
-	if tile:
-		add_collision_exception_with(tile);
+	add_collision_exception_with(tile);
 
 func set_splitter_tile(tile:TileForTilemap):
+	assert(tile);
 	splitter_tile = tile;
-	if tile:
-		add_collision_exception_with(tile);
+	add_collision_exception_with(tile);
 
 func clear_collision_values():
 	for collision_id in GV.CollisionId.values():
 		set_collision_layer_value(collision_id, false);
 		set_collision_mask_value(collision_id, false);
+
+func clear_curr_sprite():
+	if curr_sprite:
+		curr_sprite.queue_free();
+		curr_sprite = null;
+
+func clear_prev_sprite():
+	if prev_sprite:
+		prev_sprite.queue_free();
+		prev_sprite = null;
+
+func clear_sprites():
+	clear_prev_sprite();
+	clear_curr_sprite();
 
 func initialize_roam(atlas_coords:Vector2i):
 	#print("initialize roam")
@@ -76,14 +85,15 @@ func initialize_roam(atlas_coords:Vector2i):
 
 # does not require tile to be aligned
 # delay movement by one frame to wait for tilemap collider update
-func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i, is_splitted:bool, is_merging:bool, p_temp_back_tile:TileForTilemap):
+func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i, is_splitted:bool, is_merging:bool, p_back_tile:TileForTilemap):
 	#print("initialize slide")
 	assert(not is_initializing_transit);
 	assert(not move_controller);
-	temp_back_tile = p_temp_back_tile;
+	back_tile = p_back_tile;
 	
 	# sprites (static frame)
 	if conversion_transit_id == GV.TransitId.NONE:
+		clear_sprites();
 		curr_sprite = TileForTilemapSprite.new(self, tile_sheet, atlas_coords, GV.ZId.DEFAULT, 1);
 		add_child(curr_sprite);
 	elif conversion_transit_id == GV.TransitId.MERGE:
@@ -102,15 +112,6 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	self.is_splitted = is_splitted;
 	self.is_merging = is_merging;
 	self.atlas_coords = atlas_coords;
-	
-	front_tile = temp_front_tile;
-	back_tile = temp_back_tile;
-	set_merger_tile(temp_merger_tile);
-	set_splitter_tile(temp_splitter_tile);
-	temp_front_tile = null;
-	temp_back_tile = null;
-	temp_merger_tile = null;
-	temp_splitter_tile = null;
 	
 	old_type_id = world.atlas_coords_to_type_id(atlas_coords);
 	new_type_id = old_type_id;
@@ -148,6 +149,7 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	
 	# sprites (static frame)
 	if conversion_transit_id == GV.TransitId.NONE:
+		clear_sprites();
 		curr_sprite = TileForTilemapSprite.new(self, tile_sheet, atlas_coords, GV.ZId.DEFAULT, 1);
 		add_child(curr_sprite);
 	elif conversion_transit_id == GV.TransitId.MERGE:
@@ -193,12 +195,7 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	assert(not move_controller);
 	
 	# sprites (static frame)
-	if prev_sprite:
-		prev_sprite.queue_free();
-		prev_sprite = null;
-	if curr_sprite:
-		curr_sprite.queue_free();
-		curr_sprite = null;
+	clear_sprites();
 	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.SPLITTING_OLD, 1);
 	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.SPLITTING_NEW, 0);
 	add_child(prev_sprite);
@@ -235,12 +232,7 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	assert(not move_controller);
 	
 	# sprites (static frame)
-	if prev_sprite:
-		prev_sprite.queue_free();
-		prev_sprite = null;
-	if curr_sprite:
-		curr_sprite.queue_free();
-		curr_sprite = null;
+	clear_sprites();
 	prev_sprite = TileForTilemapSprite.new(self, tile_sheet, old_atlas_coords, GV.ZId.COMBINING_OLD, 1);
 	curr_sprite = TileForTilemapSprite.new(self, tile_sheet, new_atlas_coords, GV.ZId.COMBINING_NEW, 0);
 	add_child(prev_sprite);
@@ -284,7 +276,8 @@ func _physics_process(delta: float) -> void:
 
 # NOTE don't use governor_tile.is_splitted/is_merging to get prev_transit_id bc it might've been returned to pool already
 # NOTE when merger/splitter finalizes depends on framerate, so they should only be responsible for entity key (switch to pos_t), atlas_coords, aligned_tiles_in_transient, and return to pool
-# NOTE don't set tilemap cell if is_initializing_transit
+# NOTE skip if is_initializing_transit
+# NOTE if is_move_finalize and is_reversed, finalize merger/splitter too bc splitter tile finalizing late could cause unexpected collision
 func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
 	print("finalize ", "reversed " if is_reversed else "", GV.TransitId.keys()[prev_transit_id], " at ", pos_t, position, " is_aligned: ", is_aligned);
 	if is_initializing_transit:
@@ -313,12 +306,6 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	self.is_aligned = is_aligned;
 	self.pos_t = pos_t;
 	
-	# ================ START CRITICAL SECTION ================
-	world.layer_mutexes[GV.LayerId.TILE].lock();
-	# get self entity
-	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
-	var tile_entity:Entity = world.get_entity(tile_entity_id, self);
-	
 	# asserts
 	if is_move_finalize:
 		if is_merging:
@@ -326,35 +313,11 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		if is_splitted:
 			assert(not splitter_tile.is_initializing_transit);
 	
-	# update tilemap TILE layer
-	var is_poolable:bool = is_aligned and move_transit_id == GV.TransitId.NONE and (conversion_transit_id == GV.TransitId.NONE or (is_move_finalize and is_merging and not is_reversed));
-	if is_poolable:
-		if (not is_merging and prev_transit_id != GV.TransitId.SPLIT) or (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or (is_move_finalize and is_merging and is_reversed):
-			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
-	
-	# remove from aligned_tiles_in_transient
-	if is_poolable and not is_move_finalize:
-		world.remove_aligned_tile_in_transient(self);
-	
-	# add to aligned_tiles_in_transient and AltId TILE
-	if is_move_finalize:
-		if not is_reversed and is_merging:
-			assert(is_aligned);
-			world.add_aligned_tile_in_transient(merger_tile);
-			assert(world.get_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t) == -Vector2i.ONE);
-			world.set_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t, GV.TileSetSourceId.TILE, merger_tile.atlas_coords, 1, false);
-		elif conversion_transit_id != GV.TransitId.NONE:
-			assert(is_aligned);
-			world.add_aligned_tile_in_transient(self);
-			assert(world.get_atlas_coords(GV.LayerId.TILE, pos_t) == -Vector2i.ONE);
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, atlas_coords, 1, false);
-		if not is_reversed and is_splitted:
-			assert(is_aligned);
-			world.add_aligned_tile_in_transient(splitter_tile);
-			assert(world.get_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t) == -Vector2i.ONE);
-			world.set_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, GV.TileSetSourceId.TILE, splitter_tile.atlas_coords, 1, false);
-		
+	# ================ START CRITICAL SECTION ================
+	world.layer_mutexes[GV.LayerId.TILE].lock();
+	# get self entity
+	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
+	var tile_entity:Entity = world.get_entity(tile_entity_id, self);
 	
 	# find resulting entity at pos_t
 	# NOTE null if not aligned, assume this is only used for moved_for_PC signal
@@ -363,6 +326,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		if is_self_entity_preserved:
 			resulting_entity = tile_entity;
 		else:
+			assert(is_move_finalize and is_merging);
 			# NOTE this will be null iff merger entity is getting removed
 			resulting_entity = world.get_entity(merger_tile.new_type_id, merger_tile);
 	
@@ -403,6 +367,37 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.old_type_id, splitter_tile);
 			if splitter_tile_entity:
 				splitter_tile_entity.die(resulting_entity);
+	
+	# update tilemap TILE layer
+	var is_poolable:bool = is_aligned and move_transit_id == GV.TransitId.NONE and (conversion_transit_id == GV.TransitId.NONE or (is_move_finalize and is_merging and not is_reversed));
+	if is_poolable:
+		if (not is_merging and prev_transit_id != GV.TransitId.SPLIT) or (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or (is_move_finalize and is_merging and is_reversed):
+			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
+	
+	# remove from aligned_tiles_in_transient
+	if is_poolable and not is_move_finalize:
+		world.remove_aligned_tile_in_transient(self);
+	
+	# add to aligned_tiles_in_transient and AltId TILE
+	# NOTE add self as well if converting and no successful merge happens
+	if is_move_finalize:
+		if not is_reversed and is_merging:
+			assert(is_aligned);
+			world.add_aligned_tile_in_transient(merger_tile);
+			assert(world.get_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t) == -Vector2i.ONE);
+			world.set_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t, GV.TileSetSourceId.TILE, merger_tile.atlas_coords, 1, false);
+		elif conversion_transit_id != GV.TransitId.NONE:
+			assert(is_aligned);
+			world.add_aligned_tile_in_transient(self);
+			assert(world.get_atlas_coords(GV.LayerId.TILE, pos_t) == -Vector2i.ONE);
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, atlas_coords, 1, false);
+		if not is_reversed and is_splitted:
+			assert(is_aligned);
+			world.add_aligned_tile_in_transient(splitter_tile);
+			assert(world.get_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t) == -Vector2i.ONE);
+			world.set_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, GV.TileSetSourceId.TILE, splitter_tile.atlas_coords, 1, false);
+		
 	world.layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
 	
@@ -432,6 +427,14 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
 			if splitter_tile_entity:
 				splitter_tile_entity.set_is_busy(false);
+	
+	# finalize merger and splitter tiles
+	# NOTE assume this doesn't queue_free() them, so that remove_collision_exception_with() will succeed
+	if is_move_finalize and is_reversed:
+		if is_merging:
+			merger_tile.finalize_transit(GV.TransitId.MERGE, true, merger_tile.pos_t, true);
+		if is_splitted:
+			splitter_tile.finalize_transit(GV.TransitId.SPLIT, true, splitter_tile.pos_t, true);
 	
 	# return to pool or update misc. properties to prepare for next transition
 	if is_poolable:
@@ -463,15 +466,24 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			set_collision_layer_value(GV.CollisionId.DEFAULT, true);
 		
 		if conversion_transit_id == GV.TransitId.NONE:
-			if prev_sprite:
-				prev_sprite.queue_free();
-				prev_sprite = null;
+			# remove the unused sprite
+			# clear animators to prevent duplicate conversion finalize
+			if not is_move_finalize:
+				if is_reversed:
+					clear_curr_sprite();
+					prev_sprite.modulate.a = 1;
+					prev_sprite.scale = Vector2.ONE;
+					prev_sprite.z_index = GV.ZId.DEFAULT;
+					prev_sprite.animators.clear();
+				else:
+					clear_prev_sprite();
+					curr_sprite.modulate.a = 1;
+					curr_sprite.scale = Vector2.ONE;
+					curr_sprite.z_index = GV.ZId.DEFAULT;
+					curr_sprite.animators.clear();
 			
 			# update collision values
 			# ALL DONE
-			
-			# update curr_sprite z_index
-			curr_sprite.z_index = GV.ZId.DEFAULT;
 
 func are_sprite_animators_finished() -> bool:
 	return (not prev_sprite or prev_sprite.animators.is_empty()) and (not curr_sprite or curr_sprite.animators.is_empty());
