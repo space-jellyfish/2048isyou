@@ -26,6 +26,12 @@ func _init(tile:TileForTilemap, dir:Vector2i):
 	self.tile = tile;
 	self.dir = dir;
 	remaining_dist = GV.TILE_WIDTH - fposmod(Vector2(dir).dot(tile.position - Vector2(GV.TILE_WIDTH, GV.TILE_WIDTH) / 2), GV.TILE_WIDTH);
+	
+	var curr_pos_t:Vector2i = GV.world_to_pos_t(tile.position);
+	var offset:Vector2 = tile.position - GV.pos_t_to_world(curr_pos_t); #this is the vector from nearest grid center (not intersection) to tile position
+	if (dir.x and abs(offset.y) > GV.SNAP_TOLERANCE) or \
+	(dir.y and abs(offset.x) > GV.SNAP_TOLERANCE):
+		print("START UNALIGNED from ", tile.position, " in dir ", dir);
 
 #returns false if movement has finished
 func step(delta:float):

@@ -279,11 +279,11 @@ func _physics_process(delta: float) -> void:
 # NOTE skip if is_initializing_transit
 # NOTE if is_move_finalize and is_reversed, finalize merger/splitter too bc splitter tile finalizing late could cause unexpected collision
 func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
-	print("finalize ", "reversed " if is_reversed else "", GV.TransitId.keys()[prev_transit_id], " at ", pos_t, position, " is_aligned: ", is_aligned);
+	#print("finalize ", "reversed " if is_reversed else "", GV.TransitId.keys()[prev_transit_id], " at ", pos_t, position, " is_aligned: ", is_aligned);
 	if is_initializing_transit:
 		assert(is_aligned);
 		assert(prev_transit_id != move_transit_id);
-		print("SKIP")
+		#print("SKIP")
 		return;
 	
 	# snap position
@@ -345,10 +345,10 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# NOTE don't change key to pos_t if still converting
 	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
 		if is_move_finalize and is_merging and not is_reversed and is_self_entity_preserved:
-			print("set entity key to merger tile at pos_t ", merger_tile.pos_t);
+			#print("set entity key to merger tile at pos_t ", merger_tile.pos_t);
 			tile_entity.set_body(merger_tile);
 		elif conversion_transit_id == GV.TransitId.NONE:
-			print("set entity key to pos_t ", pos_t);
+			#print("set entity key to pos_t ", pos_t);
 			tile_entity.set_pos_t(pos_t);
 		
 	# emit moved for tracking cam

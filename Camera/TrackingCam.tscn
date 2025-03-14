@@ -14,3 +14,6 @@ collision_mask = 0
 
 [node name="CollisionRect" type="CollisionShape2D" parent="Area2D"]
 shape = SubResource("RectangleShape2D_kiq20")
+
+[node name="AudioListener2D" type="AudioListener2D" parent="."]
+current = true
