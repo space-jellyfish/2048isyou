@@ -152,13 +152,14 @@ func clear_premoves():
 # NOTE cannot assert is_aligned() bc tile might've been pushed by another entity (and squid club isn't aligned)
 func try_curr_frame_premoves():
 	assert(not action_timer or action_timer.is_stopped());
+	assert(is_premove_possible());
 	if premoves:
 		consume_premove();
 
 func consume_premove():
 	var premove:Premove = premoves.pop_front();
 	var initiated:bool = false;
-	print("consume premove ", premove.dir, premove.action_id);
+	print("consume premove ", premove.dir, premove.action_id, "from ", get_pos_t());
 	
 	if not is_busy and is_aligned():
 		assert(world.is_tile(get_pos_t()));

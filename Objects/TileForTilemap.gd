@@ -285,111 +285,6 @@ func _physics_process(delta: float) -> void:
 # NOTE don't use governor_tile.is_splitted/is_merging to get prev_transit_id bc it might've been returned to pool already
 # NOTE when merger/splitter finalizes depends on framerate, so they should only be responsible for entity key (switch to pos_t), atlas_coords, aligned_tiles_in_transient, and return to pool
 # NOTE don't set tilemap cell if is_initializing_transit
-# Type and Entity Key/Busy/Removal and TileMap and aligned_tiles_in_transient and tile_pool Changes
-# MERGE Case 1: m: b->b, g: a->a
-#	not reversed
-#		on g.finalize,
-#			m.entity.key does not change
-#			m.entity.busy becomes false
-#			g.entity is removed
-#			tilemap does not change
-#			add m to aligned_tiles_in_transient
-#			return to pool if conversion animators finished
-#		on m.finalize,
-#			change m.entity.key to pos_t if not moving
-#			set atlas_coords if not moving
-#			remove m from aligned_tiles_in_transient if not moving (else already removed)
-#			return to pool if not moving
-#	reversed
-#		on g.finalize,
-#			set g.entity.key to pos_t
-#			set g.entity.busy to false
-#			set m.entity.busy to false
-#			set atlas_coords
-#			return to pool if conversion animators finished
-#		on m.finalize,
-#			set m.entity.key to pos_t
-#			set atlas_coords
-#			return to pool
-# MERGE Case 2: m: b->a, g: a->a, b != a
-#	not reversed
-#		on g.finalize,
-#			g.entity.key changes from g to m
-#			m.entity is removed
-#			g.entity.busy becomes false
-#			tilemap does not change
-#			add m to aligned_tiles_in_transient
-#			return to pool if conversion animators finished
-#		on m.finalize,
-#			change m.entity.key to pos_t if not moving
-#			set atlas_coords if not moving
-#			remove m from aligned_tiles_in_transient if not moving
-#			return to pool if not moving
-#	reversed
-#		""
-# MERGE Case 3 (Death by Zeroing): m: b->REG, g: a->a, b != REG, a != REG
-#	not reversed
-#		on g.finalize,
-#			remove g.entity
-#			remove m.entity
-#			tilemap doesn't change
-#			add m to aligned_tiles_in_transient
-#			return to pool if conversion animators finished
-#		on m.finalize,
-#			set atlas_coords if not moving
-#			remove m from aligned_tiles_in_transient if not moving
-#			return to pool if not moving
-#	reversed
-#		""
-# SPLIT Case 1: s: a->a, g: a->a
-#	not reversed
-#		on g.finalize,
-#			change g.entity.key from g to pos_t
-#			set g.busy to false
-#			set s.busy to false
-#			set atlas_coords at pos_t
-#			add s to aligned_tiles_in_transient
-#			return to pool if conversion animators finished
-#		on s.finalize,
-#			change s.entity.key to pos_t if not moving
-#			set atlas_coords if not moving
-#			remove s from aligned_tiles_in_transient if not moving
-#			return to pool if not moving
-#	reversed
-#		on g.finalize,
-#			set g.entity.key to pos_t
-#			set g.entity.busy to false
-#			remove s.entity
-#			set unsplit atlas_coords at pos_t
-#			return to pool if conversion animators finished
-#		on s.finalize,
-#			return to pool
-# SPLIT Case 2: s: a->REG, g: a->a, a != REG
-#	not reversed
-#		on g.finalize
-#			change g.entity.key to pos_t
-#			set g.busy to false
-#			no need to remove s.entity since it was transferred to g
-#			set atlas_coords at pos_t
-#			add s to aligned_tiles_in_transient
-#			return to pool if conversion animators finished
-#		on s.finalize
-#			set atlas_coords if not moving
-#			remove s from aligned_tiles_in_transient if not moving
-#			return to pool if not moving
-#	reversed
-#		on g.finalize
-#			set g.entity.key to pos_t
-#			set g.busy to false
-#			set unsplit atlas_coords at pos_t
-#			return to pool if conversion animators finished
-#		on s.finalize
-#			return to pool
-# SHIFT:
-#	set entity.key to pos_t
-#	set entity.busy to false
-#	set atlas_coords at pos_t
-#	return to pool if conversion animators finished
 func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_reversed:bool):
 	print("finalize ", "reversed " if is_reversed else "", GV.TransitId.keys()[prev_transit_id], " at ", pos_t, position, " is_aligned: ", is_aligned);
 	if is_initializing_transit:
@@ -430,8 +325,6 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			assert(not merger_tile.is_initializing_transit);
 		if is_splitted:
 			assert(not splitter_tile.is_initializing_transit);
-	if tile_entity and tile_entity.body == self and not tile_entity.is_busy and is_aligned:
-		assert(world.is_tile(pos_t));
 	
 	# update tilemap TILE layer
 	var is_poolable:bool = is_aligned and move_transit_id == GV.TransitId.NONE and (conversion_transit_id == GV.TransitId.NONE or (is_move_finalize and is_merging and not is_reversed));
@@ -439,7 +332,6 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		if (not is_merging and prev_transit_id != GV.TransitId.SPLIT) or (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or (is_move_finalize and is_merging and is_reversed):
 			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
 			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
-			print("tilemap cell set at ", pos_t);
 	
 	# remove from aligned_tiles_in_transient
 	if is_poolable and not is_move_finalize:
@@ -486,10 +378,13 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	
 	# set self entity key
 	# NOTE assume type did not change if not is_aligned
+	# NOTE don't change key to pos_t if still converting
 	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
 		if is_move_finalize and is_merging and not is_reversed and is_self_entity_preserved:
+			print("set entity key to merger tile at pos_t ", merger_tile.pos_t);
 			tile_entity.set_body(merger_tile);
-		else:
+		elif conversion_transit_id == GV.TransitId.NONE:
+			print("set entity key to pos_t ", pos_t);
 			tile_entity.set_pos_t(pos_t);
 		
 	# emit moved for tracking cam
@@ -523,7 +418,6 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	
 	# set self entity not busy
 	if tile_entity and is_move_finalize and is_self_entity_preserved:
-		print("set self busy false")
 		tile_entity.set_is_busy(false);
 	
 	# set splitter/merger entity not busy IF THEY"RE NOT MOVING
@@ -532,13 +426,11 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			assert(merger_tile.move_transit_id == GV.TransitId.NONE);
 			var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
 			if merger_tile_entity:
-				print("set merger busy false");
 				merger_tile_entity.set_is_busy(false);
 		if is_splitted and not is_reversed:
 			assert(splitter_tile.move_transit_id == GV.TransitId.NONE);
 			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
 			if splitter_tile_entity:
-				print("set splitter busy false");
 				splitter_tile_entity.set_is_busy(false);
 	
 	# return to pool or update misc. properties to prepare for next transition

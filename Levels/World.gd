@@ -124,7 +124,6 @@ func viewport_to_tile_pos(viewport_pos:Vector2) -> Vector2i:
 	return $Cells.local_to_map(local_pos);
 
 func get_pooled_tile(pos_t:Vector2i) -> TileForTilemap:
-	print("get pooled tile at ", pos_t);
 	var tile:TileForTilemap;
 	if not tile_pool.is_empty():
 		tile = tile_pool.pop_back();
@@ -136,7 +135,6 @@ func get_pooled_tile(pos_t:Vector2i) -> TileForTilemap:
 	return tile;
 
 func return_pooled_tile(tile:TileForTilemap):
-	print("return pooled tile at ", tile.pos_t);
 	#assert(not tile.is_inside_tree());
 	#assert(tile.prev_sprite == null);
 	#assert(tile.curr_sprite == null);
@@ -198,15 +196,13 @@ func remove_aligned_tile_in_transient(tile:TileForTilemap):
 func get_aligned_tile_in_transient(pos_t:Vector2i) -> TileForTilemap:
 	return aligned_tiles_in_transient.get(pos_t); #Dictionary read is thread-safe
 
-func get_transit_tile(pos_t:Vector2i, include_transient:bool, remove_transient:bool = true) -> TileForTilemap:
-	print("get transit tile at ", pos_t);
+func get_transit_tile(pos_t:Vector2i, include_transient:bool) -> TileForTilemap:
 	assert(not is_tile(pos_t))
 	
 	if include_transient:
 		var tile:TileForTilemap = get_aligned_tile_in_transient(pos_t);
 		if tile:
-			if remove_transient:
-				remove_aligned_tile_in_transient(tile);
+			remove_aligned_tile_in_transient(tile);
 			return tile;
 	
 	for tile in $TransitTiles.get_children():
@@ -305,7 +301,7 @@ func generate_cell(pos_t:Vector2i):
 	# tile type
 	var type_id:int = GV.TypeId.REGULAR;
 	var n_type:float = randf();
-	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
+	if n_type < 0:#GV.P_GEN_DUPLICATOR:
 		type_id = GV.TypeId.DUPLICATOR;
 		print("DUP GEN")
 	elif n_type < GV.P_GEN_HOSTILE:
@@ -621,7 +617,6 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	
 	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir, true, false);
 	if push_count != -1:
-		print("slide init")
 		if not test_only:
 			# start animation
 			animate_slide(pusher_entity, pos_t, dir, push_count, is_splitted, unsplit_atlas_coords);
@@ -653,11 +648,13 @@ func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	# once split animation finishes (without worrying about the slide bouncing)
 	# set splitted coord for try_slide().get_slide_push_count() (and try_slide() does not have to calculate it again)
 	# try_slide() will add parent_atlas_coords at src_pos_t if it initiates
-	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, splitted_coords, 0, true);
+	var alt_id:int = int(get_aligned_tile_in_transient(pos_t) != null);
+	assert(alt_id == $Cells.get_cell_alternative_tile(GV.LayerId.TILE, pos_t));
+	set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, splitted_coords, alt_id, true);
 	var initiated:bool = try_slide(pusher_entity, tile_entity, dir, test_only, true, src_coords);
 	# reset src coords
 	if not initiated or test_only:
-		set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, src_coords, 0, true);
+		set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, src_coords, alt_id, true);
 	return initiated;
 
 #update player_pos_t
@@ -690,6 +687,7 @@ func get_entity(entity_id:int, key:Variant):
 
 # tries tile, then aligned_tiles_in_transient, then pos_t
 # NOTE does not assume non-null tile must be entity key
+# NOTE tile parameter necessary bc get_transit_tile() may remove the transient_tile
 func get_aligned_tile_entity(entity_id:int, tile:TileForTilemap, pos_t:Vector2i) -> Entity:
 	if tile:
 		var entity:Entity = get_entity(entity_id, tile);
@@ -718,7 +716,6 @@ func add_entity(entity_id:int, key:Variant, entity:Entity):
 # add tile via await get_tree().physics_frame
 # defer initialize_*() not add_child() to ensure tile renders
 func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push_count:int, is_splitted:bool, unsplit_atlas_coords:Vector2i):
-	print("erase tiles")
 	# SLIDING TILES
 	var back_tile:TileForTilemap;
 	var curr_atlas_coords:Vector2i;
@@ -738,10 +735,11 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 		set_atlas_coords(GV.LayerId.TILE, curr_pos_t, GV.TileSetSourceId.TILE, -Vector2i.ONE);
 		
 		# get sliding tile
-		# don't use transient tile if is_splitted, splitted tile should be fresh/unanimated
+		# if is_splitted, let splitter have the transient tile (splitted tile should be fresh/unanimated)
 		var curr_tile:TileForTilemap = get_transit_tile(curr_pos_t, not curr_splitted);
 		
 		# update entity
+		# if is_splitted, let splitted have the existing entity
 		if curr_type_id not in GV.T_NONE_OR_REGULAR:
 			var tile_entity:Entity = get_aligned_tile_entity(curr_type_id, curr_tile, curr_pos_t);
 			if tile_entity:
