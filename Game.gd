@@ -34,8 +34,6 @@ func _ready():
 	#init messages_shown
 	messages_shown.resize(GV.MessageId.size());
 	messages_shown.fill(false);
-	
-	get_viewport().set_as_audio_listener_2d(true);
 
 signal toggle_game_paused(is_paused : bool)
 

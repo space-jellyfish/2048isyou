@@ -2158,3 +2158,7 @@ var temp_splitter_tile:TileForTilemap;
 	assert(tile.temp_merger_tile == null);
 	assert(tile.temp_splitter_tile == null);
 '''
+
+'''
+	get_viewport().set_as_audio_listener_2d(true);
+'''
