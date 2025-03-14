@@ -1999,3 +1999,140 @@ const PLAYER_COLLIDER_SCALE:float = 0.98;
 func _ready() -> void:
 	collision_shape.scale = GV.PLAYER_COLLIDER_SCALE * Vector2.ONE;
 '''
+
+'''
+		# try to catch the ultra rare bug
+		if remaining_dist == 40 and collider is TileMap:
+			print(collision.get_position());
+			print(collision.get_normal());
+			print(tile.world.get_atlas_coords(GV.LayerId.TILE, tile.pos_t));
+			assert(false);
+		if remaining_dist == 40 and collider is TileForTilemap:
+			print("collider tile: ", collider);
+			print(collision.get_normal());
+			print(tile.pos_t, collider.pos_t);
+			print(tile.position, collider.position);
+'''
+
+'''
+func get_transit_tile(pos_t:Vector2i, include_transient:bool, remove_transient:bool = true) -> TileForTilemap:
+	assert(not is_tile(pos_t))
+	
+	if include_transient:
+		var tile:TileForTilemap = get_aligned_tile_in_transient(pos_t);
+		if tile:
+			if remove_transient:
+				remove_aligned_tile_in_transient(tile);
+			return tile;
+	
+	for tile in $TransitTiles.get_children():
+		assert(not (include_transient and tile.is_aligned and tile.pos_t == pos_t));
+	
+	return get_pooled_tile(pos_t);
+'''
+
+# Type and Entity Key/Busy/Removal and TileMap and aligned_tiles_in_transient and tile_pool Changes
+# MERGE Case 1: m: b->b, g: a->a
+#	not reversed
+#		on g.finalize,
+#			m.entity.key does not change
+#			m.entity.busy becomes false
+#			g.entity is removed
+#			tilemap does not change
+#			add m to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			change m.entity.key to pos_t if not moving
+#			set atlas_coords if not moving
+#			remove m from aligned_tiles_in_transient if not moving (else already removed)
+#			return to pool if not moving
+#	reversed
+#		on g.finalize,
+#			set g.entity.key to pos_t
+#			set g.entity.busy to false
+#			set m.entity.busy to false
+#			set atlas_coords
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			set m.entity.key to pos_t
+#			set atlas_coords
+#			return to pool
+# MERGE Case 2: m: b->a, g: a->a, b != a
+#	not reversed
+#		on g.finalize,
+#			g.entity.key changes from g to m
+#			m.entity is removed
+#			g.entity.busy becomes false
+#			tilemap does not change
+#			add m to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			change m.entity.key to pos_t if not moving
+#			set atlas_coords if not moving
+#			remove m from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		""
+# MERGE Case 3 (Death by Zeroing): m: b->REG, g: a->a, b != REG, a != REG
+#	not reversed
+#		on g.finalize,
+#			remove g.entity
+#			remove m.entity
+#			tilemap doesn't change
+#			add m to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			set atlas_coords if not moving
+#			remove m from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		""
+# SPLIT Case 1: s: a->a, g: a->a
+#	not reversed
+#		on g.finalize,
+#			change g.entity.key from g to pos_t
+#			set g.busy to false
+#			set s.busy to false
+#			set atlas_coords at pos_t
+#			add s to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on s.finalize,
+#			change s.entity.key to pos_t if not moving
+#			set atlas_coords if not moving
+#			remove s from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		on g.finalize,
+#			set g.entity.key to pos_t
+#			set g.entity.busy to false
+#			remove s.entity
+#			set unsplit atlas_coords at pos_t
+#			return to pool if conversion animators finished
+#		on s.finalize,
+#			return to pool
+# SPLIT Case 2: s: a->REG, g: a->a, a != REG
+#	not reversed
+#		on g.finalize
+#			change g.entity.key to pos_t
+#			set g.busy to false
+#			no need to remove s.entity since it was transferred to g
+#			set atlas_coords at pos_t
+#			add s to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on s.finalize
+#			set atlas_coords if not moving
+#			remove s from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		on g.finalize
+#			set g.entity.key to pos_t
+#			set g.busy to false
+#			set unsplit atlas_coords at pos_t
+#			return to pool if conversion animators finished
+#		on s.finalize
+#			return to pool
+# SHIFT:
+#	set entity.key to pos_t
+#	set entity.busy to false
+#	set atlas_coords at pos_t
+#	return to pool if conversion animators finished
