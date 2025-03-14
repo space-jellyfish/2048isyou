@@ -2136,3 +2136,25 @@ func get_transit_tile(pos_t:Vector2i, include_transient:bool, remove_transient:b
 #	set entity.busy to false
 #	set atlas_coords at pos_t
 #	return to pool if conversion animators finished
+
+''' not needed bc front/back/merger/splitter tiles are always null when initialize_*() is called, and body of finalize_transit() is never entered when is_initializing_transit
+
+var temp_front_tile:TileForTilemap;
+var temp_back_tile:TileForTilemap;
+var temp_merger_tile:TileForTilemap;
+var temp_splitter_tile:TileForTilemap;
+
+	front_tile = temp_front_tile;
+	back_tile = temp_back_tile;
+	set_merger_tile(temp_merger_tile);
+	set_splitter_tile(temp_splitter_tile);
+	temp_front_tile = null;
+	temp_back_tile = null;
+	temp_merger_tile = null;
+	temp_splitter_tile = null;
+
+	assert(tile.temp_front_tile == null);
+	assert(tile.temp_back_tile == null);
+	assert(tile.temp_merger_tile == null);
+	assert(tile.temp_splitter_tile == null);
+'''

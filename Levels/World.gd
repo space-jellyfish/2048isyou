@@ -168,10 +168,6 @@ func return_pooled_tile(tile:TileForTilemap):
 	if tile.splitter_tile:
 		tile.remove_collision_exception_with(tile.splitter_tile);
 		tile.splitter_tile = null;
-	assert(tile.temp_front_tile == null);
-	assert(tile.temp_back_tile == null);
-	assert(tile.temp_merger_tile == null);
-	assert(tile.temp_splitter_tile == null);
 	tile.pusher_entity_id = GV.EntityId.NONE;
 	tile.move_transit_id = GV.TransitId.NONE;
 	tile.conversion_transit_id = GV.TransitId.NONE;
@@ -790,7 +786,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 		if curr_splitted:
 			# add splitting tile
 			splitting_tile.initialize_split(unsplit_atlas_coords, splitter_atlas_coords, curr_tile);
-			curr_tile.temp_splitter_tile = splitting_tile;
+			curr_tile.set_splitter_tile(splitting_tile);
 			if not splitting_tile.is_inside_tree():
 				$TransitTiles.add_child(splitting_tile);
 			else:
@@ -802,12 +798,12 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 		# update back_tile
 		back_tile = curr_tile;
 	
-	# init temp_front_tiles
+	# init front tiles in the slide chain
 	# add frontmost tiles first so chain moves in sync every frame? NAH, collision uses positions from previous frame
 	var curr_tile:TileForTilemap = back_tile;
-	while curr_tile.temp_back_tile != null:
-		curr_tile.temp_back_tile.temp_front_tile = curr_tile;
-		curr_tile = curr_tile.temp_back_tile;
+	while curr_tile.back_tile != null:
+		curr_tile.back_tile.front_tile = curr_tile;
+		curr_tile = curr_tile.back_tile;
 	
 	# MERGING TILE (without starting the animation)
 	if is_merging:
@@ -838,7 +834,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 		# add merging tile
 		var new_atlas_coords:Vector2i = get_merged_atlas_coords(old_atlas_coords, curr_atlas_coords);
 		merging_tile.initialize_merge(old_atlas_coords, new_atlas_coords, back_tile);
-		back_tile.temp_merger_tile = merging_tile;
+		back_tile.set_merger_tile(merging_tile);
 		if not merging_tile.is_inside_tree():
 			$TransitTiles.add_child(merging_tile);
 		else:
