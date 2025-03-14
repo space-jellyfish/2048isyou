@@ -1975,3 +1975,27 @@ var debug_entity:Entity;
 
 # NOTE if is_aligned assert(world.is_tile(pos_t)) is invalid bc animate_*() might've erased cell already
 '''
+
+'''
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		if action_timer:
+			action_timer.queue_free();
+'''
+
+'''
+const PLAYER_COLLIDER_SCALE:float = 0.98;
+
+#	#init physics enabler size
+#	set_tile_push_limit(abilities["tile_push_limit"]);
+#
+#	#scale shapecasts (bc inspector can't handle precise floats)
+#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
+#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
+#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
+#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;
+
+
+func _ready() -> void:
+	collision_shape.scale = GV.PLAYER_COLLIDER_SCALE * Vector2.ONE;
+'''
