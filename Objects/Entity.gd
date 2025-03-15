@@ -29,7 +29,8 @@ var path_controller:RefCounted;
 var action_timer:Timer; #null if entity doesn't have pathfinding
 var task_id:int;
 var is_task_active:bool = false;
-var actions:Array[Vector3i];
+var task_src_pos_t:Vector2i;
+var task_actions:Array[Vector3i];
 
 
 func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
@@ -72,12 +73,12 @@ func _process():
 		WorkerThreadPool.wait_for_task_completion(task_id);
 		
 		# populate premoves
-		for action in actions:
-			var premove := Premove.new(self, Vector2i(action.x, action.y), action.z);
+		for task_action in task_actions:
+			var premove := Premove.new(self, Vector2i(task_action.x, task_action.y), task_action.z);
 			add_premove(premove);
 		
 		# reset stuff
-		actions.clear();
+		task_actions.clear();
 		is_task_active = false;
 		try_pathfind();
 
@@ -131,15 +132,17 @@ func try_premove():
 func try_pathfind():
 	if is_pathfind_warranted():
 		# start pathfinding in new thread
-		#task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
-		#is_task_active = true;
+		task_src_pos_t = get_pos_t();
+		task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
+		is_task_active = true;
 		
 		# debug pathfinding in main thread
-		path_controller.get_actions(get_pos_t());
-		for action in actions:
-			var premove := Premove.new(self, Vector2i(action.x, action.y), action.z);
-			add_premove(premove);
-		actions.clear();
+		#task_src_pos_t = get_pos_t();
+		#path_controller.get_actions();
+		#for task_action in task_actions:
+			#var premove := Premove.new(self, Vector2i(task_action.x, task_action.y), task_action.z);
+			#add_premove(premove);
+		#task_actions.clear();
 
 func add_premove(premove:Premove):
 	premoves.push_back(premove);

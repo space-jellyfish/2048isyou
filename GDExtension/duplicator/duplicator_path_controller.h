@@ -93,7 +93,7 @@ public:
     void update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos);
     void update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos);
     void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
-    void get_actions(Vector2i pos_t);
+    void get_actions();
 };
 
 #endif
