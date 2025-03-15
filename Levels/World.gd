@@ -23,6 +23,8 @@ var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[Entity,
 var premove_callback_upcoming:bool = false;
 
 @export var procgen:bool = false;
+# everything outside the loaded rect is conceptually unloaded => pause entity activity
+# NOTE previously loaded tilemap cells stay loaded in practice
 var loaded_pos_t_min:Vector2i = Vector2i.ZERO;
 var loaded_pos_t_max:Vector2i = -Vector2i.ONE; #inclusive
 
