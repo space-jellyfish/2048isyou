@@ -46,8 +46,6 @@ enum TilePow {
 const TILE_VALUE_COUNT:int = 2 * TilePow.MAX + 3;
 const TILE_LOAD_BUFFER:float = 8 * TILE_WIDTH;
 const TILE_UNLOAD_BUFFER:float = 8 * TILE_WIDTH;
-const P_GEN_DUPLICATOR:float = 0.0005;
-const P_GEN_HOSTILE:float = 0.005;
 
 #save-related stuff
 #note non-export variables are not saved in packed scene
@@ -84,7 +82,7 @@ const TRACKING_CAM_SLACK_RATIO:float = 0.15; #0.25; #ratio applied to slack (tra
 const TRACKING_CAM_TRANSITION_TIME:float = 1.28;
 const PLAYER_SPAWN_INVINCIBILITY_TIME:float = 0.25;
 
-const SNAP_TOLERANCE:float = 0.1; #epsilon; in px
+const SNAP_TOLERANCE:float = 2.3; # in px
 const COLLISION_TEST_DISTANCE:float = 0.4;
 const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
@@ -636,6 +634,16 @@ var action_cooldown_deviations:Dictionary = {
 	EntityId.STP_SPAWNING : 0,
 	EntityId.STP_SPAWNED : 0,
 	EntityId.SNAKE : 0,
+}
+
+var base_spawn_weights:Dictionary = {
+	TypeId.NONE : 0,
+	TypeId.PLAYER : 0,
+	TypeId.DUPLICATOR : 2000,#4,
+	TypeId.HOSTILE : 50,
+	TypeId.VOID : 2,
+	TypeId.REGULAR : 10000,
+	TypeId.SQUID : 1,
 }
 
 enum SASearchId {

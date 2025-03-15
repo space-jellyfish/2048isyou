@@ -2162,3 +2162,25 @@ var temp_splitter_tile:TileForTilemap;
 '''
 	get_viewport().set_as_audio_listener_2d(true);
 '''
+
+'''
+const P_GEN_DUPLICATOR:float = 0.0005;
+const P_GEN_HOSTILE:float = 0.005;
+
+	# tile type
+	var type_id:int = GV.TypeId.REGULAR;
+	var n_type:float = randf();
+	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
+		type_id = GV.TypeId.DUPLICATOR;
+		print("DUP GEN")
+	elif n_type < GV.P_GEN_HOSTILE:
+		type_id = GV.TypeId.HOSTILE;
+'''
+
+'''
+			print("finalize ", GV.TransitId.keys()[move_transit_id], "is_aligned: ", is_aligned, " move_controller.dir: ", move_controller.dir, "position: ", position);
+
+		# check for perp collision causing unalignment
+		if collider is TileForTilemap and collider.move_controller and not Vector2(collider.move_controller.dir).dot(dir):
+			print(dir, collider.move_controller.dir, prev_position, tile.position);
+'''
