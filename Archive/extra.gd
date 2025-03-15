@@ -2183,4 +2183,10 @@ const P_GEN_HOSTILE:float = 0.005;
 		# check for perp collision causing unalignment
 		if collider is TileForTilemap and collider.move_controller and not Vector2(collider.move_controller.dir).dot(dir):
 			print(dir, collider.move_controller.dir, prev_position, tile.position);
+
+	var curr_pos_t:Vector2i = GV.world_to_pos_t(tile.position);
+	var offset:Vector2 = tile.position - GV.pos_t_to_world(curr_pos_t); #this is the vector from nearest grid center (not intersection) to tile position
+	if (dir.x and abs(offset.y) > GV.SNAP_TOLERANCE) or \
+	(dir.y and abs(offset.x) > GV.SNAP_TOLERANCE):
+		print("START UNALIGNED from ", tile.position, " in dir ", dir);
 '''
