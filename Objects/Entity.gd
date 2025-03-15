@@ -33,7 +33,7 @@ var task_src_pos_t:Vector2i;
 var task_actions:Array[Vector3i];
 
 
-func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
+func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, is_split_spawned:bool):
 	assert(entity_id not in GV.T_NONE_OR_REGULAR);
 	self.world = world;
 	self.body = body;
@@ -66,7 +66,8 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i):
 		action_timer.timeout.connect(_on_action_timer_timeout);
 		world.get_node("ActionTimers").add_child(action_timer);
 		assert(action_timer.is_inside_tree());
-		action_timer.start(get_initial_action_cooldown());
+		var cd:float = get_action_cooldown(true) if is_split_spawned else get_initial_action_cooldown();
+		action_timer.start(cd);
 
 func _process():
 	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
