@@ -100,6 +100,14 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 		prev_sprite.z_index = GV.ZId.COMBINING_OLD_MOVING;
 		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
 	
+	# add NAV wall for pathfinder
+	if was_aligned:
+		world.add_nav_id(pos_t, GV.NAV_UNITS[-dir]);
+		world.add_nav_id(pos_t + dir, GV.NavId.ALL);
+	else:
+		#TODO
+		pass;
+	
 	# ensure finalize_transit() will do the right thing if called during await
 	# (make the correct return-to-pool, update-self-entity-key decisions)
 	is_initializing_transit = true;
@@ -119,14 +127,6 @@ func initialize_slide(pusher_entity_id:int, dir:Vector2i, atlas_coords:Vector2i,
 	was_aligned = is_aligned;
 	move_controller = TileForTilemapSlideController.new(self, dir);
 	is_aligned = false;
-	
-	# add NAV wall for pathfinder
-	if was_aligned:
-		world.add_nav_id(pos_t, GV.NAV_UNITS[-dir]);
-		world.add_nav_id(pos_t + dir, GV.NavId.ALL);
-	else:
-		#TODO
-		pass;
 	
 	# collision layers and masks
 	# don't set MEMBRANE mask if src_back_id is MEMBRANE (REGULAR can get inside MEMBRANE via player splitting)
@@ -156,6 +156,10 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 		prev_sprite.z_index = GV.ZId.COMBINING_OLD_MOVING;
 		curr_sprite.z_index = GV.ZId.COMBINING_NEW_MOVING;
 	
+	# add NAV wall for pathfinder
+	world.add_nav_id(pos_t, GV.NAV_UNITS[-dir]);
+	world.add_nav_id(pos_t + dir, GV.NavId.ALL);
+	
 	is_initializing_transit = true;
 	await world.get_tree().physics_frame;
 	is_initializing_transit = false;
@@ -170,10 +174,6 @@ func initialize_shift(dir:Vector2i, target_dist_t:int, atlas_coords:Vector2i):
 	was_aligned = is_aligned;
 	move_controller = TileForTilemapShiftController.new(self, dir, target_dist_t);
 	is_aligned = false;
-	
-	# add NAV wall for pathfinder
-	world.add_nav_id(pos_t, GV.NAV_UNITS[-dir]);
-	world.add_nav_id(pos_t + dir, GV.NavId.ALL);
 	
 	# collision layers and masks
 	# don't set MEMBRANE mask if src_back_id is MEMBRANE (REGULAR can get inside MEMBRANE via player splitting)
@@ -201,6 +201,9 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	add_child(prev_sprite);
 	add_child(curr_sprite);
 	
+	# add NAV wall for pathfinder
+	world.add_nav_id(pos_t, GV.NavId.ALL);
+	
 	is_initializing_transit = true;
 	await world.get_tree().physics_frame;
 	is_initializing_transit = false;
@@ -214,9 +217,6 @@ func initialize_split(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
-	
-	# add NAV wall for pathfinder
-	world.add_nav_id(pos_t, GV.NavId.ALL);
 	
 	# collision layers and masks
 	clear_collision_values();
@@ -238,6 +238,9 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	add_child(prev_sprite);
 	add_child(curr_sprite);
 	
+	# add NAV wall for pathfinder
+	world.add_nav_id(pos_t, GV.NavId.ALL);
+	
 	is_initializing_transit = true;
 	await world.get_tree().physics_frame;
 	is_initializing_transit = false;
@@ -251,9 +254,6 @@ func initialize_merge(old_atlas_coords:Vector2i, new_atlas_coords:Vector2i, gove
 	old_type_id = world.atlas_coords_to_type_id(old_atlas_coords);
 	new_type_id = world.atlas_coords_to_type_id(new_atlas_coords);
 	velocity = Vector2.ZERO;
-	
-	# add NAV wall for pathfinder
-	world.add_nav_id(pos_t, GV.NavId.ALL);
 	
 	# collision layers and masks
 	clear_collision_values();
