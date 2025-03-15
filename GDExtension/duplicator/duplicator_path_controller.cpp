@@ -22,7 +22,7 @@ void DuplicatorPathController::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_entity", "p_entity"), &DuplicatorPathController::set_entity);
 	ClassDB::bind_method(D_METHOD("get_entity"), &DuplicatorPathController::get_entity);
     ClassDB::bind_method(D_METHOD("on_entity_move_finalized", "pos_t", "is_reversed", "resulting_entity"), &DuplicatorPathController::on_entity_move_finalized);
-    ClassDB::bind_method(D_METHOD("get_actions", "pos_t"), &DuplicatorPathController::get_actions);
+    ClassDB::bind_method(D_METHOD("get_actions"), &DuplicatorPathController::get_actions);
 
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "gv", PROPERTY_HINT_NODE_TYPE, "Node"), "set_gv", "get_gv");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world", PROPERTY_HINT_NODE_TYPE, "Node2D"), "set_world", "get_world");
@@ -234,9 +234,10 @@ void DuplicatorPathController::on_entity_move_finalized(Vector2i pos_t, bool is_
 }
 
 // action dir should be normalized
-void DuplicatorPathController::get_actions(Vector2i pos_t) {
-    // get answer buffer
-    Array entity_actions = entity->get("actions");
+void DuplicatorPathController::get_actions() {
+    // get parameters from entity
+    Vector2i pos_t = entity->get("task_src_pos_t");
+    Array entity_actions = entity->get("task_actions");
 
     // get world info
     Vector2i lv_pos = Vector2i(LV_RADIUS, LV_RADIUS);

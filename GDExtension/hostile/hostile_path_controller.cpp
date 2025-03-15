@@ -21,7 +21,7 @@ void HostilePathController::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_cells"), &HostilePathController::get_cells);
 	ClassDB::bind_method(D_METHOD("set_entity", "p_entity"), &HostilePathController::set_entity);
 	ClassDB::bind_method(D_METHOD("get_entity"), &HostilePathController::get_entity);
-    ClassDB::bind_method(D_METHOD("get_actions", "pos_t"), &HostilePathController::get_actions);
+    ClassDB::bind_method(D_METHOD("get_actions"), &HostilePathController::get_actions);
 
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "gv", PROPERTY_HINT_NODE_TYPE, "Node"), "set_gv", "get_gv");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world", PROPERTY_HINT_NODE_TYPE, "Node2D"), "set_world", "get_world");
@@ -103,6 +103,6 @@ void HostilePathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t, v
 
 
 // action dir should be normalized
-void HostilePathController::get_actions(Vector2i pos_t) {
+void HostilePathController::get_actions() {
 
 }

@@ -62,7 +62,7 @@ public:
     uint32_t get_stuff_id(Vector2i pos_t);
 
     void get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv);
-    void get_actions(Vector2i pos_t);
+    void get_actions();
 };
 
 #endif
