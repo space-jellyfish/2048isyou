@@ -295,13 +295,10 @@ func generate_cell(pos_t:Vector2i):
 	var tile_id:int = GV.tile_val_to_id(power, ssign);
 	
 	# tile type
-	var type_id:int = GV.TypeId.REGULAR;
-	var n_type:float = randf();
-	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
-		type_id = GV.TypeId.DUPLICATOR;
-		print("DUP GEN")
-	elif n_type < GV.P_GEN_HOSTILE:
-		type_id = GV.TypeId.HOSTILE;
+	var type_id:int = get_spawned_type_id(tile_id);
+	type_id = GV.TypeId.REGULAR if type_id == GV.TypeId.NONE else type_id;
+	if type_id != GV.TypeId.REGULAR:
+		print(GV.TypeId.keys()[type_id], " SPAWNED");
 	
 	# tilemap
 	set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.EMPTY)); #to mark as generated
@@ -315,6 +312,26 @@ func generate_cell(pos_t:Vector2i):
 	
 	layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
+
+func get_spawn_weight(type_id:int, tile_id:int) -> int:
+	if type_id in GV.T_KILLABLE_BY_ZEROING and tile_id == GV.TileId.ZERO:
+		return 0;
+	return GV.base_spawn_weights[type_id];
+
+func get_spawned_type_id(tile_id:int) -> int:
+	if tile_id == GV.TileId.EMPTY:
+		return GV.TypeId.NONE;
+	
+	var total_weight:int = 0;
+	for type_id in GV.TypeId.values():
+		total_weight += get_spawn_weight(type_id, tile_id);
+	
+	var key:int = randi_range(1, total_weight);
+	for type_id in GV.TypeId.values():
+		key -= get_spawn_weight(type_id, tile_id);
+		if key <= 0:
+			return type_id;
+	return GV.TypeId.REGULAR;
 
 func get_event_dir(event:InputEventKey) -> Vector2i:
 	if event.keycode in [KEY_W, KEY_UP]:

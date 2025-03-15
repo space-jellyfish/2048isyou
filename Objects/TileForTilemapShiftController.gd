@@ -24,8 +24,10 @@ func step(delta:float):
 	tile.velocity = tile.velocity.lerp(max_speed * dir, GV.SHIFT_LERP_WEIGHT);
 	tile.velocity = clamp(Vector2(dir).dot(tile.velocity), GV.TILE_SLIDE_SPEED, max_speed) * dir;
 	var collision:KinematicCollision2D = tile.move_and_collide(tile.velocity * delta);
+	# reset non-movement-axis coordinate bc perp collision can cause unalignment
+	tile.position = Vector2(dir.abs()) * tile.position + (Vector2.ONE - Vector2(dir.abs())) * prev_position;
 	
-	#update remaining_dist
+	# update remaining_dist
 	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	remaining_dist -= true_step_dist;
 	
