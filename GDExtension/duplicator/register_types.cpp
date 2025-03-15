@@ -1,6 +1,6 @@
 #include "register_types.h"
 
-#include "duplicator.h"
+#include "duplicator_path_controller.h"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>

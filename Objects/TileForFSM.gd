@@ -178,18 +178,18 @@ func debug_frame():
 		#print("physics on: ", physics_on);
 		pass;
 
-func update_texture(s:Sprite2D, power, ssign, _is_player, _is_hostile, _is_invincible):
-	assert(power <= GV.TILE_POW_MAX);
+func update_texture(s:Sprite2D, p_power, p_ssign, _is_player, _is_hostile, _is_invincible):
+	assert(p_power <= GV.TilePow.MAX);
 	var texture_path:String = "res://Sprites/Sprites/2_";
 	
-	#power
-	if power == -1:
+	# power
+	if p_power == -1:
 		texture_path += "n";
 	else:
-		texture_path += str(power);
+		texture_path += str(p_power);
 	
-	#sign
-	if ssign == -1 and power >= 0:
+	# sign
+	if p_ssign == -1 and p_power >= 0:
 		texture_path += "m";
 	
 	#dark
@@ -342,7 +342,7 @@ func slide(dir:Vector2i) -> bool:
 #				elif collider.color == GV.ColorId.GRAY and collider.slide(dir): #receding player
 #					pass;
 				elif (power == -1 or collider.power == -1 or power == collider.power) and \
-				(power < GV.TILE_POW_MAX or ssign != collider.ssign): #merge
+				(power < GV.TilePow.MAX or ssign != collider.ssign): #merge
 					partner = collider;
 					collider.pusher = null;
 					collider.partner = self;
@@ -439,7 +439,7 @@ func split(dir:Vector2i) -> bool:
 			
 			if collider.color == GV.ColorId.GRAY and collider.slide(dir): #recede split
 				continue;
-			elif power - 1 == collider.power and collider.power < GV.TILE_POW_MAX: #merge split
+			elif power - 1 == collider.power and collider.power < GV.TilePow.MAX: #merge split
 				continue;
 				
 			#act as temporary pusher before splitted tile spawns
@@ -680,8 +680,8 @@ func is_yaligned():
 
 #use range = GV.PLAYER_SNAP_RANGE to fix collider offset
 func snap_range(offset_range:float):
-	var pos_t:Vector2i = GV.world_to_pos_t(position);
-	var offset:Vector2 = position - GV.pos_t_to_world(pos_t);
+	var snap_pos_t:Vector2i = GV.world_to_pos_t(position);
+	var offset:Vector2 = position - GV.pos_t_to_world(snap_pos_t);
 	if offset.x and absf(offset.x) <= offset_range:
 		position.x -= offset.x;
 	if offset.y and absf(offset.y) <= offset_range:

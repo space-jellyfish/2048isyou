@@ -14,7 +14,7 @@ func _on_body_entered(body):
 		
 		#convert other players to tiles to prepare for save
 		for player in game.current_level.players:
-			player.color = GV.ColorId.BLACK if player.power == GV.TILE_POW_MAX else GV.ColorId.ALL;
+			player.color = GV.ColorId.BLACK if player.power == GV.TilePow.MAX else GV.ColorId.ALL;
 		
 		#save level
 		game.save_level(-1);

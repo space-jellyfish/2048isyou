@@ -34,8 +34,6 @@ func _ready():
 	#init messages_shown
 	messages_shown.resize(GV.MessageId.size());
 	messages_shown.fill(false);
-	
-	get_viewport().set_as_audio_listener_2d(true);
 
 signal toggle_game_paused(is_paused : bool)
 
@@ -245,7 +243,7 @@ func show_message(message_id:int):
 	tween.set_ease(Tween.EASE_IN);
 	tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE);
 	tween.tween_property(label, "modulate:a", 0, GV.ERROR_MESSAGE_FADE_TIME).set_trans(Tween.TRANS_EXPO);
-	tween.finished.connect(_on_error_label_faded, label, message_id);
+	tween.finished.connect(_on_error_label_faded.bind(label, message_id));
 	
 	#update messages_shown
 	messages_shown[message_id] = true;

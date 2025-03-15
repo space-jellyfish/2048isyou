@@ -1742,7 +1742,7 @@ func dir_id_to_nav_id(dir_id:int) -> int:
 func dir_to_nav_id(dir:Vector2i) -> int:
 	return dir_id_to_nav_id(dir_to_dir_id(dir));
 
-func is_navigatable(dir:Vector2i, nav_id:int) -> bool:
+func is_navigable(dir:Vector2i, nav_id:int) -> bool:
 	var dir_id:int = GV.dir_to_dir_id(dir);
 	assert(dir_id in GV.DirectionId.values());
 	
@@ -1874,4 +1874,319 @@ func is_in_area(pos:Vector2) -> bool:
 		if self.pos_t != pos_t:
 			world.get_node("Pathfinder").rrd_clear_iad();
 		world.get_node("Pathfinder").set_player_pos(pos_t);
+'''
+
+'''
+const TILE_POW_MAX:int = 14;
+const TILE_GEN_POW_MAX:int = 11;
+
+#assume at most one is -Vector2i.ONE
+func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
+	var atlas_y:int = coords1.y if get_merge_priority(coords1.y) > get_merge_priority(coords2.y) else coords2.y;
+	var atlas_x:int = get_merged_tile_id(coords1.x + 1, coords2.x + 1) - 1;
+	#hostile death
+	if atlas_x == GV.TileId.ZERO - 1 and atlas_y in GV.T_KILLABLE_BY_ZEROING:
+		atlas_y = GV.TypeId.REGULAR;
+	assert(atlas_y != -1 && atlas_x != -1);
+	return Vector2i(atlas_x, atlas_y);
+'''
+
+'''
+	if new_pos != old_pos or (GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.FINISH_ACTION and pos_t != self.pos_t):
+		moved_for_tracking_cam.emit();
+'''
+
+'''
+	# test duplicator world
+	$DuplicatorPathController.set_gv(GV);
+	$DuplicatorPathController.set_world(self);
+	var test:float = $DuplicatorPathController.test_gv();
+	print(test);
+'''
+
+'''
+const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
+'''
+
+'''
+func pc_placeholder():
+	print("PLACEHOLDER")
+	actions.push_back(Vector3i.ZERO);
+'''
+
+'''
+	# delay movement by one frame to wait for tilemap collider update
+	# TODO if tile is both converting and sliding, and one of them finalizes while await is happening, world will be reset to null
+	await world.get_tree().physics_frame;
+'''
+
+'''
+		player.add_premove(Premove.new(player, Vector2i(-1, 0), GV.ActionId.SPLIT))
+		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SPLIT))
+		print(get_atlas_coords(GV.LayerId.TILE, Vector2i(-47, -8)));
+		print($Cells.get_cell_atlas_coords(GV.LayerId.TILE, Vector2i(-47, -8)))
+
+
+'''
+
+'''
+	#callback
+	if not premove_callback_upcoming:
+		call_deferred("try_curr_frame_premoves");
+		premove_callback_upcoming = true;
+'''
+
+'''
+		# try to catch the ultra rare bug
+		if remaining_dist == 40 and collider is TileMap:
+			print(collision.get_position());
+			print(collision.get_normal());
+			print(tile.world.get_atlas_coords(GV.LayerId.TILE, tile.pos_t));
+			assert(false);
+'''
+
+'''
+		# animation should be started from action_func
+		# same for sound effects
+		# same for $Cells update
+
+		# update player-position-related stats from action_func since player can be pushed (bc push/slide weights adjustable from game settings)
+		# these include player_pos_t, is_player_alive
+		
+		# update player_last_dir; this is used by enemies to predict player movement, so only player-initiated actions count
+'''
+
+'''
+	if initiated:
+		# squid club not busy after pushing a tile
+		if not is_roaming():
+			set_is_busy(true);
+'''
+
+'''
+	# update tiles_in_transient and AltId TILE
+	# if is_initializing_transit, transient tile would've already been removed
+	if not is_initializing_transit and not is_reversed:
+
+var debug_entity:Entity;
+
+	debug_entity = world.get_aligned_tile_entity(world.atlas_coords_to_type_id(atlas_coords), pos_t);
+	assert(not debug_entity or debug_entity.is_busy);
+
+# NOTE if is_aligned assert(world.is_tile(pos_t)) is invalid bc animate_*() might've erased cell already
+'''
+
+'''
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		if action_timer:
+			action_timer.queue_free();
+'''
+
+'''
+const PLAYER_COLLIDER_SCALE:float = 0.98;
+
+#	#init physics enabler size
+#	set_tile_push_limit(abilities["tile_push_limit"]);
+#
+#	#scale shapecasts (bc inspector can't handle precise floats)
+#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
+#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
+#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
+#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;
+
+
+func _ready() -> void:
+	collision_shape.scale = GV.PLAYER_COLLIDER_SCALE * Vector2.ONE;
+'''
+
+'''
+		# try to catch the ultra rare bug
+		if remaining_dist == 40 and collider is TileMap:
+			print(collision.get_position());
+			print(collision.get_normal());
+			print(tile.world.get_atlas_coords(GV.LayerId.TILE, tile.pos_t));
+			assert(false);
+		if remaining_dist == 40 and collider is TileForTilemap:
+			print("collider tile: ", collider);
+			print(collision.get_normal());
+			print(tile.pos_t, collider.pos_t);
+			print(tile.position, collider.position);
+'''
+
+'''
+func get_transit_tile(pos_t:Vector2i, include_transient:bool, remove_transient:bool = true) -> TileForTilemap:
+	assert(not is_tile(pos_t))
+	
+	if include_transient:
+		var tile:TileForTilemap = get_aligned_tile_in_transient(pos_t);
+		if tile:
+			if remove_transient:
+				remove_aligned_tile_in_transient(tile);
+			return tile;
+	
+	for tile in $TransitTiles.get_children():
+		assert(not (include_transient and tile.is_aligned and tile.pos_t == pos_t));
+	
+	return get_pooled_tile(pos_t);
+'''
+
+# Type and Entity Key/Busy/Removal and TileMap and aligned_tiles_in_transient and tile_pool Changes
+# MERGE Case 1: m: b->b, g: a->a
+#	not reversed
+#		on g.finalize,
+#			m.entity.key does not change
+#			m.entity.busy becomes false
+#			g.entity is removed
+#			tilemap does not change
+#			add m to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			change m.entity.key to pos_t if not moving
+#			set atlas_coords if not moving
+#			remove m from aligned_tiles_in_transient if not moving (else already removed)
+#			return to pool if not moving
+#	reversed
+#		on g.finalize,
+#			set g.entity.key to pos_t
+#			set g.entity.busy to false
+#			set m.entity.busy to false
+#			set atlas_coords
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			set m.entity.key to pos_t
+#			set atlas_coords
+#			return to pool
+# MERGE Case 2: m: b->a, g: a->a, b != a
+#	not reversed
+#		on g.finalize,
+#			g.entity.key changes from g to m
+#			m.entity is removed
+#			g.entity.busy becomes false
+#			tilemap does not change
+#			add m to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			change m.entity.key to pos_t if not moving
+#			set atlas_coords if not moving
+#			remove m from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		""
+# MERGE Case 3 (Death by Zeroing): m: b->REG, g: a->a, b != REG, a != REG
+#	not reversed
+#		on g.finalize,
+#			remove g.entity
+#			remove m.entity
+#			tilemap doesn't change
+#			add m to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on m.finalize,
+#			set atlas_coords if not moving
+#			remove m from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		""
+# SPLIT Case 1: s: a->a, g: a->a
+#	not reversed
+#		on g.finalize,
+#			change g.entity.key from g to pos_t
+#			set g.busy to false
+#			set s.busy to false
+#			set atlas_coords at pos_t
+#			add s to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on s.finalize,
+#			change s.entity.key to pos_t if not moving
+#			set atlas_coords if not moving
+#			remove s from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		on g.finalize,
+#			set g.entity.key to pos_t
+#			set g.entity.busy to false
+#			remove s.entity
+#			set unsplit atlas_coords at pos_t
+#			return to pool if conversion animators finished
+#		on s.finalize,
+#			return to pool
+# SPLIT Case 2: s: a->REG, g: a->a, a != REG
+#	not reversed
+#		on g.finalize
+#			change g.entity.key to pos_t
+#			set g.busy to false
+#			no need to remove s.entity since it was transferred to g
+#			set atlas_coords at pos_t
+#			add s to aligned_tiles_in_transient
+#			return to pool if conversion animators finished
+#		on s.finalize
+#			set atlas_coords if not moving
+#			remove s from aligned_tiles_in_transient if not moving
+#			return to pool if not moving
+#	reversed
+#		on g.finalize
+#			set g.entity.key to pos_t
+#			set g.busy to false
+#			set unsplit atlas_coords at pos_t
+#			return to pool if conversion animators finished
+#		on s.finalize
+#			return to pool
+# SHIFT:
+#	set entity.key to pos_t
+#	set entity.busy to false
+#	set atlas_coords at pos_t
+#	return to pool if conversion animators finished
+
+''' not needed bc front/back/merger/splitter tiles are always null when initialize_*() is called, and body of finalize_transit() is never entered when is_initializing_transit
+
+var temp_front_tile:TileForTilemap;
+var temp_back_tile:TileForTilemap;
+var temp_merger_tile:TileForTilemap;
+var temp_splitter_tile:TileForTilemap;
+
+	front_tile = temp_front_tile;
+	back_tile = temp_back_tile;
+	set_merger_tile(temp_merger_tile);
+	set_splitter_tile(temp_splitter_tile);
+	temp_front_tile = null;
+	temp_back_tile = null;
+	temp_merger_tile = null;
+	temp_splitter_tile = null;
+
+	assert(tile.temp_front_tile == null);
+	assert(tile.temp_back_tile == null);
+	assert(tile.temp_merger_tile == null);
+	assert(tile.temp_splitter_tile == null);
+'''
+
+'''
+	get_viewport().set_as_audio_listener_2d(true);
+'''
+
+'''
+const P_GEN_DUPLICATOR:float = 0.0005;
+const P_GEN_HOSTILE:float = 0.005;
+
+	# tile type
+	var type_id:int = GV.TypeId.REGULAR;
+	var n_type:float = randf();
+	if n_type < 0.2:#GV.P_GEN_DUPLICATOR:
+		type_id = GV.TypeId.DUPLICATOR;
+		print("DUP GEN")
+	elif n_type < GV.P_GEN_HOSTILE:
+		type_id = GV.TypeId.HOSTILE;
+'''
+
+'''
+			print("finalize ", GV.TransitId.keys()[move_transit_id], "is_aligned: ", is_aligned, " move_controller.dir: ", move_controller.dir, "position: ", position);
+
+		# check for perp collision causing unalignment
+		if collider is TileForTilemap and collider.move_controller and not Vector2(collider.move_controller.dir).dot(dir):
+			print(dir, collider.move_controller.dir, prev_position, tile.position);
+
+	var curr_pos_t:Vector2i = GV.world_to_pos_t(tile.position);
+	var offset:Vector2 = tile.position - GV.pos_t_to_world(curr_pos_t); #this is the vector from nearest grid center (not intersection) to tile position
+	if (dir.x and abs(offset.y) > GV.SNAP_TOLERANCE) or \
+	(dir.y and abs(offset.x) > GV.SNAP_TOLERANCE):
+		print("START UNALIGNED from ", tile.position, " in dir ", dir);
 '''
