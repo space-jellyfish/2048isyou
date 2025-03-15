@@ -415,7 +415,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	if tile_entity and is_move_finalize and is_self_entity_preserved:
 		tile_entity.set_is_busy(false);
 	
-	# set splitter/merger entity not busy IF THEY"RE NOT MOVING
+	# set splitter/merger entity not busy (assume they're not moving)
 	if is_move_finalize:
 		if is_merging and not is_self_entity_preserved:
 			assert(merger_tile.move_transit_id == GV.TransitId.NONE);
