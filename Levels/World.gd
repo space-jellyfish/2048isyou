@@ -62,7 +62,7 @@ func _ready():
 		entities_with_curr_frame_premoves[entity_id] = Dictionary();
 	
 	# init player
-	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t);
+	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t, false);
 	add_entity(GV.EntityId.PLAYER, initial_player_pos_t, player);
 	
 	# init trackingCam stuff
@@ -308,7 +308,7 @@ func generate_cell(pos_t:Vector2i):
 	
 	# entity
 	if type_id not in GV.T_NONE_OR_REGULAR:
-		add_entity(type_id, pos_t, Entity.new(self, null, type_id, pos_t));
+		add_entity(type_id, pos_t, Entity.new(self, null, type_id, pos_t, false));
 	
 	layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
@@ -780,7 +780,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			
 			# add entity if duplicated
 			if splitter_type_id not in GV.T_NONE_OR_REGULAR:
-				var tile_entity:Entity = Entity.new(self, splitting_tile, splitter_type_id, Vector2i());
+				var tile_entity:Entity = Entity.new(self, splitting_tile, splitter_type_id, Vector2i(), true);
 				tile_entity.set_is_busy(true);
 				add_entity(splitter_type_id, splitting_tile, tile_entity);
 		
