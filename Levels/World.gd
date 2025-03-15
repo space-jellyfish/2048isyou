@@ -17,6 +17,7 @@ var wall_noise = FastNoiseLite.new();
 # Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
 # secondary key is body if it exists and pos_t otherwise
 # NOTE using pos_t (as secondary key) doesn't work for an aligned tile if it's in transient
+# NOTE writes should be protected by layer_mutexes[GV.LayerId.TILE]
 var entities:Dictionary;
 var entities_with_curr_frame_premoves:Dictionary; #[EntityId, Dictionary[Entity, DONT_CARE]]
 var premove_callback_upcoming:bool = false;
