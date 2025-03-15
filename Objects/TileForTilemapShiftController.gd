@@ -24,8 +24,10 @@ func step(delta:float):
 	tile.velocity = tile.velocity.lerp(max_speed * dir, GV.SHIFT_LERP_WEIGHT);
 	tile.velocity = clamp(Vector2(dir).dot(tile.velocity), GV.TILE_SLIDE_SPEED, max_speed) * dir;
 	var collision:KinematicCollision2D = tile.move_and_collide(tile.velocity * delta);
+	# reset non-movement-axis coordinate bc perp collision can cause unalignment
+	tile.position = Vector2(dir.abs()) * tile.position + (Vector2.ONE - Vector2(dir.abs())) * prev_position;
 	
-	#update remaining_dist
+	# update remaining_dist
 	var true_step_dist:float = Vector2(dir).dot(tile.position - prev_position);
 	remaining_dist -= true_step_dist;
 	
@@ -33,15 +35,15 @@ func step(delta:float):
 	if not is_reversed and remaining_dist > GV.SNAP_TOLERANCE:
 		var new_latest_pos_t:Vector2i = GV.world_to_pos_t(tile.position - 0.5 * GV.TILE_WIDTH * dir);
 		if new_latest_pos_t != latest_pos_t:
-			tile.world.remove_nav_id(latest_pos_t, GV.NAV_UNITS[dir]);
+			tile.world.remove_nav_id(latest_pos_t, GV.NAV_UNITS[-dir]);
 			tile.world.remove_nav_id(latest_pos_t + dir, GV.NavId.ALL);
-			tile.world.add_nav_id(new_latest_pos_t, GV.NAV_UNITS[dir]);
+			tile.world.add_nav_id(new_latest_pos_t, GV.NAV_UNITS[-dir]);
 			tile.world.add_nav_id(new_latest_pos_t + dir, GV.NavId.ALL);
 			latest_pos_t = new_latest_pos_t;
 	
 	#emit moved signal
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:
-		tile.moved.emit();
+		tile.moved_for_tracking_cam.emit();
 	
 	#bounce (with deceleration), update tilemap if shift finished
 	if remaining_dist <= GV.SNAP_TOLERANCE:

@@ -28,8 +28,8 @@ const WORLD_MIN_POS_T:Vector2i = BORDER_MIN_POS_T + Vector2i.ONE; #leave gap for
 const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
-const LEVEL_COUNT:int = 17;
-var current_level_index:int = 14;
+const LEVEL_COUNT:int = 4;
+var current_level_index:int = 0;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
@@ -37,13 +37,15 @@ var reverting:bool = false; #if true, fade faster and don't show lv name
 #var through_goal:bool = false; #changing level via goal
 
 #procgen-related stuff
-const TILE_POW_MAX:int = 14;
-const TILE_GEN_POW_MAX:int = 11;
-const TILE_VALUE_COUNT:int = 2 * TILE_POW_MAX + 3;
+enum TilePow {
+	VAL_ZERO = -1,
+	VAL_ONE = 0,
+	MAX = 14,
+	MAX_PROCGEN = 11,
+};
+const TILE_VALUE_COUNT:int = 2 * TilePow.MAX + 3;
 const TILE_LOAD_BUFFER:float = 8 * TILE_WIDTH;
 const TILE_UNLOAD_BUFFER:float = 8 * TILE_WIDTH;
-const P_GEN_DUPLICATOR:float = 0.0005;
-const P_GEN_HOSTILE:float = 0.005;
 
 #save-related stuff
 #note non-export variables are not saved in packed scene
@@ -80,9 +82,8 @@ const TRACKING_CAM_SLACK_RATIO:float = 0.15; #0.25; #ratio applied to slack (tra
 const TRACKING_CAM_TRANSITION_TIME:float = 1.28;
 const PLAYER_SPAWN_INVINCIBILITY_TIME:float = 0.25;
 
-const SNAP_TOLERANCE:float = 0.1; #epsilon; in px
+const SNAP_TOLERANCE:float = 2.3; # in px
 const COLLISION_TEST_DISTANCE:float = 0.4;
-const PLAYER_COLLIDER_SCALE:float = 0.98;
 const PLAYER_MU:float = 0.16; #coefficient of friction
 const PLAYER_SLIDE_SPEED:float = 33;
 const PLAYER_SLIDE_SPEED_MIN:float = 8;
@@ -154,6 +155,7 @@ enum ConversionAnimatorId {
 }
 
 enum ActionId {
+	NONE, #when in path returned by path_controller, indicates tile should wait
 	SLIDE,
 	SPLIT,
 	SHIFT,
@@ -224,13 +226,16 @@ var abilities:Dictionary = {
 	"copy" : true,
 };
 
+# should match tile_sheet
 enum TileId { #5 bits
 	EMPTY = 0,
 	ZERO = 16,
 };
 
+# should match tile_sheet
 enum TypeId { #3 bits
-	PLAYER = 0,
+	NONE = 0,
+	PLAYER,
 	DUPLICATOR,
 	HOSTILE,
 	VOID,
@@ -238,6 +243,7 @@ enum TypeId { #3 bits
 	SQUID,
 }
 
+# should match back_sheet
 enum BackId { #8 bits
 	EMPTY = 0,
 	BORDER_ROUND,
@@ -251,24 +257,171 @@ enum BackId { #8 bits
 	BOARD_FRAME,
 }
 
-const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
-const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
-const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
-const T_ENEMY:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE, TypeId.VOID, TypeId.SQUID];
-const T_ENEMY_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
-
 # NOTE TypeId should be usable as EntityId without conversion
 enum EntityId {
+	NONE = 0,
 	PLAYER, #for simplicity, player priorities/push_weight/tpl are the same when roaming
 	DUPLICATOR,
 	HOSTILE,
 	VOID,
-	NONE, #TypeId.REGULAR
+	REGULAR,
 	SQUID_BODY,
 	SQUID_CLUB,
 	STP_SPAWNING,
 	STP_SPAWNED,
 	SNAKE,
+}
+
+const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
+const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
+const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
+const T_NONE_OR_REGULAR:Array = [TypeId.NONE, TypeId.REGULAR];
+const T_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
+const E_HAS_PATHFINDING:Array = [EntityId.DUPLICATOR];
+const E_ENEMY:Dictionary = { #[src_entity, dest_entity]
+	EntityId.NONE : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : false,
+		EntityId.DUPLICATOR : false,
+		EntityId.HOSTILE : false,
+		EntityId.VOID : false,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : false,
+		EntityId.SQUID_CLUB : false,
+		EntityId.STP_SPAWNING : false,
+		EntityId.STP_SPAWNED : false,
+		EntityId.SNAKE : false,
+	},
+	EntityId.PLAYER : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : true,
+		EntityId.HOSTILE : true,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : true,
+		EntityId.SQUID_CLUB : true,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.DUPLICATOR : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : false,
+		EntityId.HOSTILE : false,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : true,
+		EntityId.SQUID_CLUB : true,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.HOSTILE : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : false,
+		EntityId.HOSTILE : false,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : true,
+		EntityId.SQUID_CLUB : true,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.VOID : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : true,
+		EntityId.HOSTILE : true,
+		EntityId.VOID : false,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : true,
+		EntityId.SQUID_CLUB : true,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.REGULAR : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : false,
+		EntityId.DUPLICATOR : false,
+		EntityId.HOSTILE : false,
+		EntityId.VOID : false,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : false,
+		EntityId.SQUID_CLUB : false,
+		EntityId.STP_SPAWNING : false,
+		EntityId.STP_SPAWNED : false,
+		EntityId.SNAKE : false,
+	},
+	EntityId.SQUID_BODY : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : true,
+		EntityId.HOSTILE : true,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : false,
+		EntityId.SQUID_CLUB : false,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.SQUID_CLUB : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : true,
+		EntityId.HOSTILE : true,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : false,
+		EntityId.SQUID_CLUB : false,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.STP_SPAWNING : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : true,
+		EntityId.HOSTILE : true,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : true,
+		EntityId.SQUID_CLUB : true,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.STP_SPAWNED : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : true,
+		EntityId.HOSTILE : true,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : true,
+		EntityId.SQUID_CLUB : true,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : true,
+	},
+	EntityId.SNAKE : {
+		EntityId.NONE : false,
+		EntityId.PLAYER : true,
+		EntityId.DUPLICATOR : true,
+		EntityId.HOSTILE : true,
+		EntityId.VOID : true,
+		EntityId.REGULAR : false,
+		EntityId.SQUID_BODY : true,
+		EntityId.SQUID_CLUB : true,
+		EntityId.STP_SPAWNING : true,
+		EntityId.STP_SPAWNED : true,
+		EntityId.SNAKE : false,
+	},
 }
 
 enum TileSetSourceId {
@@ -318,11 +471,12 @@ const NAV_UNITS:Dictionary = {
 
 #player tile_push_limit does not change when roaming
 var tile_push_limits:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 2,
-	EntityId.DUPLICATOR : 1,
+	EntityId.DUPLICATOR : 0,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 3,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 0,
 	EntityId.SQUID_CLUB : 6,
 	EntityId.STP_SPAWNING : 0,
@@ -331,6 +485,7 @@ var tile_push_limits:Dictionary = {
 };
 
 var duplicate_upon_split:Dictionary = {
+	TypeId.NONE : false,
 	TypeId.PLAYER : false,
 	TypeId.DUPLICATOR : true,
 	TypeId.HOSTILE : false,
@@ -340,7 +495,7 @@ var duplicate_upon_split:Dictionary = {
 }
 
 var merge_priorities:Dictionary = {
-	-1 : -1,
+	TypeId.NONE : -1,
 	TypeId.REGULAR : 0,
 	TypeId.PLAYER : 1,
 	TypeId.HOSTILE : 2,
@@ -349,13 +504,14 @@ var merge_priorities:Dictionary = {
 	TypeId.SQUID : 5,
 }
 
-#push is possible if pusher push_weight >= pushed slide_weight
+# push is possible if pusher push_weight >= pushed slide_weight
 var slide_weights:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 3, #INT64_MAX when roaming, but doesn't matter since only SQUID_CLUB can push player
 	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 2,
 	EntityId.VOID : 0,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 0,
 	EntityId.SQUID_CLUB : INT64_MAX,
 	EntityId.STP_SPAWNING : INT64_MAX,
@@ -363,13 +519,14 @@ var slide_weights:Dictionary = {
 	EntityId.SNAKE : INT64_MAX,
 }
 
-#-1 if entity cannot push anything
+# -1 if entity cannot push anything
 var push_weights:Dictionary = {
+	EntityId.NONE : -1,
 	EntityId.PLAYER : 2,
 	EntityId.DUPLICATOR : 1,
 	EntityId.HOSTILE : 1,
 	EntityId.VOID : 2,
-	EntityId.NONE : -1,
+	EntityId.REGULAR : -1,
 	EntityId.SQUID_BODY : -1,
 	EntityId.SQUID_CLUB : 3,
 	EntityId.STP_SPAWNING : -1,
@@ -387,11 +544,12 @@ enum SlideArbitrationMode {
 # for tiebreaking when two slides collide at midpoint
 # id of entity that initiated move is used, not EntityId of moving tile
 var slide_priorities:Dictionary = {
+	EntityId.NONE : -1,
 	EntityId.PLAYER : 8,
 	EntityId.DUPLICATOR : 3,
 	EntityId.HOSTILE : 4,
 	EntityId.VOID : 5,
-	EntityId.NONE : -1,
+	EntityId.REGULAR : -1,
 	EntityId.SQUID_BODY : 2,
 	EntityId.SQUID_CLUB : 1,
 	EntityId.STP_SPAWNING : 0,
@@ -403,11 +561,12 @@ var slide_priorities:Dictionary = {
 # enemies have higher priority so player cannot use premoving to cross enemy-protected cells
 # roaming entities should use the premove system instead of initiating moves in the middle of physics frame
 var premove_priorities:Dictionary = {
+	EntityId.NONE : -1,
 	EntityId.PLAYER : 3,
 	EntityId.DUPLICATOR : 5,
 	EntityId.HOSTILE : 4,
 	EntityId.VOID : 6,
-	EntityId.NONE : -1,
+	EntityId.REGULAR : -1,
 	EntityId.SQUID_BODY : 2,
 	EntityId.SQUID_CLUB : 1,
 	EntityId.STP_SPAWNING : 0,
@@ -418,6 +577,7 @@ var premove_priorities:Dictionary = {
 var ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:Array;
 
 var max_shift_dists:Dictionary = {
+	TypeId.NONE : 0,
 	TypeId.PLAYER : 4,
 	TypeId.DUPLICATOR : 0,
 	TypeId.HOSTILE : 0,
@@ -426,30 +586,34 @@ var max_shift_dists:Dictionary = {
 	TypeId.SQUID : 8,
 }
 
-# whether all instances of entity should move in sync
-var move_sync:Dictionary = {
-	EntityId.PLAYER : false,
-	EntityId.DUPLICATOR : false,
-	EntityId.HOSTILE : false,
-	EntityId.VOID : false,
-	EntityId.NONE : false,
-	EntityId.SQUID_BODY : false,
-	EntityId.SQUID_CLUB : false,
-	EntityId.STP_SPAWNING : false,
-	EntityId.STP_SPAWNED : false,
-	EntityId.SNAKE : false,
+# if not null, all instances of entity should move in sync
+# TODO pause these when pause menu is opened to avoid the np bug
+var global_action_timers:Dictionary = {
+	EntityId.NONE : null,
+	EntityId.PLAYER : null,
+	EntityId.DUPLICATOR : null,
+	EntityId.HOSTILE : null,
+	EntityId.VOID : null,
+	EntityId.REGULAR : null,
+	EntityId.SQUID_BODY : null,
+	EntityId.SQUID_CLUB : null,
+	EntityId.STP_SPAWNING : null,
+	EntityId.STP_SPAWNED : null,
+	EntityId.SNAKE : null,
 }
 
 # in seconds
 # NOTE use 0 to let entity try premoves as fast as *physically* possible, as determined by TILE_WIDTH and TILE_SLIDE_SPEED
 # NOTE extend to use Vector2i(entity_id, action_id) as key if necessary
 # NOTE phase should be delayed if ThreadPool couldn't finish pathfinding on time
-var move_cooldowns:Dictionary = {
+const UNINITIATED_PREMOVE_COOLDOWN_DISCOUNT:float = 0.5;
+var action_cooldowns:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
-	EntityId.DUPLICATOR : 14,
+	EntityId.DUPLICATOR : 4, #14,
 	EntityId.HOSTILE : 0.8,
 	EntityId.VOID : 0.5,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 1,
 	EntityId.SQUID_CLUB : 0,
 	EntityId.STP_SPAWNING : 2.8, #should accelerate
@@ -457,18 +621,29 @@ var move_cooldowns:Dictionary = {
 	EntityId.SNAKE : 0, #speed should oscillate for realistic movement
 }
 
-# max random deviation from premove_interval, in seconds
-var move_cooldown_deviations:Dictionary = {
+# max positive deviation from action_cooldown, in seconds
+var action_cooldown_deviations:Dictionary = {
+	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
-	EntityId.DUPLICATOR : 3,
+	EntityId.DUPLICATOR : 0.5, #3,
 	EntityId.HOSTILE : 0,
 	EntityId.VOID : 0,
-	EntityId.NONE : 0,
+	EntityId.REGULAR : 0,
 	EntityId.SQUID_BODY : 0.1,
 	EntityId.SQUID_CLUB : 0,
 	EntityId.STP_SPAWNING : 0,
 	EntityId.STP_SPAWNED : 0,
 	EntityId.SNAKE : 0,
+}
+
+var base_spawn_weights:Dictionary = {
+	TypeId.NONE : 0,
+	TypeId.PLAYER : 0,
+	TypeId.DUPLICATOR : 2000,#4,
+	TypeId.HOSTILE : 50,
+	TypeId.VOID : 2,
+	TypeId.REGULAR : 10000,
+	TypeId.SQUID : 1,
 }
 
 enum SASearchId {
@@ -523,7 +698,7 @@ var messages:Dictionary = {
 
 
 func dir_to_dir_id(dir:Vector2i) -> int:
-	return 1.5 * dir.x - 0.5 * dir.y + 1.5;
+	return int(1.5 * dir.x - 0.5 * dir.y + 1.5);
 
 func world_to_pos_t(pos:Vector2) -> Vector2i:
 	return (pos / TILE_WIDTH).floor();
@@ -596,10 +771,10 @@ func tile_val_to_id(power:int, ssign:int) -> int:
 	return (power + 1) * ssign + TileId.ZERO;
 
 # ssign should be 1 for TileId.ZERO (required by is_vals_mergeable())
-func id_to_tile_val(id:int):
-	if id == TileId.ZERO:
+func tile_id_to_val(tile_id:int):
+	if tile_id == TileId.ZERO or tile_id == TileId.EMPTY:
 		return Vector2i(-1, 1);
-	var signed_incremented_pow:int = id - TileId.ZERO;
+	var signed_incremented_pow:int = tile_id - TileId.ZERO;
 	return Vector2i(absi(signed_incremented_pow) - 1, signi(signed_incremented_pow));
 
 func is_approx_equal(a:float, b:float, tolerance:float) -> bool:
@@ -633,12 +808,3 @@ func _ready():
 	#fill sorted entity_id lists
 	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY = premove_priorities.keys();
 	ENTITY_IDS_DECREASING_PREMOVE_PRIORITY.sort_custom(func(a, b): return premove_priorities[a] > premove_priorities[b]);
-	
-#	#init physics enabler size
-#	set_tile_push_limit(abilities["tile_push_limit"]);
-#
-#	#scale shapecasts (bc inspector can't handle precise floats)
-#	var shape_LR:RectangleShape2D = preload("res://Objects/ShapeCastShapeLR.tres");
-#	var shape_UD:RectangleShape2D = preload("res://Objects/ShapeCastShapeUD.tres");
-#	shape_LR.size.y *= GV.PLAYER_COLLIDER_SCALE;
-#	shape_UD.size.x *= GV.PLAYER_COLLIDER_SCALE;

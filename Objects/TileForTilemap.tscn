@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://b5vw0ff0dfmkv"]
 
-[ext_resource type="Script" path="res://Objects/TileForTilemap.gd" id="1_w0hdh"]
+[ext_resource type="Script" uid="uid://coeqhntaadss7" path="res://Objects/TileForTilemap.gd" id="1_w0hdh"]
 [ext_resource type="AudioStream" uid="uid://b8hg5w8h4n0ll" path="res://Audio/merge_short.wav" id="2_pljt6"]
 [ext_resource type="AudioStream" uid="uid://4acf1v8r2emv" path="res://Audio/snap.wav" id="3_v1825"]
 [ext_resource type="AudioStream" uid="uid://ba2n6bmuyqoqa" path="res://Audio/split_b_short.wav" id="4_08a8k"]
@@ -11,22 +11,28 @@ collision_layer = 0
 collision_mask = 0
 script = ExtResource("1_w0hdh")
 
-[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+[node name="CollisionPolygon2DOld" type="CollisionPolygon2D" parent="."]
 polygon = PackedVector2Array(-16, -19, -14, -20, 14, -20, 16, -19, 19, -16, 20, -14, 20, 14, 19, 16, 16, 19, 14, 20, -14, 20, -16, 19, -19, 16, -20, 14, -20, -14, -19, -16)
+disabled = true
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+polygon = PackedVector2Array(-16, -18, -14, -19, 14, -19, 16, -18, 18, -16, 19, -14, 19, 14, 18, 16, 16, 18, 14, 19, -14, 19, -16, 18, -18, 16, -19, 14, -19, -14, -18, -16)
 
 [node name="Audio" type="Node2D" parent="."]
 
 [node name="Combine" type="AudioStreamPlayer2D" parent="Audio"]
 stream = ExtResource("2_pljt6")
-volume_db = 1.0
+volume_db = -9.0
 
 [node name="Slide" type="AudioStreamPlayer2D" parent="Audio"]
 stream = ExtResource("3_v1825")
+volume_db = -13.0
 
 [node name="Split" type="AudioStreamPlayer2D" parent="Audio"]
 stream = ExtResource("4_08a8k")
-volume_db = 2.3
+volume_db = -7.7
 
 [node name="Shift" type="AudioStreamPlayer2D" parent="Audio"]
+position = Vector2(0, 1)
 stream = ExtResource("5_lgs43")
-volume_db = -2.5
+volume_db = -12.5

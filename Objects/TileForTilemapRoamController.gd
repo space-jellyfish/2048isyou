@@ -24,7 +24,7 @@ func step(delta:float):
 	
 	#emit moved signal
 	if tile.get_last_motion().length():
-		tile.moved.emit();
+		tile.moved_for_tracking_cam.emit();
 	
 	for index in tile.get_slide_collision_count():
 		var collision:KinematicCollision2D = tile.get_slide_collision(index);
@@ -42,5 +42,10 @@ func step(delta:float):
 			#slide if slide_dir and player_dir agree
 			# this means player can guide itself to alignment if it cuts a tile really thin on the corner
 			if (slide_dir.x && slide_dir.x == dir.x) or (slide_dir.y && slide_dir.y == dir.y):
+				pass;
 				# add premove using self.premove_priority
-				tile.world.add_premove()
+				# NOTE same entity should be used by all roaming pushers bc try_*() checks its is_busy flag
+				#var tile_entity:Entity = tile.world.get_entity(tile.old_type_id, tile);
+				#var pushed_tile_entity:Entity = tile.world.get_aligned_tile_entity()
+				#var premove:Premove = Premove.new(tile_entity, )
+				#tile_entity.add_premove();
