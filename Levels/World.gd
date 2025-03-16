@@ -25,8 +25,10 @@ var premove_callback_upcoming:bool = false;
 @export var procgen:bool = false;
 # everything outside the loaded rect is conceptually unloaded => pause entity activity
 # NOTE previously loaded tilemap cells stay loaded in practice
+# NOTE don't use Rect2i bc inclusive loaded_pos_t_max is more intuitive, especially for update_map()
 var loaded_pos_t_min:Vector2i = Vector2i.ZERO;
 var loaded_pos_t_max:Vector2i = -Vector2i.ONE; #inclusive
+var active_rect_t:Rect2i = Rect2i(Vector2i.ZERO, Vector2i.ZERO);
 
 #for enemy intel
 @export var initial_player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
@@ -237,8 +239,8 @@ func on_copy():
 
 func _on_tracking_cam_moved(pos:Vector2):
 	if procgen:
-		var load_pos_min:Vector2 = pos - GV.tracking_cam_resolution / 2 - GV.TILE_LOAD_BUFFER * Vector2.ONE;
-		var load_pos_max:Vector2 = pos + GV.tracking_cam_resolution / 2 + GV.TILE_LOAD_BUFFER * Vector2.ONE;
+		var load_pos_min:Vector2 = pos - GV.tracking_cam_resolution / 2 - GV.TILE_LOAD_BUFFER * GV.TILE_WIDTH * Vector2.ONE;
+		var load_pos_max:Vector2 = pos + GV.tracking_cam_resolution / 2 + GV.TILE_LOAD_BUFFER * GV.TILE_WIDTH * Vector2.ONE;
 		var load_pos_t_min:Vector2i = GV.world_to_pos_t(load_pos_min);
 		var load_pos_t_max:Vector2i = GV.world_to_pos_t(load_pos_max);
 		#print("load_pos_t_min: ", load_pos_t_min);
@@ -246,6 +248,9 @@ func _on_tracking_cam_moved(pos:Vector2):
 		update_map(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max);
 		loaded_pos_t_min = load_pos_t_min;
 		loaded_pos_t_max = load_pos_t_max;
+		var active_pos_t_min:Vector2i = loaded_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
+		var active_rect_t_size:Vector2i = loaded_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
+		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
 
 # NOTE pos_t_max inclusive
 func update_map(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Vector2i, new_pos_t_max:Vector2i):
