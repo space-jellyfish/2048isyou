@@ -18,22 +18,25 @@ signal moved_for_path_controller(pos_t:Vector2i, is_reversed:bool, resulting_ent
 signal died(killer_entity:Entity);
 
 var world:World;
-var body:Node2D; #if null, refer to pos_t (entity is in TileMap)
-var entity_id:int; #should not change after init
-var pos_t:Vector2i; #NOTE invalid if body not null
+var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
+var entity_id:int; # should not change after init
+# invalid if body not null
+# NOTE if STP, represents top left corner
+var pos_t:Vector2i;
+var size:Vector2i; # (k, k) if STP else (1, 1)
 var premoves:Array[Premove];
-var is_busy:bool = false; #true if premoves are unable to be consumed
+var is_busy:bool = false; # true if premoves are unable to be consumed
 # controls entity movement/behavior
 # path_controller functions should be multithreaded for performance
 var path_controller:RefCounted;
-var action_timer:Timer; #null if entity doesn't have pathfinding
+var action_timer:Timer; # null if entity doesn't have pathfinding
 var task_id:int;
 var is_task_active:bool = false;
 var task_src_pos_t:Vector2i;
 var task_actions:Array[Vector3i];
 
 
-func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, is_split_spawned:bool):
+func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2i, is_split_spawned:bool):
 	assert(entity_id not in GV.T_NONE_OR_REGULAR);
 	self.world = world;
 	self.body = body;
@@ -41,6 +44,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, is_split_spa
 		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
 	self.entity_id = entity_id;
 	self.pos_t = pos_t;
+	self.size = size;
 	
 	# add path controller
 	match entity_id:
