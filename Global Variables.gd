@@ -44,8 +44,8 @@ enum TilePow {
 	MAX_PROCGEN = 11,
 };
 const TILE_VALUE_COUNT:int = 2 * TilePow.MAX + 3;
-const TILE_LOAD_BUFFER:int = 8;
-const TILE_UNLOAD_BUFFER:int = 8;
+const TILE_LOAD_BUFFER:int = 12;
+const TILE_UNLOAD_BUFFER:int = 12;
 # no. tiles between active rect and loaded rect
 # inactive buffer is necessary to prevent inactive entities from overlapping with unspawned cells
 const ENTITY_INACTIVE_BUFFER:int = 4;
