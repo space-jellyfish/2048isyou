@@ -336,7 +336,7 @@ void DuplicatorPathController::get_actions() {
 // else choose target entity over NONE/REGULAR (if hunting)
 // else prefer escape dir over perp dir
 // else prefer higher resulting power
-// else prefer split over slide
+// else prefer slide over split (to grow power)
 DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger) :
     dpc(p_dpc),
     action(p_action),
@@ -360,7 +360,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
     weight += (target_merge_priority != -1) * 1000;
 
     // wander-related stuff
-    weight += (action.z == ActionId::SPLIT) * 1;
+    weight += (action.z == ActionId::SLIDE) * 2;
 
     // random term for unpredictability
     uniform_int_distribution<int> dist(0, 10);
@@ -369,7 +369,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
 
 bool DuplicatorPathController::Action::operator<(const Action& other) const {
     int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 8;
-    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * 3;
+    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * 1;
     int temp_weight = weight + resulting_power_bonus + merge_priority_bonus;
 
     // tiebreaking
