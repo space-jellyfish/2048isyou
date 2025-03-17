@@ -257,9 +257,6 @@ func change_keys(old_key:Variant, new_key:Variant):
 func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
-func get_position() -> Vector2:
-	return body.position if body else GV.pos_t_to_world(pos_t);
-
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
 
@@ -269,6 +266,14 @@ func is_aligned() -> bool:
 func is_roaming():
 	#return entity_id == GV.EntityId.SQUID_CLUB or (entity_id == GV.EntityId.PLAYER and not GV.snap_mode);
 	return not is_aligned();
+
+func is_active():
+	if body:
+		return Rect2(world.active_rect_t.position * GV.TILE_WIDTH, world.active_rect_t.size * GV.TILE_WIDTH).has_point(get_position());
+	world.active_rect_t.intersects(Rect2i(pos_t, size));
+
+func get_position() -> Vector2:
+	return body.position if body else GV.pos_t_to_world(pos_t);
 
 # returns pos_t if is_aligned else null
 func get_pos_t() -> Variant:
