@@ -5,6 +5,8 @@
 class_name World
 extends Node2D
 
+signal active_rect_moved;
+
 @onready var game:Node2D = $"/root/Game";
 var packed_tile:PackedScene = preload("res://Objects/TileForTilemap.tscn");
 var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.png");
@@ -249,6 +251,7 @@ func _on_tracking_cam_moved(pos:Vector2):
 		var active_pos_t_min:Vector2i = loaded_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
 		var active_rect_t_size:Vector2i = loaded_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
 		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
+		active_rect_moved.emit();
 
 # NOTE pos_t_max inclusive
 func update_map(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Vector2i, new_pos_t_max:Vector2i):
