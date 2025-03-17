@@ -27,6 +27,7 @@ var size:Vector2i; # (k, k) if STP else (1, 1)
 var premoves:Array[Premove];
 var is_busy:bool = false; # true if premoves are unable to be consumed
 var is_premove_queued:bool = false;
+var is_inactive:bool = false;
 # controls entity movement/behavior
 # path_controller functions should be multithreaded for performance
 var path_controller:RefCounted;
@@ -48,6 +49,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 	world.active_rect_moved.connect(_on_active_rect_moved);
 	if body:
 		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
+	is_inactive = not is_active();
 	
 	# add path controller
 	match entity_id:
@@ -104,12 +106,12 @@ func get_pos_t() -> Variant:
 		return pos_t;
 
 func is_premove_possible() -> bool:
-	return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves and is_active();
+	return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves and not is_inactive;
 
 func is_pathfind_warranted() -> bool:
 	if entity_id not in GV.E_HAS_PATHFINDING or is_task_active or is_busy or not is_aligned():
 		return false;
-	return action_timer.is_stopped() and not premoves and is_active();
+	return action_timer.is_stopped() and not premoves and not is_inactive;
 
 func _process():
 	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
@@ -156,6 +158,7 @@ func set_is_busy(is_busy:bool):
 	if not is_busy and not is_active():
 		if action_timer:
 			action_timer.stop();
+		is_inactive = true;
 	
 	try_premove();
 	try_pathfind();
@@ -295,7 +298,8 @@ func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
 func _on_active_rect_moved():
-	if is_active():
+	if is_inactive and is_active():
+		is_inactive = false;
 		if action_timer and not is_premove_queued:
 			action_timer.start(get_initial_action_cooldown());
 		try_premove();
