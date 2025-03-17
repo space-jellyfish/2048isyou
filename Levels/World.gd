@@ -563,11 +563,10 @@ func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i
 					return push_count; #bubble
 				return nearest_merge_push_count;
 		
-		if push_count == GV.tile_push_limits[pusher_entity.entity_id] or \
-		GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
+		if GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
 			return nearest_merge_push_count;
 		push_count += 1;
-	return -1;
+	return nearest_merge_push_count;
 
 func get_merge_priority(type_id:int):
 	return GV.merge_priorities[type_id];
