@@ -26,6 +26,7 @@ var pos_t:Vector2i;
 var size:Vector2i; # (k, k) if STP else (1, 1)
 var premoves:Array[Premove];
 var is_busy:bool = false; # true if premoves are unable to be consumed
+var is_premove_queued:bool = false;
 # controls entity movement/behavior
 # path_controller functions should be multithreaded for performance
 var path_controller:RefCounted;
@@ -167,6 +168,7 @@ func try_premove():
 		if not is_busy and is_aligned():
 			assert(world.is_tile(get_pos_t()));
 		world.add_curr_frame_premove_entity(self);
+		is_premove_queued = true;
 
 func try_pathfind():
 	if is_pathfind_warranted():
@@ -197,6 +199,7 @@ func try_curr_frame_premoves():
 	assert(not action_timer or action_timer.is_stopped());
 	if premoves:
 		consume_premove();
+	is_premove_queued = false;
 
 func consume_premove():
 	var premove:Premove = premoves.pop_front();
@@ -292,7 +295,8 @@ func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
 func _on_active_rect_moved():
-	if is_active() and action_timer:
-		action_timer.start(get_initial_action_cooldown());
+	if is_active():
+		if action_timer and not is_premove_queued:
+			action_timer.start(get_initial_action_cooldown());
 		try_premove();
 		try_pathfind();
