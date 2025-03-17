@@ -314,7 +314,7 @@ void DuplicatorPathController::get_actions() {
                     resulting_power = tile_id_to_val(merged_tile_id).x;
                 }
                 int dot_escape_dir = dot(dir, temp_danger.escape_dir);
-                int target_merge_priority = (!action_push_count && T_NONE_OR_REGULAR.find(curr_type_id) == T_NONE_OR_REGULAR.end()) ? merge_priorities.at(curr_type_id) : -1;
+                int target_merge_priority = (!action_push_count && T_NONE_OR_REGULAR.find(curr_type_id) == T_NONE_OR_REGULAR.end() && curr_type_id != TypeId::DUPLICATOR) ? merge_priorities.at(curr_type_id) : -1;
 
                 actions.emplace_back(this, action, resulting_power, dot_escape_dir, target_merge_priority, temp_danger.level);
             }

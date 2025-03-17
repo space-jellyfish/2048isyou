@@ -45,7 +45,7 @@ private:
         Vector3i action;
         int resulting_power;
         int dot_escape_dir;
-        int target_merge_priority; //-1 if not merge or target isn't an entity
+        int target_merge_priority; //-1 if not merge or target isn't a non-duplicator entity
     
         Action(DuplicatorPathController* p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger);
         bool operator<(const Action& other) const;

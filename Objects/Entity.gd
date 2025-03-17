@@ -40,11 +40,13 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 	assert(entity_id not in GV.T_NONE_OR_REGULAR);
 	self.world = world;
 	self.body = body;
-	if body:
-		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
 	self.entity_id = entity_id;
 	self.pos_t = pos_t;
 	self.size = size;
+	
+	world.active_rect_moved.connect(_on_active_rect_moved);
+	if body:
+		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
 	
 	# add path controller
 	match entity_id:
@@ -72,6 +74,41 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 		assert(action_timer.is_inside_tree());
 		var cd:float = get_action_cooldown(true) if is_split_spawned else get_initial_action_cooldown();
 		action_timer.start(cd);
+
+func is_tile() -> bool:
+	return not body or body is TileForTilemap;
+
+func is_aligned() -> bool:
+	return not body or (body is TileForTilemap and body.is_aligned);
+
+func is_roaming():
+	#return entity_id == GV.EntityId.SQUID_CLUB or (entity_id == GV.EntityId.PLAYER and not GV.snap_mode);
+	return not is_aligned();
+
+func is_active() -> bool:
+	if body:
+		return Rect2(world.active_rect_t.position * GV.TILE_WIDTH, world.active_rect_t.size * GV.TILE_WIDTH).has_point(get_position());
+	return world.active_rect_t.intersects(Rect2i(pos_t, size));
+
+func get_position() -> Vector2:
+	return body.position if body else GV.pos_t_to_world(pos_t);
+
+# returns pos_t if is_aligned else null
+func get_pos_t() -> Variant:
+	if body:
+		if body is TileForTilemap and body.is_aligned:
+			return body.pos_t;
+		return null;
+	else:
+		return pos_t;
+
+func is_premove_possible() -> bool:
+	return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves and is_active();
+
+func is_pathfind_warranted() -> bool:
+	if entity_id not in GV.E_HAS_PATHFINDING or is_task_active or is_busy or not is_aligned():
+		return false;
+	return action_timer.is_stopped() and not premoves and is_active();
 
 func _process():
 	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
@@ -114,19 +151,16 @@ func _on_action_timer_timeout():
 
 func set_is_busy(is_busy:bool):
 	self.is_busy = is_busy;
+	
+	if not is_busy and not is_active():
+		if action_timer:
+			action_timer.stop();
+	
 	try_premove();
 	try_pathfind();
 	
 	if not is_busy and is_aligned():
 		assert(world.is_tile(get_pos_t()));
-
-func is_premove_possible() -> bool:
-	return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves;
-
-func is_pathfind_warranted() -> bool:
-	if entity_id not in GV.E_HAS_PATHFINDING or is_task_active or is_busy or not is_aligned():
-		return false;
-	return action_timer.is_stopped() and not premoves;
 
 func try_premove():
 	if is_premove_possible():
@@ -257,29 +291,8 @@ func change_keys(old_key:Variant, new_key:Variant):
 func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
-func is_tile() -> bool:
-	return not body or body is TileForTilemap;
-
-func is_aligned() -> bool:
-	return not body or (body is TileForTilemap and body.is_aligned);
-
-func is_roaming():
-	#return entity_id == GV.EntityId.SQUID_CLUB or (entity_id == GV.EntityId.PLAYER and not GV.snap_mode);
-	return not is_aligned();
-
-func is_active():
-	if body:
-		return Rect2(world.active_rect_t.position * GV.TILE_WIDTH, world.active_rect_t.size * GV.TILE_WIDTH).has_point(get_position());
-	world.active_rect_t.intersects(Rect2i(pos_t, size));
-
-func get_position() -> Vector2:
-	return body.position if body else GV.pos_t_to_world(pos_t);
-
-# returns pos_t if is_aligned else null
-func get_pos_t() -> Variant:
-	if body:
-		if body is TileForTilemap and body.is_aligned:
-			return body.pos_t;
-		return null;
-	else:
-		return pos_t;
+func _on_active_rect_moved():
+	if is_active() and action_timer:
+		action_timer.start(get_initial_action_cooldown());
+		try_premove();
+		try_pathfind();
