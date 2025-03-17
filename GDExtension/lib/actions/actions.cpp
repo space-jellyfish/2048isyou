@@ -221,7 +221,7 @@ int get_dist_to_lv_edge(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i 
 }
 
 // assume pusher entity is the lv_pos tile
-// NOTE dist_to_lv_edge must be checked
+// NOTE lv edge is treated like a wall
 // entity death includes both type change and merging into an entity of the same type
 int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge) {
     uint32_t src_stuff_id = lv[lv_pos.y][lv_pos.x];

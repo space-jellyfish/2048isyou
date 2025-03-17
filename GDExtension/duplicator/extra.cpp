@@ -365,3 +365,12 @@ DuplicatorPathController::DuplicatorPathController() {
 */
 
 // decrement danger level if move succeeded and resulting entity is duplicator
+
+/*
+uint8_t atlas_coords_to_back_id(Vector2i back_atlas_coords, bool block_ungenerated) {
+    if (block_ungenerated && back_atlas_coords.x == -1) {
+        return BackId::BORDER_SQUARE;
+    }
+    return max(back_atlas_coords.x, 0);
+}
+*/

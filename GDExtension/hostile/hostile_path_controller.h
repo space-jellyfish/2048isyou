@@ -53,16 +53,6 @@ public:
     TileMap* get_cells();
     void set_entity(Ref<RefCounted> p_entity);
     Ref<RefCounted> get_entity();
-
-    // these require tile_mutex
-    uint8_t get_tile_id(Vector2i pos_t);
-    uint8_t get_type_id(Vector2i pos_t);
-    uint8_t get_back_id(Vector2i pos_t);
-    uint16_t get_nav_id(Vector2i pos_t);
-    uint32_t get_stuff_id(Vector2i pos_t);
-
-    void get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv);
-    void get_actions();
 };
 
 #endif

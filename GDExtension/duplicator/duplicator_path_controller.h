@@ -73,7 +73,8 @@ public:
     uint8_t get_type_id(Vector2i pos_t);
     uint8_t get_back_id(Vector2i pos_t);
     uint16_t get_nav_id(Vector2i pos_t);
-    uint32_t get_stuff_id(Vector2i pos_t);
+    bool is_generated(Vector2i pos_t);
+    uint32_t get_stuff_id(Vector2i pos_t, bool block_ungenerated, bool purge_regular, bool purge_regular_zero);
 
     // getter/setters
     void set_gv(Node* p_gv);
