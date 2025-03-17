@@ -287,13 +287,12 @@ int get_slide_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i
             }
         }
 
-        if (push_count == tile_push_limits.at(src_type_id) ||
-        push_weights.at(src_type_id) < slide_weights.at(curr_type_id)) {
+        if (push_weights.at(src_type_id) < slide_weights.at(curr_type_id)) {
             return nearest_merge_push_count;
         }
         push_count += 1;
     }
-    return -1;
+    return nearest_merge_push_count;
 }
 
 int get_split_push_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos, Vector2i dir, bool check_back, bool check_nav, bool allow_enemy_annihilation_type_change, bool allow_other_type_change, bool allow_same_type_merge) {
