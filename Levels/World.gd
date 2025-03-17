@@ -1,9 +1,7 @@
-#tilemap-based for better performance
-#-Vector2i.ONE indicates cell hasn't been generated yet
-#coords indicates atlas_coords from tileset
-#empty atlas_coords indicates cell is empty
-#val indicates Vector2i(pow, sign)
-# save tile if it's not grid-aligned
+# tilemap-based for better performance than FSM-per-tile
+# coords is short for tileset atlas_coords
+# val refers to the value of a tile, Vector2i(pow, sign)
+# TransitTile should be saved if it's not grid-aligned or not finished animating
 class_name World
 extends Node2D
 
@@ -273,9 +271,8 @@ func load_rect(pos_t_min:Vector2i, pos_t_max:Vector2i):
 			generate_cell(pos_t);
 
 func generate_cell(pos_t:Vector2i):
-	if get_atlas_coords(GV.LayerId.BACK, pos_t) != -Vector2i.ONE:
-		#once generated, TILE layer may return to -Vector2i.ONE, so use BackId to mark generated cells
-		return; #cell was previously generated
+	if is_generated(pos_t):
+		return;
 	if is_world_border(pos_t):
 		set_atlas_coords(GV.LayerId.BACK, pos_t, GV.TileSetSourceId.BACK, back_id_to_atlas_coords(GV.BackId.BORDER_SQUARE));
 		return;
@@ -320,6 +317,10 @@ func generate_cell(pos_t:Vector2i):
 	
 	layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
+
+# TILE layer may return to -Vector2i.ONE at any time, so use BackId to mark generated cells
+func is_generated(pos_t:Vector2i) -> bool:
+	return get_atlas_coords(GV.LayerId.BACK, pos_t).x != -1;
 
 func get_spawn_weight(type_id:int, tile_id:int) -> int:
 	if type_id in GV.T_KILLABLE_BY_ZEROING and tile_id == GV.TileId.ZERO:
