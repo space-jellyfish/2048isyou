@@ -51,8 +51,30 @@ uint16_t DuplicatorPathController::get_nav_id(Vector2i pos_t) {
     return atlas_coords_to_nav_id(atlas_coords);
 }
 
-uint32_t DuplicatorPathController::get_stuff_id(Vector2i pos_t) {
-    return make_tile_bits(get_tile_id(pos_t)) + make_type_bits(get_type_id(pos_t)) + make_back_bits(get_back_id(pos_t)) + make_nav_bits(get_nav_id(pos_t));
+bool DuplicatorPathController::is_generated(Vector2i pos_t) {
+    Vector2i atlas_coords = cells->get_cell_atlas_coords(LayerId::BACK, pos_t);
+    return atlas_coords.x != -1;
+}
+
+// purge to reduce branching factor of search
+uint32_t DuplicatorPathController::get_stuff_id(Vector2i pos_t, bool block_ungenerated, bool purge_regular, bool purge_regular_zero) {
+    uint8_t tile_id = get_tile_id(pos_t);
+    uint8_t type_id = get_type_id(pos_t);
+    uint8_t back_id = get_back_id(pos_t);
+    uint16_t nav_id = get_nav_id(pos_t);
+
+    if (block_ungenerated && !is_generated(pos_t)) {
+        back_id = BackId::BORDER_SQUARE;
+    }
+    if (purge_regular_zero && type_id == TypeId::REGULAR && tile_id == TileId::ZERO) {
+        tile_id = TileId::EMPTY;
+        type_id = TypeId::NONE;
+    }
+    else if (purge_regular && type_id == TypeId::REGULAR) {
+        type_id = TypeId::NONE;
+    }
+
+    return make_tile_bits(tile_id) + make_type_bits(type_id) + make_back_bits(back_id) + make_nav_bits(nav_id);
 }
 
 
@@ -110,12 +132,12 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
     for (int dx = 0; dx < lv[0].size(); ++dx) {
         Vector2i curr_pos_t = Vector2i(min_pos_t.x + dx, pos_t.y);
         Vector2i curr_lv_pos = curr_pos_t - min_pos_t;
-        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t);
+        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t, true, true, true);
     }
     for (int dy = 0; dy < lv.size(); ++dy) {
         Vector2i curr_pos_t = Vector2i(pos_t.x, min_pos_t.y + dy);
         Vector2i curr_lv_pos = curr_pos_t - min_pos_t;
-        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t);
+        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t, true, true, true);
     }
 
     tile_mutex->unlock();
