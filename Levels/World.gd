@@ -523,25 +523,36 @@ func is_compatible(type_id:int, back_id:int) -> bool:
 func is_navigable(dir:Vector2i, nav_id:int) -> bool:
 	return (nav_id & (GV.NAV_BIT_BLOCK << GV.dir_to_dir_id(dir))) == 0;
 
+func get_dist_to_load_edge(pos_t:Vector2i, dir:Vector2i) -> int:
+	if dir == Vector2i(1, 0):
+		return loaded_pos_t_max.x - pos_t.x;
+	if dir == Vector2i(-1, 0):
+		return pos_t.x - loaded_pos_t_min.x;
+	if dir == Vector2i(0, 1):
+		return loaded_pos_t_max.y - pos_t.y;
+	return pos_t.y - loaded_pos_t_min.y;
+
 # -1 if slide not possible
 # NOTE try_action() should not check NAV because a slide blocked in NAV can still succeed due to rounded corners
 # plus initiating the slide provides auditory fb for player
-func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool):
+func get_slide_push_count(pusher_entity:Entity, src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool, check_load_edge:bool):
 	var curr_pos_t:Vector2i = src_pos_t;
 	var curr_tile_id:int = get_tile_id(src_pos_t);
 	var curr_type_id:int = get_type_id(src_pos_t);
 	var push_count:int = 0;
 	var nearest_merge_push_count:int = -1;
+	var dist_to_load_edge:int = get_dist_to_load_edge(src_pos_t, dir) if check_load_edge else 0;
 	
-	# check for obstruction (if pusher entity isn't the src_pos_t tile)
-	# NOTE no need to check pusher compatibility with src_back_id since pusher couldn't have collided if incompatible (tile collision_shape is scaled)
+	# check pushability (if pusher entity isn't the src_pos_t tile)
+	# NOTE no need to check pusher compatibility with src_back_id since pusher couldn't have collided if incompatible (tile collision_shape is smaller than TILE_WIDTH)
 	var pusher_pos_t:Variant = pusher_entity.get_pos_t();
 	if pusher_pos_t != src_pos_t:
 		if GV.push_weights[pusher_entity.entity_id] < GV.slide_weights[curr_type_id]:
 			return nearest_merge_push_count;
 		push_count += 1;
 	
-	while push_count <= GV.tile_push_limits[pusher_entity.entity_id]:
+	while push_count <= GV.tile_push_limits[pusher_entity.entity_id] and \
+	(not check_load_edge or push_count <= dist_to_load_edge - 1):
 		#check for obstruction
 		var prev_type_id:int = curr_type_id;
 		curr_pos_t += dir;
@@ -604,15 +615,17 @@ func get_merged_atlas_coords(coords1:Vector2i, coords2:Vector2i):
 	return tile_and_type_id_to_atlas_coords(merged_tile_id, merged_type_id);
 
 #used for shift speed calculation
-func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool) -> int:
+func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, check_nav:bool, check_load_edge:bool) -> int:
 	var src_type_id:int = get_type_id(src_pos_t);
 	var max_distance:int = GV.max_shift_dists[src_type_id];
 	var next_pos_t:Vector2i = src_pos_t + dir;
 	var distance:int = 0;
+	var dist_to_load_edge:int = get_dist_to_load_edge(src_pos_t, dir) if check_load_edge else 0;
 
 	while distance < max_distance and \
 	(not check_back or is_compatible(src_type_id, get_back_id(next_pos_t))) and \
 	(not check_nav or is_navigable(dir, get_nav_id(next_pos_t))) and \
+	(not check_load_edge or distance < dist_to_load_edge) and \
 	not is_tile(next_pos_t):
 		distance += 1;
 		next_pos_t += dir;
@@ -636,7 +649,7 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	
 	assert(is_tile(pos_t));
 	
-	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir, true, false);
+	var push_count:int = get_slide_push_count(pusher_entity, pos_t, dir, true, false, true);
 	if push_count != -1:
 		if not test_only:
 			# start animation
@@ -694,7 +707,7 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 	
 	assert(is_tile(pos_t));
 	
-	var target_distance:int = get_shift_target_dist(pos_t, dir, true, false);
+	var target_distance:int = get_shift_target_dist(pos_t, dir, true, false, true);
 	if target_distance:
 		if not test_only:
 			#update tile_id and player stats during animation
