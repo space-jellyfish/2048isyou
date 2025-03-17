@@ -613,7 +613,7 @@ const UNINITIATED_PREMOVE_COOLDOWN_DISCOUNT:float = 0.5;
 var action_cooldowns:Dictionary = {
 	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
-	EntityId.DUPLICATOR : 12,
+	EntityId.DUPLICATOR : 4,#12,
 	EntityId.HOSTILE : 0.8,
 	EntityId.VOID : 0.5,
 	EntityId.REGULAR : 0,
@@ -628,7 +628,7 @@ var action_cooldowns:Dictionary = {
 var action_cooldown_deviations:Dictionary = {
 	EntityId.NONE : 0,
 	EntityId.PLAYER : 0,
-	EntityId.DUPLICATOR : 2.5,
+	EntityId.DUPLICATOR : 0.5,#2.5,
 	EntityId.HOSTILE : 0,
 	EntityId.VOID : 0,
 	EntityId.REGULAR : 0,
