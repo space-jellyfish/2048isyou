@@ -2197,3 +2197,24 @@ var is_premove_queued:bool = false;
 var is_inactive:bool = false;
 var is_task_active:bool = false;
 '''
+
+'''
+	if is_active():
+		if curr_state == State.INACTIVE:
+			# start timer
+			if action_timer:
+				assert(action_timer.is_stopped());
+				action_timer.start(get_initial_action_cooldown());
+			
+			# change state
+			assert(premoves.is_empty());
+			if action_timer and not action_timer.is_stopped():
+				change_state(State.COOLDOWN);
+			elif path_controller and is_aligned():
+				change_state(State.PATHFINDING);
+			else:
+				change_state(State.IDLE);
+	
+	elif curr_state not in [State.BUSY, State.INACTIVE]:
+		change_state(State.INACTIVE);
+'''

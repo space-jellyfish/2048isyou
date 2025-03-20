@@ -63,7 +63,7 @@ func get_new_state(is_busy:bool) -> int:
 	else:
 		return State.IDLE;
 
-func change_state(state:int, reenter:bool = false):
+func change_state(state:int, reenter:bool):
 	if curr_state != state or reenter:
 		exit_state(curr_state);
 		curr_state = state;
@@ -182,13 +182,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 			action_timer.start(cd);
 	
 	# initialize state
-	if is_active():
-		if path_controller:
-			change_state(State.COOLDOWN, true);
-		else:
-			change_state(State.IDLE, true);
-	else:
-		change_state(State.INACTIVE, true);
+	change_state(get_new_state(false), true);
 
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
@@ -236,13 +230,9 @@ func _process():
 		
 		# change state
 		if curr_state == State.PATHFINDING:
-			if action_timer and not action_timer.is_stopped():
-				change_state(State.COOLDOWN)
-			elif not premoves.is_empty():
-				change_state(State.PREMOVING);
-			else:
-				assert(path_controller and is_aligned());
-				change_state(State.PATHFINDING, true);
+			# reenter to allow PATHFINDING -> PATHFINDING transition to restart pathfinding
+			# since current state is PATHFINDING, no other state can get reentered
+			change_state(get_new_state(false), true);
 
 func die(killer_entity:Entity) -> void:
 	if action_timer:
@@ -267,30 +257,14 @@ func get_action_cooldown(last_premove_initiated:bool) -> float:
 func _on_action_timer_timeout():
 	# change state
 	if curr_state == State.COOLDOWN:
-		if not premoves.is_empty():
-			change_state(State.PREMOVING);
-		elif path_controller and is_aligned():
-			change_state(State.PATHFINDING);
-		else:
-			change_state(State.IDLE);
+		change_state(get_new_state(false), false);
 	
 	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
 func set_is_busy(is_busy:bool):
 	# change state
-	if is_busy:
-		change_state(State.BUSY);
-	elif not is_active():
-		change_state(State.INACTIVE);
-	elif action_timer and not action_timer.is_stopped():
-		change_state(State.COOLDOWN);
-	elif not premoves.is_empty():
-		change_state(State.PREMOVING);
-	elif path_controller and is_aligned():
-		change_state(State.PATHFINDING);
-	else:
-		change_state(State.IDLE);
+	change_state(get_new_state(is_busy), false);
 	
 	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
@@ -299,8 +273,8 @@ func add_premove(premove:Premove, change_state:bool = true):
 	premoves.push_back(premove);
 	
 	# change state
-	if change_state and curr_state in [State.PATHFINDING, State.IDLE]:
-		change_state(State.PREMOVING);
+	if change_state:
+		change_state(get_new_state(curr_state == State.BUSY), false);
 
 func clear_premoves():
 	premoves.clear();
@@ -317,20 +291,7 @@ func try_curr_frame_premoves():
 	consume_premove();
 	
 	# change state
-	if curr_state == State.BUSY:
-		return;
-	
-	assert(is_active());
-	assert(curr_state == State.PREMOVING);
-	
-	if action_timer and not action_timer.is_stopped():
-		change_state(State.COOLDOWN);
-	elif not premoves.is_empty():
-		change_state(State.PREMOVING, true);
-	elif path_controller and is_aligned():
-		change_state(State.PATHFINDING);
-	else:
-		change_state(State.IDLE);
+	change_state(get_new_state(curr_state == State.BUSY), curr_state == State.PREMOVING);
 
 func consume_premove():
 	var premove:Premove = premoves.pop_front();
@@ -425,21 +386,15 @@ func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
 func _on_active_rect_moved():
-	if is_active():
-		if curr_state == State.INACTIVE:
-			# start timer
-			if action_timer:
-				assert(action_timer.is_stopped());
-				action_timer.start(get_initial_action_cooldown());
-			
-			# change state
-			assert(premoves.is_empty());
-			if action_timer and not action_timer.is_stopped():
-				change_state(State.COOLDOWN);
-			elif path_controller and is_aligned():
-				change_state(State.PATHFINDING);
-			else:
-				change_state(State.IDLE);
+	var is_active:bool = is_active();
 	
-	elif curr_state not in [State.BUSY, State.INACTIVE]:
-		change_state(State.INACTIVE);
+	# start timer
+	if is_active and curr_state == State.INACTIVE and action_timer:
+		assert(action_timer.is_stopped());
+		action_timer.start(get_initial_action_cooldown());
+	
+	# change state
+	if (is_active and curr_state == State.INACTIVE) or \
+	(not is_active and curr_state != State.INACTIVE):
+		change_state(get_new_state(curr_state == State.BUSY), false);
+		
