@@ -2190,3 +2190,10 @@ const P_GEN_HOSTILE:float = 0.005;
 	(dir.y and abs(offset.x) > GV.SNAP_TOLERANCE):
 		print("START UNALIGNED from ", tile.position, " in dir ", dir);
 '''
+
+'''
+var is_busy:bool = false; # true if premoves are unable to be consumed
+var is_premove_queued:bool = false;
+var is_inactive:bool = false;
+var is_task_active:bool = false;
+'''

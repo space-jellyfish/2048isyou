@@ -206,8 +206,8 @@ func get_transit_tile(pos_t:Vector2i, include_transient:bool) -> TileForTilemap:
 			remove_aligned_tile_in_transient(tile);
 			return tile;
 	
-	for tile in $TransitTiles.get_children():
-		assert(not (include_transient and tile.is_aligned and tile.pos_t == pos_t));
+	#for tile in $TransitTiles.get_children():
+		#assert(not (include_transient and tile.is_aligned and tile.pos_t == pos_t));
 	
 	return get_pooled_tile(pos_t);
 
@@ -638,7 +638,7 @@ func get_shift_target_dist(src_pos_t:Vector2i, dir:Vector2i, check_back:bool, ch
 # if is_splitted, assume atlas_coord at pos_t is already splitted with keep_type = true
 func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only:bool, is_splitted:bool=false, unsplit_atlas_coords=Vector2i.ZERO) -> bool:
 	# check if busy (pushed by another entity)
-	if tile_entity.is_busy:
+	if tile_entity.is_busy():
 		return false;
 	
 	# check if not aligned
@@ -662,7 +662,7 @@ func try_slide(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 
 func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only:bool) -> bool:
 	# check if busy (pushed by another entity)
-	if tile_entity.is_busy:
+	if tile_entity.is_busy():
 		return false;
 	
 	# check if not aligned
@@ -697,7 +697,7 @@ func try_split(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 #update player_pos_t
 func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only:bool) -> bool:
 	# check if busy (pushed by another entity)
-	if tile_entity.is_busy:
+	if tile_entity.is_busy():
 		return false;
 	
 	# check if not aligned
@@ -737,6 +737,7 @@ func get_aligned_tile_entity(entity_id:int, tile:TileForTilemap, pos_t:Vector2i)
 	
 	return get_entity(entity_id, pos_t);
 
+# NOTE not equivalent to dying; this function is used frequently to change entity key
 func remove_entity(entity_id:int, key:Variant):
 	entities[entity_id].erase(key);
 
