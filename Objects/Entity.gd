@@ -25,18 +25,120 @@ var entity_id:int; # should not change after init
 var pos_t:Vector2i;
 var size:Vector2i; # (k, k) if STP else (1, 1)
 var premoves:Array[Premove];
-var is_busy:bool = false; # true if premoves are unable to be consumed
-var is_premove_queued:bool = false;
-var is_inactive:bool = false;
+
+# add a top-level FSM for escape/hunt/wander maybe
+# NOTE every state has precedence over the ones below it
+# NOTE no DEAD state bc Entity object is immediately released upon death
+enum State {
+	BUSY,
+	INACTIVE,
+	COOLDOWN,
+	PREMOVING,
+	PATHFINDING, # wait till premoving/cooldown ends before starting pathfind so the most recent world info is used
+	IDLE, # assume premoves empty; if not, go to PREMOVING instead
+}
+var curr_state:int = State.IDLE;
+var is_task_active:bool = false;
+
 # controls entity movement/behavior
 # path_controller functions should be multithreaded for performance
-var path_controller:RefCounted;
+var path_controller:RefCounted; # null if entity doesn't have pathfinding
 var action_timer:Timer; # null if entity doesn't have pathfinding
 var task_id:int;
-var is_task_active:bool = false;
 var task_src_pos_t:Vector2i;
 var task_actions:Array[Vector3i];
 
+
+func get_new_state(is_busy:bool) -> int:
+	if is_busy:
+		return State.BUSY;
+	elif not is_active():
+		return State.INACTIVE;
+	elif action_timer and not action_timer.is_stopped():
+		return State.COOLDOWN;
+	elif not premoves.is_empty():
+		return State.PREMOVING;
+	elif path_controller and is_aligned():
+		return State.PATHFINDING;
+	else:
+		return State.IDLE;
+
+func change_state(state:int, reenter:bool = false):
+	if curr_state != state or reenter:
+		exit_state(curr_state);
+		curr_state = state;
+		enter_state(state);
+		if entity_id == GV.EntityId.DUPLICATOR:
+			assert(state != State.IDLE);
+			#print_stack()
+			#print(GV.EntityId.keys()[entity_id], " changed state to ", State.keys()[curr_state]);
+
+func enter_state(state:int):
+	match state:
+		State.BUSY:
+			pass;
+		State.INACTIVE:
+			if action_timer:
+				action_timer.stop();
+			clear_premoves();
+		State.COOLDOWN:
+			assert(action_timer and not action_timer.is_stopped());
+		State.PREMOVING:
+			assert(not action_timer or action_timer.is_stopped());
+			assert(not premoves.is_empty());
+			world.add_curr_frame_premove_entity(self);
+		State.PATHFINDING:
+			# cannot assert(not is_task_active) bc pathfinder can finish whenever
+			assert(path_controller);
+			assert(is_aligned());
+			assert(not action_timer or action_timer.is_stopped());
+			assert(premoves.is_empty());
+			
+			# start pathfinding in new thread
+			if not is_task_active:
+				task_src_pos_t = get_pos_t();
+				task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
+				is_task_active = true;
+			
+			# debug pathfinding in main thread
+			#task_src_pos_t = get_pos_t();
+			#path_controller.get_actions();
+			#for task_action in task_actions:
+				#var premove := Premove.new(self, Vector2i(task_action.x, task_action.y), task_action.z);
+				#add_premove(premove, false);
+			#task_actions.clear();
+		State.IDLE:
+			pass;
+
+#func is_premove_possible() -> bool:
+	#return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves and is_active();
+#
+#func is_pathfind_warranted() -> bool:
+	#if not path_controller or is_task_active or is_busy or not is_aligned():
+		#return false;
+	#return action_timer.is_stopped() and not premoves and is_active();
+
+#func try_premove():
+	#if is_premove_possible():
+		#if curr_state != State.BUSY and is_aligned():
+			#assert(world.is_tile(get_pos_t()));
+		#world.add_curr_frame_premove_entity(self);
+		#curr_state = State.PREMOVING;
+
+func exit_state(state:int):
+	match state:
+		State.BUSY:
+			pass;
+		State.INACTIVE:
+			pass;
+		State.COOLDOWN:
+			pass;
+		State.PREMOVING:
+			pass;
+		State.PATHFINDING:
+			pass;
+		State.IDLE:
+			pass;
 
 func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2i, is_split_spawned:bool):
 	assert(entity_id not in GV.T_NONE_OR_REGULAR);
@@ -46,12 +148,12 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 	self.pos_t = pos_t;
 	self.size = size;
 	
+	# connections
 	world.active_rect_moved.connect(_on_active_rect_moved);
 	if body:
 		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
-	is_inactive = not is_active();
 	
-	# add path controller
+	# path controller stuff
 	match entity_id:
 		GV.EntityId.DUPLICATOR:
 			path_controller = DuplicatorPathController.new();
@@ -64,8 +166,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 		moved_for_path_controller.connect(path_controller.on_entity_move_finalized);
 	
 	# action timer stuff
-	# assume Entity isn't init until world ready
-	if entity_id in GV.E_HAS_PATHFINDING:
+	if path_controller:
 		if GV.global_action_timers[entity_id]:
 			action_timer = GV.global_action_timers[entity_id];
 		else:
@@ -73,10 +174,21 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 		
 		action_timer.one_shot = true;
 		action_timer.timeout.connect(_on_action_timer_timeout);
-		world.get_node("ActionTimers").add_child(action_timer);
+		world.get_node("ActionTimers").add_child(action_timer); # assume Entity isn't init until world ready
 		assert(action_timer.is_inside_tree());
-		var cd:float = get_action_cooldown(true) if is_split_spawned else get_initial_action_cooldown();
-		action_timer.start(cd);
+		
+		if is_active():
+			var cd:float = get_action_cooldown(true) if is_split_spawned else get_initial_action_cooldown();
+			action_timer.start(cd);
+	
+	# initialize state
+	if is_active():
+		if path_controller:
+			change_state(State.COOLDOWN, true);
+		else:
+			change_state(State.IDLE, true);
+	else:
+		change_state(State.INACTIVE, true);
 
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
@@ -84,9 +196,12 @@ func is_tile() -> bool:
 func is_aligned() -> bool:
 	return not body or (body is TileForTilemap and body.is_aligned);
 
+# NOTE return not is_aligned() is incorrect; snap mode entity isn't aligned when moving
 func is_roaming():
-	#return entity_id == GV.EntityId.SQUID_CLUB or (entity_id == GV.EntityId.PLAYER and not GV.snap_mode);
-	return not is_aligned();
+	return entity_id == GV.EntityId.SQUID_CLUB or (entity_id == GV.EntityId.PLAYER and not GV.snap_mode);
+
+func is_busy() -> bool:
+	return curr_state == State.BUSY;
 
 func is_active() -> bool:
 	if body:
@@ -105,33 +220,36 @@ func get_pos_t() -> Variant:
 	else:
 		return pos_t;
 
-func is_premove_possible() -> bool:
-	return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves and not is_inactive;
-
-func is_pathfind_warranted() -> bool:
-	if entity_id not in GV.E_HAS_PATHFINDING or is_task_active or is_busy or not is_aligned():
-		return false;
-	return action_timer.is_stopped() and not premoves and not is_inactive;
-
 func _process():
 	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
 		WorkerThreadPool.wait_for_task_completion(task_id);
 		
 		# populate premoves
-		for task_action in task_actions:
-			var premove := Premove.new(self, Vector2i(task_action.x, task_action.y), task_action.z);
-			add_premove(premove);
+		if curr_state == State.PATHFINDING:
+			for task_action in task_actions:
+				var premove := Premove.new(self, Vector2i(task_action.x, task_action.y), task_action.z);
+				add_premove(premove, false);
 		
 		# reset stuff
 		task_actions.clear();
 		is_task_active = false;
-		try_pathfind();
+		
+		# change state
+		if curr_state == State.PATHFINDING:
+			if action_timer and not action_timer.is_stopped():
+				change_state(State.COOLDOWN)
+			elif not premoves.is_empty():
+				change_state(State.PREMOVING);
+			else:
+				assert(path_controller and is_aligned());
+				change_state(State.PATHFINDING, true);
 
 func die(killer_entity:Entity) -> void:
 	if action_timer:
 		action_timer.queue_free();
+	
 	world.remove_entity(entity_id, body if body else pos_t);
-	if self == world.player:
+	if world.player == self:
 		world.player = null;
 	died.emit(killer_entity);
 
@@ -147,50 +265,42 @@ func get_action_cooldown(last_premove_initiated:bool) -> float:
 	return cd;
 
 func _on_action_timer_timeout():
-	#if not is_busy and is_aligned():
-		#assert(world.is_tile(get_pos_t()));
-	try_premove();
-	try_pathfind();
-
-func set_is_busy(is_busy:bool):
-	self.is_busy = is_busy;
+	# change state
+	if curr_state == State.COOLDOWN:
+		if not premoves.is_empty():
+			change_state(State.PREMOVING);
+		elif path_controller and is_aligned():
+			change_state(State.PATHFINDING);
+		else:
+			change_state(State.IDLE);
 	
-	if not is_busy and not is_active():
-		if action_timer:
-			action_timer.stop();
-		is_inactive = true;
-	
-	try_premove();
-	try_pathfind();
-	
-	if not is_busy and is_aligned():
+	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
-func try_premove():
-	if is_premove_possible():
-		if not is_busy and is_aligned():
-			assert(world.is_tile(get_pos_t()));
-		world.add_curr_frame_premove_entity(self);
-		is_premove_queued = true;
+func set_is_busy(is_busy:bool):
+	# change state
+	if is_busy:
+		change_state(State.BUSY);
+	elif not is_active():
+		change_state(State.INACTIVE);
+	elif action_timer and not action_timer.is_stopped():
+		change_state(State.COOLDOWN);
+	elif not premoves.is_empty():
+		change_state(State.PREMOVING);
+	elif path_controller and is_aligned():
+		change_state(State.PATHFINDING);
+	else:
+		change_state(State.IDLE);
+	
+	if curr_state != State.BUSY and is_aligned():
+		assert(world.is_tile(get_pos_t()));
 
-func try_pathfind():
-	if is_pathfind_warranted():
-		# start pathfinding in new thread
-		task_src_pos_t = get_pos_t();
-		task_id = WorkerThreadPool.add_task(path_controller.get_actions, false, "pathfinding");
-		is_task_active = true;
-		
-		# debug pathfinding in main thread
-		#task_src_pos_t = get_pos_t();
-		#path_controller.get_actions();
-		#for task_action in task_actions:
-			#var premove := Premove.new(self, Vector2i(task_action.x, task_action.y), task_action.z);
-			#add_premove(premove);
-		#task_actions.clear();
-
-func add_premove(premove:Premove):
+func add_premove(premove:Premove, change_state:bool = true):
 	premoves.push_back(premove);
-	try_premove();
+	
+	# change state
+	if change_state and curr_state in [State.PATHFINDING, State.IDLE]:
+		change_state(State.PREMOVING);
 
 func clear_premoves():
 	premoves.clear();
@@ -199,18 +309,37 @@ func clear_premoves():
 # NOTE cannot assert is_aligned() bc might've been pushed (and squid club isn't aligned)
 # NOTE cannot assert is_premove_possible() bc might've been pushed
 func try_curr_frame_premoves():
-	assert(not action_timer or action_timer.is_stopped());
-	if premoves:
-		consume_premove();
-	is_premove_queued = false;
+	# might've been pushed or deactivated
+	if curr_state != State.PREMOVING:
+		return;
+	
+	assert(premoves);
+	consume_premove();
+	
+	# change state
+	if curr_state == State.BUSY:
+		return;
+	
+	assert(is_active());
+	assert(curr_state == State.PREMOVING);
+	
+	if action_timer and not action_timer.is_stopped():
+		change_state(State.COOLDOWN);
+	elif not premoves.is_empty():
+		change_state(State.PREMOVING, true);
+	elif path_controller and is_aligned():
+		change_state(State.PATHFINDING);
+	else:
+		change_state(State.IDLE);
 
 func consume_premove():
 	var premove:Premove = premoves.pop_front();
 	var initiated:bool = false;
 	#print("consume premove ", premove.dir, premove.action_id, "from ", get_pos_t());
 	
-	if not is_busy and is_aligned():
+	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
+	assert(not action_timer or action_timer.is_stopped());
 	
 	if premove.action_id == GV.ActionId.SLIDE:
 		initiated = world.try_slide(self, premove.tile_entity, premove.dir, false);
@@ -221,15 +350,13 @@ func consume_premove():
 	elif premove.action_id == GV.ActionId.NONE:
 		pass;
 	
-	if initiated:
-		pass;
-	else:
-		clear_premoves();
-	
-	# start action timer
-	if entity_id in GV.E_HAS_PATHFINDING:
-		assert(action_timer.is_stopped());
+	# start timer
+	if path_controller:
 		action_timer.start(get_action_cooldown(initiated));
+	
+	# clear premoves
+	if initiated:
+		clear_premoves();
 
 func set_body(body:Node2D):
 	#check if no action required
@@ -258,7 +385,7 @@ func set_body(body:Node2D):
 	#update properties
 	self.body = body;
 
-	if not is_busy and is_aligned():
+	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
 # NOTE body is set to null
@@ -287,7 +414,7 @@ func set_pos_t(pos_t:Vector2i):
 	self.pos_t = pos_t;
 	self.body = null;
 	
-	if not is_busy and is_aligned():
+	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
 func change_keys(old_key:Variant, new_key:Variant):
@@ -298,9 +425,21 @@ func _on_body_moved_for_tracking_cam():
 	moved_for_tracking_cam.emit();
 
 func _on_active_rect_moved():
-	if is_inactive and is_active():
-		is_inactive = false;
-		if action_timer and not is_premove_queued:
-			action_timer.start(get_initial_action_cooldown());
-		try_premove();
-		try_pathfind();
+	if is_active():
+		if curr_state == State.INACTIVE:
+			# start timer
+			if action_timer:
+				assert(action_timer.is_stopped());
+				action_timer.start(get_initial_action_cooldown());
+			
+			# change state
+			assert(premoves.is_empty());
+			if action_timer and not action_timer.is_stopped():
+				change_state(State.COOLDOWN);
+			elif path_controller and is_aligned():
+				change_state(State.PATHFINDING);
+			else:
+				change_state(State.IDLE);
+	
+	elif curr_state not in [State.BUSY, State.INACTIVE]:
+		change_state(State.INACTIVE);
