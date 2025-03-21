@@ -247,10 +247,13 @@ func _on_tracking_cam_moved(pos:Vector2):
 		#print("load_pos_t_max: ", load_pos_t_max);
 		
 		# update active rect first so generated entities can init with correct active/inactive status
+		var old_active_rect_t = active_rect_t;
 		var active_pos_t_min:Vector2i = load_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
 		var active_rect_t_size:Vector2i = load_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
 		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
-		active_rect_moved.emit();
+		# emit moved conservatively for better perf
+		if active_rect_t != old_active_rect_t:
+			active_rect_moved.emit();
 		
 		# generate tiles, update loaded rect
 		update_map(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max);
