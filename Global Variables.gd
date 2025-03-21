@@ -648,9 +648,9 @@ var action_cooldown_deviations:Dictionary = {
 var entity_base_spawn_weights:Dictionary = {
 	TypeId.NONE : 0,
 	TypeId.PLAYER : 0,
-	TypeId.DUPLICATOR : 20,#4,
+	TypeId.DUPLICATOR : 4,
 	TypeId.HOSTILE : 50,
-	TypeId.VOID : 20,#2,
+	TypeId.VOID : 2,
 	TypeId.REGULAR : 10000,
 	TypeId.SQUID : 1,
 }
