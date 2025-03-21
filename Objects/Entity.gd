@@ -68,9 +68,7 @@ func change_state(state:int, reenter:bool):
 		exit_state(curr_state);
 		curr_state = state;
 		enter_state(state);
-		if entity_id == GV.EntityId.DUPLICATOR:
-			assert(state != State.IDLE);
-			#print_stack()
+		#if entity_id == GV.EntityId.DUPLICATOR:
 			#print(GV.EntityId.keys()[entity_id], " changed state to ", State.keys()[curr_state]);
 
 func enter_state(state:int):
@@ -109,21 +107,6 @@ func enter_state(state:int):
 			#task_actions.clear();
 		State.IDLE:
 			pass;
-
-#func is_premove_possible() -> bool:
-	#return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves and is_active();
-#
-#func is_pathfind_warranted() -> bool:
-	#if not path_controller or is_task_active or is_busy or not is_aligned():
-		#return false;
-	#return action_timer.is_stopped() and not premoves and is_active();
-
-#func try_premove():
-	#if is_premove_possible():
-		#if curr_state != State.BUSY and is_aligned():
-			#assert(world.is_tile(get_pos_t()));
-		#world.add_curr_frame_premove_entity(self);
-		#curr_state = State.PREMOVING;
 
 func exit_state(state:int):
 	match state:
@@ -312,6 +295,7 @@ func consume_premove():
 		pass;
 	
 	# start timer
+	assert(is_active());
 	if path_controller:
 		action_timer.start(get_action_cooldown(initiated));
 	
@@ -397,4 +381,3 @@ func _on_active_rect_moved():
 	if (is_active and curr_state == State.INACTIVE) or \
 	(not is_active and curr_state != State.INACTIVE):
 		change_state(get_new_state(curr_state == State.BUSY), false);
-		
