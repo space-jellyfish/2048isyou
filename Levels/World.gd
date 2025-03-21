@@ -335,7 +335,7 @@ func is_generated(pos_t:Vector2i) -> bool:
 func get_spawn_weight(type_id:int, tile_id:int) -> int:
 	if type_id in GV.T_KILLABLE_BY_ZEROING and tile_id == GV.TileId.ZERO:
 		return 0;
-	return GV.base_spawn_weights[type_id];
+	return GV.entity_base_spawn_weights[type_id];
 
 func get_spawned_type_id(tile_id:int) -> int:
 	if tile_id == GV.TileId.EMPTY:

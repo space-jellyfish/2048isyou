@@ -275,6 +275,12 @@ enum EntityId {
 	SNAKE,
 }
 
+# for open world
+enum StructureId {
+	THIN_MOAT,
+	THICK_MOAT,
+}
+
 const B_WALL_OR_BORDER:Array = [BackId.BORDER_ROUND, BackId.BORDER_SQUARE, BackId.BLACK_WALL, BackId.BLUE_WALL, BackId.RED_WALL];
 const B_SAVE_OR_GOAL:Array = [BackId.SAVEPOINT, BackId.GOAL];
 const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
@@ -639,7 +645,7 @@ var action_cooldown_deviations:Dictionary = {
 	EntityId.SNAKE : 0,
 }
 
-var base_spawn_weights:Dictionary = {
+var entity_base_spawn_weights:Dictionary = {
 	TypeId.NONE : 0,
 	TypeId.PLAYER : 0,
 	TypeId.DUPLICATOR : 20,#4,
@@ -647,6 +653,11 @@ var base_spawn_weights:Dictionary = {
 	TypeId.VOID : 20,#2,
 	TypeId.REGULAR : 10000,
 	TypeId.SQUID : 1,
+}
+
+var structure_base_spawn_weights:Dictionary = {
+	StructureId.THIN_MOAT : 1,
+	StructureId.THICK_MOAT : 1,
 }
 
 enum SASearchId {
