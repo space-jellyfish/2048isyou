@@ -245,13 +245,17 @@ func _on_tracking_cam_moved(pos:Vector2):
 		var load_pos_t_max:Vector2i = GV.world_to_pos_t(load_pos_max);
 		#print("load_pos_t_min: ", load_pos_t_min);
 		#print("load_pos_t_max: ", load_pos_t_max);
+		
+		# update active rect first so generated entities can init with correct active/inactive status
+		var active_pos_t_min:Vector2i = load_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
+		var active_rect_t_size:Vector2i = load_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
+		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
+		active_rect_moved.emit();
+		
+		# generate tiles, update loaded rect
 		update_map(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max);
 		loaded_pos_t_min = load_pos_t_min;
 		loaded_pos_t_max = load_pos_t_max;
-		var active_pos_t_min:Vector2i = loaded_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
-		var active_rect_t_size:Vector2i = loaded_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
-		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
-		active_rect_moved.emit();
 
 # NOTE pos_t_max inclusive
 func update_map(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Vector2i, new_pos_t_max:Vector2i):

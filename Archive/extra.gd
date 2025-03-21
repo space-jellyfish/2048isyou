@@ -2199,6 +2199,22 @@ var is_task_active:bool = false;
 '''
 
 '''
+#func is_premove_possible() -> bool:
+	#return not is_busy and (not action_timer or action_timer.is_stopped()) and premoves and is_active();
+#
+#func is_pathfind_warranted() -> bool:
+	#if not path_controller or is_task_active or is_busy or not is_aligned():
+		#return false;
+	#return action_timer.is_stopped() and not premoves and is_active();
+
+#func try_premove():
+	#if is_premove_possible():
+		#if curr_state != State.BUSY and is_aligned():
+			#assert(world.is_tile(get_pos_t()));
+		#world.add_curr_frame_premove_entity(self);
+		#curr_state = State.PREMOVING;
+
+
 	if is_active():
 		if curr_state == State.INACTIVE:
 			# start timer
