@@ -298,7 +298,7 @@ func consume_premove():
 		action_timer.start(get_action_cooldown(initiated));
 	
 	# clear premoves
-	if initiated:
+	if not initiated:
 		clear_premoves();
 
 func set_body_as_key(body:Node2D):

@@ -103,8 +103,8 @@ func _exit_tree():
 
 func _physics_process(delta: float) -> void:
 	if premove_callback_upcoming:
-		try_curr_frame_premoves();
 		premove_callback_upcoming = false;
+		try_curr_frame_premoves(); # this might set premove_callback_upcoming
 	
 func add_curr_frame_premove_entity(entity:Entity):
 	#add to entities_with_curr_frame_premoves
@@ -389,8 +389,7 @@ func _input(event):
 			add_premove_from_input(event, GV.ActionId.SLIDE);
 	if event.is_action_pressed("debug"):
 		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
-		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
-		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
+		player.add_premove(Premove.new(player, Vector2i(-1, 0), GV.ActionId.SLIDE))
 		#print(entities[GV.EntityId.PLAYER])
 		#print(entities[GV.EntityId.DUPLICATOR])
 
