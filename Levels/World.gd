@@ -790,7 +790,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			if tile_entity:
 				assert(tile_entity.entity_id == curr_type_id);
 				tile_entity.set_is_busy(true);
-				tile_entity.set_body(curr_tile);
+				tile_entity.set_body_as_key(curr_tile);
 				
 				if tile_entity != pusher_entity:
 					tile_entity.clear_premoves();
@@ -812,7 +812,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			
 			# add entity if duplicated
 			if splitter_type_id not in GV.T_NONE_OR_REGULAR:
-				var tile_entity:Entity = Entity.new(self, splitting_tile, splitter_type_id, Vector2i(), Vector2i.ONE, true);
+				var tile_entity:Entity = Entity.new(self, splitting_tile, splitter_type_id, curr_pos_t, Vector2i.ONE, true);
 				tile_entity.set_is_busy(true);
 				add_entity(splitter_type_id, splitting_tile, tile_entity);
 		
@@ -872,7 +872,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			if tile_entity:
 				assert(tile_entity.entity_id == old_type_id);
 				tile_entity.set_is_busy(true);
-				tile_entity.set_body(merging_tile);
+				tile_entity.set_body_as_key(merging_tile);
 				
 				assert(tile_entity != pusher_entity);
 				tile_entity.clear_premoves();
@@ -909,7 +909,7 @@ func animate_shift(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, target_di
 		if tile_entity:
 			assert(tile_entity.entity_id == type_id);
 			tile_entity.set_is_busy(true);
-			tile_entity.set_body(tile);
+			tile_entity.set_body_as_key(tile);
 			
 			if tile_entity != pusher_entity:
 				tile_entity.clear_premoves();

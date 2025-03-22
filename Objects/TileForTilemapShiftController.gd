@@ -42,8 +42,8 @@ func step(delta:float):
 			latest_pos_t = new_latest_pos_t;
 	
 	#emit moved signal
-	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA and true_step_dist:
-		tile.moved_for_tracking_cam.emit();
+	if true_step_dist:
+		tile.moved.emit();
 	
 	#bounce (with deceleration), update tilemap if shift finished
 	if remaining_dist <= GV.SNAP_TOLERANCE:

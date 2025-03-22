@@ -2234,3 +2234,26 @@ var is_task_active:bool = false;
 	elif curr_state not in [State.BUSY, State.INACTIVE]:
 		change_state(State.INACTIVE);
 '''
+
+'''
+# if is_aligned(), this should represent the aligned pos_t
+# if not aligned and not busy, this should represent world_to_pos_t(get_position())
+# so that active rect can update the entity's active status
+# NOTE if not null and busy, forcing pos_t == world_to_pos_t(get_position()) is unnecessary
+# bc lots of updates will be required if tile is bouncing back and forth
+# and active status will be updated anyways when set_busy(false) is called.
+# A small number of redundant calls for updating active status (due to outdated pos_t) is acceptable.
+
+func get_pos_t() -> Variant:
+	if body:
+		if body is TileForTilemap and body.is_aligned:
+			return body.pos_t;
+		return null;
+	else:
+		return pos_t;
+
+func get_pos_t(use_approx:bool) -> Variant:
+	if is_aligned() or use_approx:
+		return pos_t;
+	return null;
+'''

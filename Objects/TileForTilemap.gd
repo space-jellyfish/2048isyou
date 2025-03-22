@@ -1,7 +1,7 @@
 class_name TileForTilemap
 extends CharacterBody2D;
 
-signal moved_for_tracking_cam;
+signal moved;
 var atlas_coords:Vector2i;
 var curr_sprite:TileForTilemapSprite;
 var prev_sprite:TileForTilemapSprite;
@@ -287,6 +287,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		return;
 	
 	# snap position
+	# assume entity.pos_t is unaffected, no need to update it
 	if is_aligned:
 		position = GV.pos_t_to_world(pos_t);
 
@@ -346,10 +347,10 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	if tile_entity and is_aligned and move_transit_id == GV.TransitId.NONE:
 		if is_move_finalize and is_merging and not is_reversed and is_self_entity_preserved:
 			#print("set entity key to merger tile at pos_t ", merger_tile.pos_t);
-			tile_entity.set_body(merger_tile);
+			tile_entity.set_body_as_key(merger_tile);
 		elif conversion_transit_id == GV.TransitId.NONE:
 			#print("set entity key to pos_t ", pos_t);
-			tile_entity.set_pos_t(pos_t);
+			tile_entity.set_pos_t_as_key(pos_t);
 		
 	# emit moved for tracking cam
 	# NOTE this should be done after "remove self entity" so no pan is triggered if agent dies (tile_entity must be checked)

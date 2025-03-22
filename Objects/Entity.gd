@@ -11,7 +11,7 @@
 # roaming entities can try new premoves before the old ones finish
 class_name Entity
 
-# emitted when body emits moved or set_body/set_pos_t changes entity position
+# emitted when body emits moved or set_body_as_key/set_pos_t_as_key changes entity position
 # assumes body has a moved signal
 signal moved_for_tracking_cam;
 signal moved_for_path_controller(pos_t:Vector2i, is_reversed:bool, resulting_entity:Entity);
@@ -20,7 +20,7 @@ signal died(killer_entity:Entity);
 var world:World;
 var body:Node2D; # if null, refer to pos_t (entity is in TileMap)
 var entity_id:int; # should not change after init
-# invalid if body not null
+# represents nearest pos_t = world_to_pos_t(get_position())
 # NOTE if STP, represents top left corner
 var pos_t:Vector2i;
 var size:Vector2i; # (k, k) if STP else (1, 1)
@@ -134,7 +134,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 	# connections
 	world.active_rect_moved.connect(_on_active_rect_moved);
 	if body:
-		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
+		body.moved.connect(_on_body_moved);
 	
 	# path controller stuff
 	match entity_id:
@@ -189,13 +189,11 @@ func get_position() -> Vector2:
 	return body.position if body else GV.pos_t_to_world(pos_t);
 
 # returns pos_t if is_aligned else null
+# NOTE assume pos_t == world_to_pos_t(body.position)
 func get_pos_t() -> Variant:
-	if body:
-		if body is TileForTilemap and body.is_aligned:
-			return body.pos_t;
-		return null;
-	else:
+	if is_aligned():
 		return pos_t;
+	return null;
 
 func _process():
 	if is_task_active and WorkerThreadPool.is_task_completed(task_id):
@@ -303,7 +301,7 @@ func consume_premove():
 	if initiated:
 		clear_premoves();
 
-func set_body(body:Node2D):
+func set_body_as_key(body:Node2D):
 	#check if no action required
 	if self.body == body:
 		return;
@@ -323,18 +321,20 @@ func set_body(body:Node2D):
 	
 	#connect/disconnect body.moved signal
 	if self.body and self.body != body:
-		self.body.moved_for_tracking_cam.disconnect(_on_body_moved_for_tracking_cam);
+		self.body.moved.disconnect(_on_body_moved);
 	if body and body != self.body:
-		body.moved_for_tracking_cam.connect(_on_body_moved_for_tracking_cam);
+		body.moved.connect(_on_body_moved);
 	
 	#update properties
 	self.body = body;
+	if body:
+		pos_t = GV.world_to_pos_t(body.position);
 
 	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
 # NOTE body is set to null
-func set_pos_t(pos_t:Vector2i):
+func set_pos_t_as_key(pos_t:Vector2i):
 	#check if no action required
 	if self.pos_t == pos_t and not body:
 		return;
@@ -353,7 +353,7 @@ func set_pos_t(pos_t:Vector2i):
 	
 	#connect/disconnect body.moved signal
 	if body:
-		body.moved_for_tracking_cam.disconnect(_on_body_moved_for_tracking_cam);
+		body.moved.disconnect(_on_body_moved);
 	
 	#update properties
 	self.pos_t = pos_t;
@@ -366,8 +366,10 @@ func change_keys(old_key:Variant, new_key:Variant):
 	world.remove_entity(entity_id, old_key);
 	world.add_entity(entity_id, new_key, self);
 
-func _on_body_moved_for_tracking_cam():
-	moved_for_tracking_cam.emit();
+func _on_body_moved():
+	pos_t = GV.world_to_pos_t(body.position);
+	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA:
+		moved_for_tracking_cam.emit();
 
 func _on_active_rect_moved():
 	var is_active:bool = is_active();
