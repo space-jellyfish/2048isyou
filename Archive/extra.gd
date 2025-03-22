@@ -2257,3 +2257,8 @@ func get_pos_t(use_approx:bool) -> Variant:
 		return pos_t;
 	return null;
 '''
+
+'''
+func get_position() -> Vector2:
+	return body.position if body else GV.pos_t_to_world(pos_t);
+'''

@@ -186,7 +186,9 @@ func is_active() -> bool:
 	return world.active_rect_t.intersects(Rect2i(pos_t, size));
 
 func get_position() -> Vector2:
-	return body.position if body else GV.pos_t_to_world(pos_t);
+	if body:
+		return body.position;
+	return 0.5 * (GV.world_to_pos_t(pos_t) + GV.world_to_pos_t(pos_t + size - Vector2i.ONE));
 
 # returns pos_t if is_aligned else null
 # NOTE assume pos_t == world_to_pos_t(body.position)
