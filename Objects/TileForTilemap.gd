@@ -289,7 +289,10 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	# snap position
 	# assume entity.pos_t is unaffected, no need to update it
 	if is_aligned:
-		position = GV.pos_t_to_world(pos_t);
+		var aligned_position:Vector2 = GV.pos_t_to_world(pos_t);
+		if position != aligned_position:
+			position = aligned_position;
+			moved.emit();
 
 	# find derived flags
 	# don't overuse them, they obfuscate the logic
@@ -318,7 +321,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	world.layer_mutexes[GV.LayerId.TILE].lock();
 	# get self entity
 	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
-	var tile_entity:Entity = world.get_entity(tile_entity_id, self);
+	var tile_entity:Entity = world.get_entity(tile_entity_id, pos_t, self);
 	
 	# find resulting entity at pos_t
 	# NOTE null if not aligned, assume this is only used for moved_for_PC signal
@@ -329,7 +332,7 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 		else:
 			assert(is_move_finalize and is_merging);
 			# NOTE this will be null iff merger entity is getting removed
-			resulting_entity = world.get_entity(merger_tile.new_type_id, merger_tile);
+			resulting_entity = world.get_entity(merger_tile.new_type_id, merger_tile.pos_t, merger_tile);
 	
 	# emit moved for path controller
 	# NOTE this should be done before "remove self entity" so path controller can do its finalize logic
@@ -353,19 +356,20 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			tile_entity.set_pos_t_as_key(pos_t);
 		
 	# emit moved for tracking cam
+	# can't rely on set_*_as_key() bc if converting tile finalizes slide, no key change happens
 	# NOTE this should be done after "remove self entity" so no pan is triggered if agent dies (tile_entity must be checked)
-	if tile_entity and is_aligned and is_move_finalize:
+	if tile_entity and is_aligned and is_move_finalize and GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.FINISH_ACTION:
 		tile_entity.moved_for_tracking_cam.emit();
 	
 	# remove merger/splitter entity
 	# if governor and merger_tile have the same type, merger entity is kept
 	if is_move_finalize:
 		if is_merging and not is_reversed and merger_tile.new_type_id != merger_tile.old_type_id:
-			var merger_tile_entity:Entity = world.get_entity(merger_tile.old_type_id, merger_tile);
+			var merger_tile_entity:Entity = world.get_entity(merger_tile.old_type_id, merger_tile.pos_t, merger_tile);
 			if merger_tile_entity:
 				merger_tile_entity.die(resulting_entity);
 		if is_splitted and is_reversed:
-			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.old_type_id, splitter_tile);
+			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.old_type_id, splitter_tile.pos_t, splitter_tile);
 			if splitter_tile_entity:
 				splitter_tile_entity.die(resulting_entity);
 	
@@ -420,12 +424,12 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	if is_move_finalize:
 		if is_merging and not is_self_entity_preserved:
 			assert(merger_tile.move_transit_id == GV.TransitId.NONE);
-			var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile);
+			var merger_tile_entity:Entity = world.get_entity(merger_tile.new_type_id, merger_tile.pos_t, merger_tile);
 			if merger_tile_entity:
 				merger_tile_entity.set_is_busy(false);
 		if is_splitted and not is_reversed:
 			assert(splitter_tile.move_transit_id == GV.TransitId.NONE);
-			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile);
+			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.new_type_id, splitter_tile.pos_t, splitter_tile);
 			if splitter_tile_entity:
 				splitter_tile_entity.set_is_busy(false);
 	

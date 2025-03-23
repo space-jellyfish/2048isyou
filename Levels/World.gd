@@ -14,8 +14,7 @@ var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.pn
 var tile_noise = FastNoiseLite.new();
 var wall_noise = FastNoiseLite.new();
 
-# Dictionary[EntityId, Dictionary[pos_t or body, Entity]]
-# secondary key is body if it exists and pos_t otherwise
+# Dictionary[EntityId, Dictionary[nearest_pos_t, Dictionary[body if it exists else pos_t, Entity]]]
 # NOTE using pos_t (as secondary key) doesn't work for an aligned tile if it's in transient
 # NOTE writes should be protected by layer_mutexes[GV.LayerId.TILE]
 var entities:Dictionary;
@@ -32,7 +31,7 @@ var active_rect_t:Rect2i = Rect2i(Vector2i.ZERO, Vector2i.ZERO);
 
 #for enemy intel
 @export var initial_player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
-var player:Entity; #alias for entities[GV.EntityId.PLAYER].get_values()[0]
+var player:Entity; #alias for entities[GV.EntityId.PLAYER].get_values()[0].get_values()[0]
 var is_player_alive:bool = true;
 
 #for input repeat delay
@@ -68,7 +67,7 @@ func _ready():
 	
 	# init player
 	player = Entity.new(self, null, GV.EntityId.PLAYER, initial_player_pos_t, Vector2i.ONE, false);
-	add_entity(GV.EntityId.PLAYER, initial_player_pos_t, player);
+	add_entity(GV.EntityId.PLAYER, initial_player_pos_t, initial_player_pos_t, player);
 	
 	# init trackingCam stuff
 	$TrackingCam.set_target_entity(player, false);
@@ -82,8 +81,9 @@ func _ready():
 func _process(delta: float) -> void:
 	# call entity _process()es bc they don't have it as RefCounted
 	for typed_entities in entities.values():
-		for entity in typed_entities.values():
-			entity._process();
+		for positioned_entities in typed_entities.values():
+			for entity in positioned_entities.values():
+				entity._process();
 
 func set_level_name():
 	if has_node("LevelName"):
@@ -323,7 +323,7 @@ func generate_cell(pos_t:Vector2i):
 	
 	# entity
 	if type_id not in GV.T_NONE_OR_REGULAR:
-		add_entity(type_id, pos_t, Entity.new(self, null, type_id, pos_t, Vector2i.ONE, false));
+		add_entity(type_id, pos_t, pos_t, Entity.new(self, null, type_id, pos_t, Vector2i.ONE, false));
 	
 	layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================
@@ -390,8 +390,6 @@ func _input(event):
 	if event.is_action_pressed("debug"):
 		player.add_premove(Premove.new(player, Vector2i(1, 0), GV.ActionId.SLIDE))
 		player.add_premove(Premove.new(player, Vector2i(-1, 0), GV.ActionId.SLIDE))
-		#print(entities[GV.EntityId.PLAYER])
-		#print(entities[GV.EntityId.DUPLICATOR])
 
 # NOTE for multithreading: sequential consistency is unnecessary for pathfinder, only data integrity matters
 # NOTE include_transient isn't a parameter bc atlas_coords of transient tile should always match tilemap
@@ -725,30 +723,38 @@ func try_shift(pusher_entity:Entity, tile_entity:Entity, dir:Vector2i, test_only
 		return true;
 	return false;
 
-func get_entity(entity_id:int, key:Variant):
-	return entities[entity_id].get(key);
+func get_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant) -> Entity:
+	var positioned_entities = entities[entity_id].get(nearest_pos_t);
+	if positioned_entities:
+		return positioned_entities.get(key);
+	return null;
 
 # tries tile, then aligned_tiles_in_transient, then pos_t
 # NOTE does not assume non-null tile must be entity key
-# NOTE tile parameter necessary bc get_transit_tile() may remove the transient_tile
+# NOTE tile parameter necessary bc get_transit_tile() might've removed the transient_tile
 func get_aligned_tile_entity(entity_id:int, tile:TileForTilemap, pos_t:Vector2i) -> Entity:
-	if tile:
-		var entity:Entity = get_entity(entity_id, tile);
-		if entity:
-			return entity;
+	# try tile (that was removed from tiles_in_transient by get_transit_tile())
+	assert(tile and tile.is_aligned and tile.pos_t == pos_t);
+	var entity:Entity = get_entity(entity_id, pos_t, tile);
+	if entity:
+		return entity;
 	
 	var transient_tile:TileForTilemap = get_aligned_tile_in_transient(pos_t);
 	if transient_tile:
-		return get_entity(entity_id, transient_tile);
+		return get_entity(entity_id, pos_t, transient_tile);
 	
-	return get_entity(entity_id, pos_t);
+	return get_entity(entity_id, pos_t, pos_t);
 
 # NOTE not equivalent to dying; this function is used frequently to change entity key
-func remove_entity(entity_id:int, key:Variant):
-	entities[entity_id].erase(key);
+func remove_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant):
+	var positioned_entities = entities[entity_id].get(nearest_pos_t);
+	if positioned_entities:
+		positioned_entities.erase(key);
 
-func add_entity(entity_id:int, key:Variant, entity:Entity):
-	entities[entity_id][key] = entity;
+func add_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant, entity:Entity):
+	if not entities[entity_id].has(nearest_pos_t):
+		entities[entity_id][nearest_pos_t] = Dictionary();
+	entities[entity_id][nearest_pos_t][key] = entity;
 
 # erase cells and initialize transit_tiles
 # tile with TransitId.MERGE is created but doesn't start animating yet
@@ -813,7 +819,7 @@ func animate_slide(pusher_entity:Entity, pos_t:Vector2i, dir:Vector2i, tile_push
 			if splitter_type_id not in GV.T_NONE_OR_REGULAR:
 				var tile_entity:Entity = Entity.new(self, splitting_tile, splitter_type_id, curr_pos_t, Vector2i.ONE, true);
 				tile_entity.set_is_busy(true);
-				add_entity(splitter_type_id, splitting_tile, tile_entity);
+				add_entity(splitter_type_id, curr_pos_t, splitting_tile, tile_entity);
 		
 		layer_mutexes[GV.LayerId.TILE].unlock();
 		# ================ END CRITICAL SECTION ================

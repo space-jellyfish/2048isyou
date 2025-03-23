@@ -188,10 +188,9 @@ func is_active() -> bool:
 func get_position() -> Vector2:
 	if body:
 		return body.position;
-	return 0.5 * (GV.world_to_pos_t(pos_t) + GV.world_to_pos_t(pos_t + size - Vector2i.ONE));
+	return 0.5 * (GV.pos_t_to_world(pos_t) + GV.pos_t_to_world(pos_t + size - Vector2i.ONE));
 
 # returns pos_t if is_aligned else null
-# NOTE assume pos_t == world_to_pos_t(body.position)
 func get_pos_t() -> Variant:
 	if is_aligned():
 		return pos_t;
@@ -221,7 +220,7 @@ func die(killer_entity:Entity) -> void:
 	if action_timer:
 		action_timer.queue_free();
 	
-	world.remove_entity(entity_id, body if body else pos_t);
+	world.remove_entity(entity_id, pos_t, body if body else pos_t);
 	if world.player == self:
 		world.player = null;
 	died.emit(killer_entity);
@@ -304,72 +303,72 @@ func consume_premove():
 		clear_premoves();
 
 func set_body_as_key(body:Node2D):
-	#check if no action required
+	# check if no action required
 	if self.body == body:
 		return;
 	
-	#find parameters for change_keys() function
-	var old_key:Variant = self.body if self.body else pos_t;
-	var new_key:Variant = body if body else pos_t;
-	
-	#update dictionary keys
-	change_keys(old_key, new_key);
-	
-	#emit moved signal
+	# assert position does not change
+	# if position should change, remove this assertion and emit moved_for_tracking_cam if applicable
 	var old_pos:Vector2 = get_position();
 	var new_pos:Vector2 = body.position if body else GV.pos_t_to_world(pos_t);
-	if new_pos != old_pos:
-		moved_for_tracking_cam.emit();
+	assert(old_pos == new_pos);
 	
-	#connect/disconnect body.moved signal
+	# connect/disconnect body.moved signal
 	if self.body and self.body != body:
 		self.body.moved.disconnect(_on_body_moved);
 	if body and body != self.body:
 		body.moved.connect(_on_body_moved);
 	
-	#update properties
+	# change keys
+	var new_pos_t:Vector2i = GV.world_to_pos_t(body.position) if body else pos_t;
+	change_keys(pos_t, new_pos_t, self.body if self.body else pos_t, body if body else new_pos_t);
+	
+	# update properties
 	self.body = body;
-	if body:
-		pos_t = GV.world_to_pos_t(body.position);
+	self.pos_t = new_pos_t;
 
 	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
 # NOTE body is set to null
 func set_pos_t_as_key(pos_t:Vector2i):
-	#check if no action required
+	# check if no action required
 	if self.pos_t == pos_t and not body:
 		return;
 	
-	#find parameters for change_keys() function
-	var old_key:Variant = body if body else self.pos_t;
-	
-	#update dictionary keys
-	change_keys(old_key, pos_t);
-	
-	#emit moved signal
+	# assert position does not change
+	# if position should change, remove this assertion and emit moved_for_tracking_cam if applicable
 	var old_pos:Vector2 = get_position();
-	var new_pos:Vector2 = GV.pos_t_to_world(pos_t);
-	if new_pos != old_pos:
-		moved_for_tracking_cam.emit();
+	var new_pos:Vector2 = body.position if body else GV.pos_t_to_world(pos_t);
+	assert(old_pos == new_pos);
 	
-	#connect/disconnect body.moved signal
+	# connect/disconnect body.moved signal
 	if body:
 		body.moved.disconnect(_on_body_moved);
 	
-	#update properties
-	self.pos_t = pos_t;
+	# change keys
+	change_keys(self.pos_t, pos_t, body if body else self.pos_t, pos_t);
+	
+	# update properties
 	self.body = null;
+	self.pos_t = pos_t;
 	
 	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
-func change_keys(old_key:Variant, new_key:Variant):
-	world.remove_entity(entity_id, old_key);
-	world.add_entity(entity_id, new_key, self);
+func change_keys(old_pos_t:Vector2i, new_pos_t:Vector2i, old_key:Variant, new_key:Variant):
+	world.remove_entity(entity_id, old_pos_t, old_key);
+	world.add_entity(entity_id, new_pos_t, new_key, self);
+
+func set_pos_t(new_pos_t:Vector2i):
+	if new_pos_t != pos_t:
+		change_keys(pos_t, new_pos_t, body if body else pos_t, body if body else new_pos_t);
+		pos_t = new_pos_t;
 
 func _on_body_moved():
-	pos_t = GV.world_to_pos_t(body.position);
+	assert(body);
+	set_pos_t(GV.world_to_pos_t(body.position));
+	
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA:
 		moved_for_tracking_cam.emit();
 
