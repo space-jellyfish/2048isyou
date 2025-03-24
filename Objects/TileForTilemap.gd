@@ -319,6 +319,37 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 	
 	# ================ START CRITICAL SECTION ================
 	world.layer_mutexes[GV.LayerId.TILE].lock();
+
+	# update tilemap TILE layer
+	var is_poolable:bool = is_aligned and move_transit_id == GV.TransitId.NONE and (conversion_transit_id == GV.TransitId.NONE or (is_move_finalize and is_merging and not is_reversed));
+	if is_poolable:
+		if (not is_merging and prev_transit_id != GV.TransitId.SPLIT) or (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or (is_move_finalize and is_merging and is_reversed):
+			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
+	
+	# remove from aligned_tiles_in_transient
+	if is_poolable and not is_move_finalize:
+		world.remove_aligned_tile_in_transient(self);
+	
+	# add to aligned_tiles_in_transient and AltId TILE
+	# NOTE add self as well if converting and no successful merge happens
+	if is_move_finalize:
+		if not is_reversed and is_merging:
+			assert(is_aligned);
+			world.add_aligned_tile_in_transient(merger_tile);
+			assert(world.get_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t) == -Vector2i.ONE);
+			world.set_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t, GV.TileSetSourceId.TILE, merger_tile.atlas_coords, 1, false);
+		elif conversion_transit_id != GV.TransitId.NONE:
+			assert(is_aligned);
+			world.add_aligned_tile_in_transient(self);
+			assert(world.get_atlas_coords(GV.LayerId.TILE, pos_t) == -Vector2i.ONE);
+			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, atlas_coords, 1, false);
+		if not is_reversed and is_splitted:
+			assert(is_aligned);
+			world.add_aligned_tile_in_transient(splitter_tile);
+			assert(world.get_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t) == -Vector2i.ONE);
+			world.set_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, GV.TileSetSourceId.TILE, splitter_tile.atlas_coords, 1, false);
+	
 	# get self entity
 	var tile_entity_id:int = old_type_id if is_reversed else new_type_id;
 	var tile_entity:Entity = world.get_entity(tile_entity_id, pos_t, self);
@@ -372,36 +403,6 @@ func finalize_transit(prev_transit_id:int, is_aligned:bool, pos_t:Vector2i, is_r
 			var splitter_tile_entity:Entity = world.get_entity(splitter_tile.old_type_id, splitter_tile.pos_t, splitter_tile);
 			if splitter_tile_entity:
 				splitter_tile_entity.die(resulting_entity);
-	
-	# update tilemap TILE layer
-	var is_poolable:bool = is_aligned and move_transit_id == GV.TransitId.NONE and (conversion_transit_id == GV.TransitId.NONE or (is_move_finalize and is_merging and not is_reversed));
-	if is_poolable:
-		if (not is_merging and prev_transit_id != GV.TransitId.SPLIT) or (prev_transit_id == GV.TransitId.SPLIT and not is_reversed) or (is_move_finalize and is_merging and is_reversed):
-			var final_atlas_coords:Vector2i = world.get_doubled_tile_atlas_coords(atlas_coords) if is_splitted and is_reversed else atlas_coords;
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, final_atlas_coords);
-	
-	# remove from aligned_tiles_in_transient
-	if is_poolable and not is_move_finalize:
-		world.remove_aligned_tile_in_transient(self);
-	
-	# add to aligned_tiles_in_transient and AltId TILE
-	# NOTE add self as well if converting and no successful merge happens
-	if is_move_finalize:
-		if not is_reversed and is_merging:
-			assert(is_aligned);
-			world.add_aligned_tile_in_transient(merger_tile);
-			assert(world.get_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t) == -Vector2i.ONE);
-			world.set_atlas_coords(GV.LayerId.TILE, merger_tile.pos_t, GV.TileSetSourceId.TILE, merger_tile.atlas_coords, 1, false);
-		elif conversion_transit_id != GV.TransitId.NONE:
-			assert(is_aligned);
-			world.add_aligned_tile_in_transient(self);
-			assert(world.get_atlas_coords(GV.LayerId.TILE, pos_t) == -Vector2i.ONE);
-			world.set_atlas_coords(GV.LayerId.TILE, pos_t, GV.TileSetSourceId.TILE, atlas_coords, 1, false);
-		if not is_reversed and is_splitted:
-			assert(is_aligned);
-			world.add_aligned_tile_in_transient(splitter_tile);
-			assert(world.get_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t) == -Vector2i.ONE);
-			world.set_atlas_coords(GV.LayerId.TILE, splitter_tile.pos_t, GV.TileSetSourceId.TILE, splitter_tile.atlas_coords, 1, false);
 		
 	world.layer_mutexes[GV.LayerId.TILE].unlock();
 	# ================ END CRITICAL SECTION ================

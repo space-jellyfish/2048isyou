@@ -109,14 +109,6 @@ func add_curr_frame_premove_entity(entity:Entity):
 	entities_with_curr_frame_premoves[entity.entity_id][entity] = true;
 	premove_callback_upcoming = true;
 
-func remove_curr_frame_premove_entity(entity:Entity):
-	entities_with_curr_frame_premoves[entity.entity_id].erase(entity);
-	
-	for typed_entities in entities_with_curr_frame_premoves.values():
-		if not typed_entities.is_empty():
-			return;
-	premove_callback_upcoming = false;
-
 # call deferred so that premove priority is respected
 func try_curr_frame_premoves():
 	for entity_id in GV.ENTITY_IDS_DECREASING_PREMOVE_PRIORITY:
@@ -756,9 +748,9 @@ func get_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant) -> Entity:
 # tries tile, then aligned_tiles_in_transient, then pos_t
 # NOTE does not assume non-null tile must be entity key
 # NOTE tile parameter necessary bc get_transit_tile() might've removed the transient_tile
+# NOTE cannot assert(tile) bc this function is used by path controllers
 func get_aligned_tile_entity(entity_id:int, tile:TileForTilemap, pos_t:Vector2i) -> Entity:
 	# try tile (that was removed from tiles_in_transient by get_transit_tile())
-	assert(tile and tile.is_aligned and tile.pos_t == pos_t);
 	var entity:Entity = get_entity(entity_id, pos_t, tile);
 	if entity:
 		return entity;
@@ -776,6 +768,7 @@ func remove_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant):
 		positioned_entities.erase(key);
 
 func add_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant, entity:Entity):
+	assert(not entity.is_dead());
 	if not entities[entity_id].has(nearest_pos_t):
 		entities[entity_id][nearest_pos_t] = Dictionary();
 	entities[entity_id][nearest_pos_t][key] = entity;

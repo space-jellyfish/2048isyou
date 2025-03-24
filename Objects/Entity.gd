@@ -28,8 +28,8 @@ var premoves:Array[Premove];
 
 # add a top-level FSM for escape/hunt/wander maybe
 # NOTE every state has precedence over the ones below it
-# NOTE no DEAD state bc Entity object is immediately released upon death
 enum State {
+	DEAD, # necessary bc due to potential key change, entity cannot be removed from entities_with_curr_frame_premoves with certainty
 	BUSY,
 	INACTIVE,
 	COOLDOWN,
@@ -50,7 +50,9 @@ var task_actions:Array[Vector3i];
 
 
 func get_new_state(is_busy:bool, is_active:Variant) -> int:
-	if is_busy:
+	if curr_state == State.DEAD:
+		return State.DEAD;
+	elif is_busy:
 		return State.BUSY;
 	elif (is_active is bool and not is_active) or (is_active == null and not is_active()):
 		return State.INACTIVE;
@@ -73,6 +75,8 @@ func change_state(state:int, reenter:bool):
 
 func enter_state(state:int):
 	match state:
+		State.DEAD:
+			pass;
 		State.BUSY:
 			pass;
 		State.INACTIVE:
@@ -110,6 +114,8 @@ func enter_state(state:int):
 
 func exit_state(state:int):
 	match state:
+		State.DEAD:
+			pass;
 		State.BUSY:
 			pass;
 		State.INACTIVE:
@@ -179,6 +185,9 @@ func is_roaming():
 func is_busy() -> bool:
 	return curr_state == State.BUSY;
 
+func is_dead() -> bool:
+	return curr_state == State.DEAD;
+
 func is_active() -> bool:
 	if body:
 		return Rect2(world.active_rect_t.position * GV.TILE_WIDTH, world.active_rect_t.size * GV.TILE_WIDTH).has_point(get_position());
@@ -216,14 +225,16 @@ func _process():
 			change_state(get_new_state(false, null), true);
 
 func die(killer_entity:Entity) -> void:
+	#print(GV.EntityId.keys()[entity_id], " at ", pos_t, " died")
 	if action_timer:
 		action_timer.queue_free();
 	
+	assert(world.get_entity(entity_id, pos_t, body if body else pos_t) == self);
 	world.remove_entity(entity_id, pos_t, body if body else pos_t);
-	world.remove_curr_frame_premove_entity(self);
 	if world.player == self:
 		world.player = null;
 	died.emit(killer_entity);
+	change_state(State.DEAD, false);
 
 # min wait time until initial action
 func get_initial_action_cooldown() -> float:
@@ -238,6 +249,7 @@ func get_action_cooldown(last_premove_initiated:bool) -> float:
 
 func _on_action_timer_timeout():
 	# change state
+	# don't do anything if DEAD
 	if curr_state == State.COOLDOWN:
 		change_state(get_new_state(false, null), false);
 	
@@ -366,7 +378,9 @@ func set_pos_t(new_pos_t:Vector2i):
 		pos_t = new_pos_t;
 
 func _on_body_moved():
-	assert(body);
+	if is_dead():
+		return;
+	
 	set_pos_t(GV.world_to_pos_t(body.position));
 	
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA:

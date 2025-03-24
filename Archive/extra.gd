@@ -2300,3 +2300,15 @@ func _on_active_rect_moved():
 
 	world.active_rect_moved.connect(_on_active_rect_moved);
 '''
+
+'''
+# NOTE no DEAD state bc Entity object is immediately released upon death
+
+func remove_curr_frame_premove_entity(entity:Entity):
+	entities_with_curr_frame_premoves[entity.entity_id].erase(entity);
+	
+	for typed_entities in entities_with_curr_frame_premoves.values():
+		if not typed_entities.is_empty():
+			return;
+	premove_callback_upcoming = false;
+'''
