@@ -49,10 +49,10 @@ var task_src_pos_t:Vector2i;
 var task_actions:Array[Vector3i];
 
 
-func get_new_state(is_busy:bool) -> int:
+func get_new_state(is_busy:bool, is_active:Variant) -> int:
 	if is_busy:
 		return State.BUSY;
-	elif not is_active():
+	elif (is_active is bool and not is_active) or (is_active == null and not is_active()):
 		return State.INACTIVE;
 	elif action_timer and not action_timer.is_stopped():
 		return State.COOLDOWN;
@@ -132,7 +132,6 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 	self.size = size;
 	
 	# connections
-	world.active_rect_moved.connect(_on_active_rect_moved);
 	if body:
 		body.moved.connect(_on_body_moved);
 	
@@ -165,7 +164,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 			action_timer.start(cd);
 	
 	# initialize state
-	change_state(get_new_state(false), true);
+	change_state(get_new_state(false, null), true);
 
 func is_tile() -> bool:
 	return not body or body is TileForTilemap;
@@ -214,13 +213,14 @@ func _process():
 		if curr_state == State.PATHFINDING:
 			# reenter to allow PATHFINDING -> PATHFINDING transition to restart pathfinding
 			# since current state is PATHFINDING, no other state can get reentered
-			change_state(get_new_state(false), true);
+			change_state(get_new_state(false, null), true);
 
 func die(killer_entity:Entity) -> void:
 	if action_timer:
 		action_timer.queue_free();
 	
 	world.remove_entity(entity_id, pos_t, body if body else pos_t);
+	world.remove_curr_frame_premove_entity(self);
 	if world.player == self:
 		world.player = null;
 	died.emit(killer_entity);
@@ -239,14 +239,14 @@ func get_action_cooldown(last_premove_initiated:bool) -> float:
 func _on_action_timer_timeout():
 	# change state
 	if curr_state == State.COOLDOWN:
-		change_state(get_new_state(false), false);
+		change_state(get_new_state(false, null), false);
 	
 	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
 
 func set_is_busy(is_busy:bool):
 	# change state
-	change_state(get_new_state(is_busy), false);
+	change_state(get_new_state(is_busy, null), false);
 	
 	if curr_state != State.BUSY and is_aligned():
 		assert(world.is_tile(get_pos_t()));
@@ -256,7 +256,7 @@ func add_premove(premove:Premove, change_state:bool = true):
 	
 	# change state
 	if change_state:
-		change_state(get_new_state(curr_state == State.BUSY), false);
+		change_state(get_new_state(curr_state == State.BUSY, null), false);
 
 func clear_premoves():
 	premoves.clear();
@@ -273,7 +273,7 @@ func try_curr_frame_premoves():
 	consume_premove();
 	
 	# change state
-	change_state(get_new_state(curr_state == State.BUSY), curr_state == State.PREMOVING);
+	change_state(get_new_state(curr_state == State.BUSY, null), curr_state == State.PREMOVING);
 
 func consume_premove():
 	var premove:Premove = premoves.pop_front();
@@ -372,15 +372,10 @@ func _on_body_moved():
 	if GV.tracking_cam_trigger_mode == GV.TrackingCamTriggerMode.LEAVE_AREA:
 		moved_for_tracking_cam.emit();
 
-func _on_active_rect_moved():
-	var is_active:bool = is_active();
-	
-	# start timer
-	if is_active and curr_state == State.INACTIVE and action_timer:
-		assert(action_timer.is_stopped());
-		action_timer.start(get_initial_action_cooldown());
-	
-	# change state
-	if (is_active and curr_state == State.INACTIVE) or \
-	(not is_active and curr_state != State.INACTIVE):
-		change_state(get_new_state(curr_state == State.BUSY), false);
+func activate():
+	assert(is_active());
+	change_state(get_new_state(curr_state == State.BUSY, true), false);
+
+func deactivate():
+	assert(not is_active());
+	change_state(get_new_state(curr_state == State.BUSY, false), false);

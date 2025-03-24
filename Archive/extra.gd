@@ -2262,3 +2262,41 @@ func get_pos_t(use_approx:bool) -> Variant:
 func get_position() -> Vector2:
 	return body.position if body else GV.pos_t_to_world(pos_t);
 '''
+
+'''
+# NOTE pos_t_max inclusive
+func load_rect(pos_t_min:Vector2i, pos_t_max:Vector2i):
+	for ty in range(pos_t_min.y, pos_t_max.y+1):
+		for tx in range(pos_t_min.x, pos_t_max.x+1):
+			var pos_t := Vector2i(tx, ty);
+			generate_cell(pos_t);
+'''
+
+'''
+func add_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant, entity:Entity):
+	var positioned_entities = entities[entity_id].get(nearest_pos_t);
+	if positioned_entities:
+		positioned_entities[key] = entity;
+	else:
+		positioned_entities = Dictionary();
+		positioned_entities[key] = entity;
+		entities[entity_id][nearest_pos_t] = positioned_entities;
+'''
+
+'''
+func _on_active_rect_moved():
+	var is_active:bool = is_active();
+	
+	# start timer
+	if is_active and curr_state == State.INACTIVE and action_timer:
+		assert(action_timer.is_stopped());
+		action_timer.start(get_initial_action_cooldown());
+	
+	# change state
+	if (is_active and curr_state == State.INACTIVE) or \
+	(not is_active and curr_state != State.INACTIVE):
+		change_state(get_new_state(curr_state == State.BUSY), false);
+
+
+	world.active_rect_moved.connect(_on_active_rect_moved);
+'''

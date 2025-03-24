@@ -5,8 +5,6 @@
 class_name World
 extends Node2D
 
-signal active_rect_moved;
-
 @onready var game:Node2D = $"/root/Game";
 var packed_tile:PackedScene = preload("res://Objects/TileForTilemap.tscn");
 var tile_sheet:CompressedTexture2D = preload("res://Sprites/Sheets/tile_sheet.png");
@@ -110,6 +108,14 @@ func add_curr_frame_premove_entity(entity:Entity):
 	#add to entities_with_curr_frame_premoves
 	entities_with_curr_frame_premoves[entity.entity_id][entity] = true;
 	premove_callback_upcoming = true;
+
+func remove_curr_frame_premove_entity(entity:Entity):
+	entities_with_curr_frame_premoves[entity.entity_id].erase(entity);
+	
+	for typed_entities in entities_with_curr_frame_premoves.values():
+		if not typed_entities.is_empty():
+			return;
+	premove_callback_upcoming = false;
 
 # call deferred so that premove priority is respected
 func try_curr_frame_premoves():
@@ -247,38 +253,56 @@ func _on_tracking_cam_moved(pos:Vector2):
 		#print("load_pos_t_max: ", load_pos_t_max);
 		
 		# update active rect first so generated entities can init with correct active/inactive status
+		# store old active_rect_t
 		var old_active_rect_t = active_rect_t;
+		# update active_rect_t
 		var active_pos_t_min:Vector2i = load_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
 		var active_rect_t_size:Vector2i = load_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
 		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
-		# emit moved conservatively for better perf
+		# update entities' active/inactive status
 		if active_rect_t != old_active_rect_t:
-			active_rect_moved.emit();
+			update_nonoverlapping(active_rect_t.position, active_rect_t.end - Vector2i.ONE, old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, deactivate_cell);
+			update_nonoverlapping(old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, active_rect_t.position, active_rect_t.end - Vector2i.ONE, activate_cell);
 		
 		# generate tiles, update loaded rect
-		update_map(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max);
-		loaded_pos_t_min = load_pos_t_min;
-		loaded_pos_t_max = load_pos_t_max;
+		if load_pos_t_min != loaded_pos_t_min or load_pos_t_max != loaded_pos_t_max:
+			update_nonoverlapping(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max, generate_cell);
+			loaded_pos_t_min = load_pos_t_min;
+			loaded_pos_t_max = load_pos_t_max;
 
 # NOTE pos_t_max inclusive
-func update_map(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Vector2i, new_pos_t_max:Vector2i):
+func update_nonoverlapping(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Vector2i, new_pos_t_max:Vector2i, update_func:Callable):
 	var overlap_min:Vector2i = Vector2i(maxi(old_pos_t_min.x, new_pos_t_min.x), maxi(old_pos_t_min.y, new_pos_t_min.y));
 	var overlap_max:Vector2i = Vector2i(mini(old_pos_t_max.x, new_pos_t_max.x), mini(old_pos_t_max.y, new_pos_t_max.y));
 	if overlap_min.x > overlap_max.x or overlap_min.y > overlap_max.y: #no overlap
-		load_rect(new_pos_t_min, new_pos_t_max);
+		update_rect(new_pos_t_min, new_pos_t_max, update_func);
 	else:
 		#new rect
-		load_rect(new_pos_t_min, Vector2i(new_pos_t_max.x, overlap_min.y - 1));
-		load_rect(Vector2i(new_pos_t_min.x, overlap_min.y), Vector2i(overlap_min.x - 1, overlap_max.y));
-		load_rect(Vector2i(overlap_max.x + 1, overlap_min.y), Vector2i(new_pos_t_max.x, overlap_max.y));
-		load_rect(Vector2i(new_pos_t_min.x, overlap_max.y + 1), new_pos_t_max);
+		update_rect(new_pos_t_min, Vector2i(new_pos_t_max.x, overlap_min.y - 1), update_func);
+		update_rect(Vector2i(new_pos_t_min.x, overlap_min.y), Vector2i(overlap_min.x - 1, overlap_max.y), update_func);
+		update_rect(Vector2i(overlap_max.x + 1, overlap_min.y), Vector2i(new_pos_t_max.x, overlap_max.y), update_func);
+		update_rect(Vector2i(new_pos_t_min.x, overlap_max.y + 1), new_pos_t_max, update_func);
 
 # NOTE pos_t_max inclusive
-func load_rect(pos_t_min:Vector2i, pos_t_max:Vector2i):
+func update_rect(pos_t_min:Vector2i, pos_t_max:Vector2i, update_func:Callable):
 	for ty in range(pos_t_min.y, pos_t_max.y+1):
 		for tx in range(pos_t_min.x, pos_t_max.x+1):
 			var pos_t := Vector2i(tx, ty);
-			generate_cell(pos_t);
+			update_func.call(pos_t);
+
+func activate_cell(pos_t:Vector2i):
+	for typed_entities in entities.values():
+		var positioned_entities = typed_entities.get(pos_t);
+		if positioned_entities:
+			for entity in positioned_entities.values():
+				entity.activate();
+
+func deactivate_cell(pos_t:Vector2i):
+	for typed_entities in entities.values():
+		var positioned_entities = typed_entities.get(pos_t);
+		if positioned_entities:
+			for entity in positioned_entities.values():
+				entity.deactivate();
 
 func generate_cell(pos_t:Vector2i):
 	if is_generated(pos_t):
