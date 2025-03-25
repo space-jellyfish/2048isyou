@@ -25,7 +25,7 @@ var premove_callback_upcoming:bool = false;
 # NOTE don't use Rect2i bc inclusive loaded_pos_t_max is more intuitive, especially for update_map()
 var loaded_pos_t_min:Vector2i = Vector2i.ZERO;
 var loaded_pos_t_max:Vector2i = -Vector2i.ONE; #inclusive
-var active_rect_t:Rect2i = Rect2i(Vector2i.ZERO, Vector2i.ZERO);
+var active_rect_t:Rect2i = Rect2i(Vector2i.ZERO, Vector2i.ZERO); # entity should be active if it intersects
 
 #for enemy intel
 @export var initial_player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
@@ -253,8 +253,13 @@ func _on_tracking_cam_moved(pos:Vector2):
 		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
 		# update entities' active/inactive status
 		if active_rect_t != old_active_rect_t:
+			# non-STP entities
 			update_nonoverlapping(active_rect_t.position, active_rect_t.end - Vector2i.ONE, old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, deactivate_cell);
 			update_nonoverlapping(old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, active_rect_t.position, active_rect_t.end - Vector2i.ONE, activate_cell);
+			
+			# STP entities require rects to be expanded toward top left to account for their size
+			update_nonoverlapping(active_rect_t.position - GV.MAX_STP_SIZE, active_rect_t.end - Vector2i.ONE, old_active_rect_t.position - GV.MAX_STP_SIZE, old_active_rect_t.end - Vector2i.ONE, deactivate_stp);
+			update_nonoverlapping(old_active_rect_t.position - GV.MAX_STP_SIZE, old_active_rect_t.end - Vector2i.ONE, active_rect_t.position - GV.MAX_STP_SIZE, active_rect_t.end - Vector2i.ONE, activate_stp);
 		
 		# generate tiles, update loaded rect
 		if load_pos_t_min != loaded_pos_t_min or load_pos_t_max != loaded_pos_t_max:
@@ -282,16 +287,40 @@ func update_rect(pos_t_min:Vector2i, pos_t_max:Vector2i, update_func:Callable):
 			var pos_t := Vector2i(tx, ty);
 			update_func.call(pos_t);
 
+func activate_stp(pos_t:Vector2i):
+	for entity_id in GV.E_STP:
+		var positioned_entities = entities[entity_id].get(pos_t);
+		if positioned_entities:
+			# don't ban 2+ STPs from overlapping (for now)
+			for entity in positioned_entities.values():
+				# check is necessary bc STP size is unknown
+				if entity.is_active():
+					entity.activate();
+
+func deactivate_stp(pos_t:Vector2i):
+	for entity_id in GV.E_STP:
+		var positioned_entities = entities[entity_id].get(pos_t);
+		if positioned_entities:
+			for entity in positioned_entities.values():
+				if not entity.is_active():
+					entity.deactivate();
+
 func activate_cell(pos_t:Vector2i):
-	for typed_entities in entities.values():
-		var positioned_entities = typed_entities.get(pos_t);
+	for entity_id in GV.EntityId.values():
+		if entity_id in GV.E_STP:
+			continue;
+		
+		var positioned_entities = entities[entity_id].get(pos_t);
 		if positioned_entities:
 			for entity in positioned_entities.values():
 				entity.activate();
 
 func deactivate_cell(pos_t:Vector2i):
-	for typed_entities in entities.values():
-		var positioned_entities = typed_entities.get(pos_t);
+	for entity_id in GV.EntityId.values():
+		if entity_id in GV.E_STP:
+			continue;
+		
+		var positioned_entities = entities[entity_id].get(pos_t);
 		if positioned_entities:
 			for entity in positioned_entities.values():
 				entity.deactivate();
@@ -766,6 +795,11 @@ func remove_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant):
 	var positioned_entities = entities[entity_id].get(nearest_pos_t);
 	if positioned_entities:
 		positioned_entities.erase(key);
+		
+		# remove empty nested dict to save memory
+		# this also speeds up all-nearest_pos_ts traversal (but all-nearest_pos_ts traversal isn't a good idea)
+		if positioned_entities.is_empty():
+			entities[entity_id].erase(nearest_pos_t);
 
 func add_entity(entity_id:int, nearest_pos_t:Vector2i, key:Variant, entity:Entity):
 	assert(not entity.is_dead());

@@ -274,6 +274,7 @@ enum EntityId {
 	STP_SPAWNED,
 	SNAKE,
 }
+const MAX_STP_SIZE := Vector2i(4, 4);
 
 # for open world
 enum StructureId {
@@ -287,6 +288,7 @@ const B_EMPTY:Array = [BackId.EMPTY, BackId.BOARD_FRAME];
 const T_NONE_OR_REGULAR:Array = [TypeId.NONE, TypeId.REGULAR];
 const T_KILLABLE_BY_ZEROING:Array = [TypeId.DUPLICATOR, TypeId.HOSTILE];
 const E_HAS_PATHFINDING:Array = [EntityId.DUPLICATOR];
+const E_STP:Array = [EntityId.STP_SPAWNING, EntityId.STP_SPAWNED];
 const E_ENEMY:Dictionary = { #[src_entity, dest_entity]
 	EntityId.NONE : {
 		EntityId.NONE : false,
