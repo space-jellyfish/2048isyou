@@ -387,7 +387,11 @@ func _on_body_moved():
 		moved_for_tracking_cam.emit();
 
 func activate():
+	# assert(curr_state == State.INACTIVE) doesn't work bc entity could be busy
 	assert(is_active());
+	
+	if action_timer and action_timer.is_stopped():
+		action_timer.start(get_initial_action_cooldown());
 	change_state(get_new_state(curr_state == State.BUSY, true), false);
 
 func deactivate():

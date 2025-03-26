@@ -5,7 +5,7 @@
 [ext_resource type="TileSet" uid="uid://bfrmys3k41wsd" path="res://Tilesets/full_set.tres" id="3_wyhqr"]
 [ext_resource type="PackedScene" uid="uid://cxvw7i8bgukix" path="res://Camera/TrackingCam.tscn" id="4_yt4wa"]
 
-[node name="World2" type="Node2D"]
+[node name="World" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_ot1s4")
 initial_player_pos_t = Vector2i(10, 5)
