@@ -7,10 +7,14 @@ var curr_search_id:int;
 func _ready():
 	super._ready();
 	
-	add_entity(GV.EntityId.DUPLICATOR, Vector2i(12, 5), Vector2i(12, 5), Entity.new(self, null, GV.EntityId.DUPLICATOR, Vector2i(12, 5), Vector2i.ONE, false))
+	add_entity(GV.EntityId.VOID, Vector2i(7, 8), Vector2i(7, 8), Entity.new(self, null, GV.EntityId.VOID, Vector2i(7, 8), Vector2i.ONE, false))
+	add_entity(GV.EntityId.DUPLICATOR, Vector2i(8, 8), Vector2i(8, 8), Entity.new(self, null, GV.EntityId.DUPLICATOR, Vector2i(8, 8), Vector2i.ONE, false))
 	
 	#connect sa_search_id_selector
 	game.sa_search_id_selector.item_selected.connect(_on_option_button_item_selected);
+	
+	# init procgen and loaded/active rect
+	_on_tracking_cam_moved($TrackingCam.position);
 
 func _unhandled_input(event):
 	if event is InputEventMouseButton and event.is_pressed():

@@ -23,8 +23,8 @@ func _ready():
 	wall_noise.set_fractal_lacunarity(2);
 	tile_noise.set_fractal_gain(0.5); #strength of subsequent layers, default 0.5
 	wall_noise.set_fractal_gain(0.3);
-
-	# init procgen
+	
+	# init procgen and loaded/active rect
 	_on_tracking_cam_moved($TrackingCam.position);
 
 func _input(event):

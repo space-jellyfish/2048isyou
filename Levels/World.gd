@@ -23,9 +23,9 @@ var premove_callback_upcoming:bool = false;
 # everything outside the loaded rect is conceptually unloaded => pause entity activity
 # NOTE previously loaded tilemap cells stay loaded in practice
 # NOTE don't use Rect2i bc inclusive loaded_pos_t_max is more intuitive, especially for update_map()
-var loaded_pos_t_min:Vector2i = Vector2i.ZERO;
-var loaded_pos_t_max:Vector2i = -Vector2i.ONE; #inclusive
-var active_rect_t:Rect2i = Rect2i(Vector2i.ZERO, Vector2i.ZERO); # entity should be active if it intersects
+@export var loaded_pos_t_min:Vector2i = Vector2i.ZERO;
+@export var loaded_pos_t_max:Vector2i = -Vector2i.ONE; #inclusive
+@export var active_rect_t:Rect2i = Rect2i(Vector2i.ZERO, Vector2i.ZERO); # entity should be active if it intersects
 
 #for enemy intel
 @export var initial_player_pos_t:Vector2i = Vector2i.ZERO; #used for enemy path planning; approx when player isn't aligned
@@ -236,36 +236,36 @@ func on_copy():
 	return level_array;
 
 func _on_tracking_cam_moved(pos:Vector2):
-	if procgen:
-		var load_pos_min:Vector2 = pos - GV.tracking_cam_resolution / 2 - GV.TILE_LOAD_BUFFER * GV.TILE_WIDTH * Vector2.ONE;
-		var load_pos_max:Vector2 = pos + GV.tracking_cam_resolution / 2 + GV.TILE_LOAD_BUFFER * GV.TILE_WIDTH * Vector2.ONE;
-		var load_pos_t_min:Vector2i = GV.world_to_pos_t(load_pos_min);
-		var load_pos_t_max:Vector2i = GV.world_to_pos_t(load_pos_max);
-		#print("load_pos_t_min: ", load_pos_t_min);
-		#print("load_pos_t_max: ", load_pos_t_max);
+	var load_pos_min:Vector2 = pos - GV.tracking_cam_resolution / 2 - GV.TILE_LOAD_BUFFER * GV.TILE_WIDTH * Vector2.ONE;
+	var load_pos_max:Vector2 = pos + GV.tracking_cam_resolution / 2 + GV.TILE_LOAD_BUFFER * GV.TILE_WIDTH * Vector2.ONE;
+	var load_pos_t_min:Vector2i = GV.world_to_pos_t(load_pos_min);
+	var load_pos_t_max:Vector2i = GV.world_to_pos_t(load_pos_max);
+	#print("load_pos_t_min: ", load_pos_t_min);
+	#print("load_pos_t_max: ", load_pos_t_max);
+	
+	# update active rect first so generated entities can init with correct active/inactive status
+	# store old active_rect_t
+	var old_active_rect_t = active_rect_t;
+	# update active_rect_t
+	var active_pos_t_min:Vector2i = load_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
+	var active_rect_t_size:Vector2i = load_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
+	active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
+	# update entities' active/inactive status
+	if active_rect_t != old_active_rect_t:
+		# non-STP entities
+		update_nonoverlapping(active_rect_t.position, active_rect_t.end - Vector2i.ONE, old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, deactivate_cell);
+		update_nonoverlapping(old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, active_rect_t.position, active_rect_t.end - Vector2i.ONE, activate_cell);
 		
-		# update active rect first so generated entities can init with correct active/inactive status
-		# store old active_rect_t
-		var old_active_rect_t = active_rect_t;
-		# update active_rect_t
-		var active_pos_t_min:Vector2i = load_pos_t_min + GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE;
-		var active_rect_t_size:Vector2i = load_pos_t_max - GV.ENTITY_INACTIVE_BUFFER * Vector2i.ONE + Vector2i.ONE - active_pos_t_min;
-		active_rect_t = Rect2i(active_pos_t_min, active_rect_t_size);
-		# update entities' active/inactive status
-		if active_rect_t != old_active_rect_t:
-			# non-STP entities
-			update_nonoverlapping(active_rect_t.position, active_rect_t.end - Vector2i.ONE, old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, deactivate_cell);
-			update_nonoverlapping(old_active_rect_t.position, old_active_rect_t.end - Vector2i.ONE, active_rect_t.position, active_rect_t.end - Vector2i.ONE, activate_cell);
-			
-			# STP entities require rects to be expanded toward top left to account for their size
-			update_nonoverlapping(active_rect_t.position - GV.MAX_STP_SIZE, active_rect_t.end - Vector2i.ONE, old_active_rect_t.position - GV.MAX_STP_SIZE, old_active_rect_t.end - Vector2i.ONE, deactivate_stp);
-			update_nonoverlapping(old_active_rect_t.position - GV.MAX_STP_SIZE, old_active_rect_t.end - Vector2i.ONE, active_rect_t.position - GV.MAX_STP_SIZE, active_rect_t.end - Vector2i.ONE, activate_stp);
-		
-		# generate tiles, update loaded rect
-		if load_pos_t_min != loaded_pos_t_min or load_pos_t_max != loaded_pos_t_max:
+		# STP entities require rects to be expanded toward top left to account for their size
+		update_nonoverlapping(active_rect_t.position - GV.MAX_STP_SIZE, active_rect_t.end - Vector2i.ONE, old_active_rect_t.position - GV.MAX_STP_SIZE, old_active_rect_t.end - Vector2i.ONE, deactivate_stp);
+		update_nonoverlapping(old_active_rect_t.position - GV.MAX_STP_SIZE, old_active_rect_t.end - Vector2i.ONE, active_rect_t.position - GV.MAX_STP_SIZE, active_rect_t.end - Vector2i.ONE, activate_stp);
+	
+	# generate tiles, update loaded rect
+	if load_pos_t_min != loaded_pos_t_min or load_pos_t_max != loaded_pos_t_max:
+		if procgen:
 			update_nonoverlapping(loaded_pos_t_min, loaded_pos_t_max, load_pos_t_min, load_pos_t_max, generate_cell);
-			loaded_pos_t_min = load_pos_t_min;
-			loaded_pos_t_max = load_pos_t_max;
+		loaded_pos_t_min = load_pos_t_min;
+		loaded_pos_t_max = load_pos_t_max;
 
 # NOTE pos_t_max inclusive
 func update_nonoverlapping(old_pos_t_min:Vector2i, old_pos_t_max:Vector2i, new_pos_t_min:Vector2i, new_pos_t_max:Vector2i, update_func:Callable):

@@ -8,6 +8,9 @@
 [node name="World" type="Node2D"]
 process_mode = 1
 script = ExtResource("1_o5law")
+loaded_pos_t_max = Vector2i(39, 29)
+active_rect_t = Rect2i(0, 0, 40, 30)
+initial_player_pos_t = Vector2i(31, 12)
 
 [node name="LevelName" type="Label" parent="."]
 modulate = Color(1, 1, 1, 0)
