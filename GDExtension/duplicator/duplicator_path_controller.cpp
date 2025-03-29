@@ -122,7 +122,6 @@ DuplicatorPathController::~DuplicatorPathController() {
 }
 
 
-// neighbor entry (dir : Danger) not added if neighbor isn't a duplicator
 void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t, vector<vector<uint32_t>>& lv) {
     Array layer_mutexes = world->get("layer_mutexes");
     Ref<Mutex> tile_mutex = layer_mutexes[LayerId::TILE];
@@ -132,12 +131,12 @@ void DuplicatorPathController::get_world_info(Vector2i pos_t, Vector2i min_pos_t
     for (int dx = 0; dx < lv[0].size(); ++dx) {
         Vector2i curr_pos_t = Vector2i(min_pos_t.x + dx, pos_t.y);
         Vector2i curr_lv_pos = curr_pos_t - min_pos_t;
-        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t, true, true, true);
+        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t, true, false, false); // don't purge REGULAR bc diff_type_merge_bonus depends on it
     }
     for (int dy = 0; dy < lv.size(); ++dy) {
         Vector2i curr_pos_t = Vector2i(pos_t.x, min_pos_t.y + dy);
         Vector2i curr_lv_pos = curr_pos_t - min_pos_t;
-        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t, true, true, true);
+        lv[curr_lv_pos.y][curr_lv_pos.x] = get_stuff_id(curr_pos_t, true, false, false);
     }
 
     tile_mutex->unlock();
@@ -163,7 +162,7 @@ int DuplicatorPathController::get_neighbor_duplicator_count(vector<vector<uint32
 // danger_lv is set to DANGER_LV_MAX if adjacent to a higher-merge-priority tile, or neighbor.danger_lv - 1 if adjacent to another duplicator
 // danger_escape_dir is set to point away from souce of highest danger_lv, or any one if there are multiple
 // embrace annihilation: don't escape if neighbor entity will die from merge
-// set neighbor danger rn bc own danger will change once get_actions() returns
+// set neighbor danger rn (if it's also a DUPLICATOR) bc own danger will change once get_actions() returns
 // NOTE assumes each entity has unique merge_priority
 void DuplicatorPathController::update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos) {
     uint32_t dest_stuff_id = lv[lv_pos.y][lv_pos.x];
@@ -228,6 +227,10 @@ void DuplicatorPathController::update_neighbor_dangers(Vector2i min_pos_t, Vecto
         tile_mutex->unlock();
         // ================ END CRITICAL SECTION ================
     }
+}
+
+void DuplicatorPathController::update_split_weight(vector<vector<uint32_t>>& lv, Vector2i lv_pos) {
+
 }
 
 // NOTE this function is run from the main thread, so set_is_busy() => get_actions() won't be called until this function finishes
@@ -367,7 +370,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
     weight += (target_merge_priority != -1) * 1000;
 
     // wander-related stuff
-    weight += (action.z == ActionId::SPLIT) * 2;
+    weight += (action.z == ActionId::SPLIT) * p_dpc->split_weight;
 
     // random term for unpredictability
     uniform_int_distribution<int> dist(0, 10);
@@ -377,7 +380,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
 bool DuplicatorPathController::Action::operator<(const Action& other) const {
     int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 2;
     int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * -1;
-    int diff_type_merge_bonus = signi(is_diff_type_merge - other.is_diff_type_merge) * 4;
+    int diff_type_merge_bonus = signi(is_diff_type_merge - other.is_diff_type_merge) * 3;
     int temp_weight = weight + resulting_power_bonus + merge_priority_bonus + diff_type_merge_bonus;
 
     // tiebreaking

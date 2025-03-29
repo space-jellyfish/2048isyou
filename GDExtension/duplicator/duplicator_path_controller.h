@@ -36,6 +36,10 @@ private:
         Vector2i escape_dir = DIRECTIONS.at(DirectionId::RIGHT);
     };
 
+    // range [-2, 2]; dynamically adjusted based on neighboring same-sign values that have merge prospects
+    // (get_actions() has nonzero chance of returning merge if vals mergeable) and availability of diff_type_merge
+    int split_weight = 0;
+
     // to make final action non-deterministic, calculate a priority score in constructor
     // and compare priority score in the operator overload
     struct Action {
@@ -95,6 +99,7 @@ public:
     int get_neighbor_duplicator_count(vector<vector<uint32_t>>& lv, Vector2i lv_pos);
     void update_danger(vector<vector<uint32_t>>& lv, Vector2i min_pos_t, Vector2i lv_pos);
     void update_neighbor_dangers(Vector2i min_pos_t, Vector2i lv_pos);
+    void update_split_weight(vector<vector<uint32_t>>& lv, Vector2i lv_pos);
     void on_entity_move_finalized(Vector2i pos_t, bool is_reversed, Ref<RefCounted> resulting_entity);
     void get_actions();
 };
