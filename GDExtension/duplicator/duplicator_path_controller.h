@@ -28,18 +28,6 @@ class DuplicatorPathController : public RefCounted {
     GDCLASS(DuplicatorPathController, RefCounted);
 
 private:
-    // random generator stuff for tiebreaking
-    mt19937 generator;
-
-    struct Danger {
-        int level = 0;
-        Vector2i escape_dir = DIRECTIONS.at(DirectionId::RIGHT);
-    };
-
-    // range [-2, 2]; dynamically adjusted based on neighboring same-sign values that have merge prospects
-    // (get_actions() has nonzero chance of returning merge if vals mergeable) and availability of diff_type_merge
-    int split_weight = 0;
-
     // to make final action non-deterministic, calculate a priority score in constructor
     // and compare priority score in the operator overload
     struct Action {
@@ -51,10 +39,14 @@ private:
         int dot_escape_dir;
         int merger_type_id;
         int target_merge_priority;
-        bool is_diff_type_merge;
     
         Action(DuplicatorPathController* p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_merger_type_id, bool is_in_danger);
         bool operator<(const Action& other) const;
+    };
+
+    struct Danger {
+        int level = 0;
+        Vector2i escape_dir = DIRECTIONS.at(DirectionId::RIGHT);
     };
 
     // stuff from scene tree
@@ -63,12 +55,20 @@ private:
     TileMap* cells = nullptr;
     Ref<RefCounted> entity = nullptr;
 
+    // random generator stuff for tiebreaking
+    mt19937 generator;
+
     static const int DANGER_LV_MAX = 2;
+    static const int SPLIT_WEIGHT_MIN = -2;
+    static const int SPLIT_WEIGHT_MAX = 3;
     int LV_RADIUS = tile_push_limits.at(EntityId::DUPLICATOR) + 1;
     int LV_WIDTH = 2 * LV_RADIUS + 1;
 
     Danger danger;
     recursive_mutex danger_mutex;
+
+    // dynamically adjusted based on majority direction and availability of neighboring diff-type same-sign nonzero values
+    int split_weight = 0;
 
 protected:
 	static void _bind_methods();

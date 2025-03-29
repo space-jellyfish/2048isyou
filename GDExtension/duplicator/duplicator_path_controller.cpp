@@ -4,6 +4,7 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/classes/engine.hpp>
+#include <algorithm>
 #include "actions.h"
 #include "duplicator_path_controller.h"
 
@@ -230,7 +231,36 @@ void DuplicatorPathController::update_neighbor_dangers(Vector2i min_pos_t, Vecto
 }
 
 void DuplicatorPathController::update_split_weight(vector<vector<uint32_t>>& lv, Vector2i lv_pos) {
+    uint32_t stuff_id = lv[lv_pos.y][lv_pos.x];
+    uint8_t tile_id = actions::get_tile_id(stuff_id);
+    Vector2i val = tile_id_to_val(tile_id);
 
+    bool has_diff_type_same_sign_nonzero_neighbor = false;
+    int delta = 0; // difference between no. lower-power and higher-or-equal-power neighbors with merge prospect
+
+    for (auto& [dir_id, dir] : DIRECTIONS) {
+        Vector2i curr_lv_pos = lv_pos + dir;
+        uint32_t curr_stuff_id = lv[curr_lv_pos.y][curr_lv_pos.x];
+        uint8_t curr_type_id = actions::get_type_id(curr_stuff_id);
+        uint8_t curr_tile_id = actions::get_tile_id(curr_stuff_id);
+        Vector2i curr_val = tile_id_to_val(curr_tile_id);
+
+        if (curr_tile_id != TileId::ZERO && curr_val.y == val.y && curr_type_id != TypeId::NONE && curr_type_id != TypeId::DUPLICATOR) {
+            has_diff_type_same_sign_nonzero_neighbor = true;
+
+            if (curr_val.x < val.x) {
+                ++delta;
+            }
+            else {
+                --delta;
+            }
+        }
+    }
+    if (!has_diff_type_same_sign_nonzero_neighbor) {
+        ++delta;
+    }
+
+    split_weight = clamp(split_weight + signi(delta), SPLIT_WEIGHT_MIN, SPLIT_WEIGHT_MAX);
 }
 
 // NOTE this function is run from the main thread, so set_is_busy() => get_actions() won't be called until this function finishes
@@ -276,9 +306,10 @@ void DuplicatorPathController::get_actions() {
     danger_mutex.unlock();
     // ================ END CRITICAL SECTION ================
 
-    // update danger
+    // update state vars
     // NOTE danger level is unchanged if no dangerous neighbors detected
     update_danger(lv, min_pos_t, lv_pos);
+    update_split_weight(lv, lv_pos);
 
     // escape, hunt, wander, reproduce
     // don't make action deterministic, even if conditions suggest that a move is very good
@@ -352,7 +383,6 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
 {
     // init vars
     target_merge_priority = (T_NONE_OR_REGULAR.find(merger_type_id) == T_NONE_OR_REGULAR.end() && merger_type_id != TypeId::DUPLICATOR) ? merge_priorities.at(merger_type_id) : -1;
-    is_diff_type_merge = (merger_type_id != TypeId::NONE && merger_type_id != TypeId::DUPLICATOR);
 
     // escape-related stuff
     if (is_in_danger) {
@@ -366,22 +396,20 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
         }
     }
 
-    // hunt-related stuff
-    weight += (target_merge_priority != -1) * 1000;
-
-    // wander-related stuff
-    weight += (action.z == ActionId::SPLIT) * p_dpc->split_weight;
+    weight += (target_merge_priority != -1) * 1000; // hunt has priority
+    weight += (merger_type_id != TypeId::NONE && merger_type_id != TypeId::DUPLICATOR) * 4; // diff_type_merge
+    weight += (merger_type_id == TypeId::DUPLICATOR) * -1; // same_type_merge
+    weight += (action.z == ActionId::SPLIT) * p_dpc->split_weight; // split_weight
 
     // random term for unpredictability
-    uniform_int_distribution<int> dist(0, 10);
+    uniform_int_distribution<int> dist(0, 8);
     weight += dist(dpc->generator);
 }
 
 bool DuplicatorPathController::Action::operator<(const Action& other) const {
-    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 2;
-    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * -1;
-    int diff_type_merge_bonus = signi(is_diff_type_merge - other.is_diff_type_merge) * 3;
-    int temp_weight = weight + resulting_power_bonus + merge_priority_bonus + diff_type_merge_bonus;
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 1;
+    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * -1; // food preference
+    int temp_weight = weight + resulting_power_bonus + merge_priority_bonus;
 
     // tiebreaking
     if (temp_weight == other.weight) {

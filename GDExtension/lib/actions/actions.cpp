@@ -103,7 +103,7 @@ int dir_to_dir_id(Vector2i dir) {
 
 Vector2i tile_id_to_val(uint8_t tile_id) {
     if (tile_id == TileId::ZERO || tile_id == TileId::EMPTY) {
-        return Vector2i(-1, -1);
+        return Vector2i(-1, 1);
     }
     int signed_incremented_pow = tile_id - TileId::ZERO;
     return Vector2i(abs(signed_incremented_pow) - 1, signi(signed_incremented_pow));
