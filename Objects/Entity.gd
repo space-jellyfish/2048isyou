@@ -67,10 +67,10 @@ func get_new_state(is_busy:bool, is_active:Variant) -> int:
 
 func change_state(state:int, reenter:bool):
 	if curr_state != state or reenter:
-		print("change state to ", State.keys()[state])
 		exit_state(curr_state);
 		curr_state = state;
 		enter_state(state);
+		#print("change state to ", State.keys()[state])
 		#if entity_id == GV.EntityId.DUPLICATOR:
 			#print(GV.EntityId.keys()[entity_id], " changed state to ", State.keys()[curr_state]);
 
@@ -214,7 +214,6 @@ func _process():
 			for task_action in task_actions:
 				var premove := Premove.new(self, Vector2i(task_action.x, task_action.y), task_action.z);
 				add_premove(premove, false);
-				print("found premove ", task_action);
 		
 		# reset stuff
 		task_actions.clear();

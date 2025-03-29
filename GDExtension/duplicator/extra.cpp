@@ -374,3 +374,7 @@ uint8_t atlas_coords_to_back_id(Vector2i back_atlas_coords, bool block_ungenerat
     return max(back_atlas_coords.x, 0);
 }
 */
+
+/*
+int target_merge_priority; //-1 if not merge or target isn't a non-duplicator entity
+*/

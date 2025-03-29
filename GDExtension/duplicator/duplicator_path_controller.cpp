@@ -293,7 +293,7 @@ void DuplicatorPathController::get_actions() {
 
         for (int action_id : {ActionId::SLIDE, ActionId::SPLIT}) {
             Vector3i action = Vector3i(dir.x, dir.y, action_id);
-            int action_push_count = get_action_push_count(lv, lv_pos, action, true, true, true, false, temp_danger.level || neighbor_duplicator_count >= 3);
+            int action_push_count = get_action_push_count(lv, lv_pos, action, true, true, true, false, temp_danger.level || neighbor_duplicator_count >= 2);
             //UtilityFunctions::print(action, action_push_count);
 
             // don't move in -escape_dir if danger_level not in [0, DANGER_LV_MAX]
@@ -304,7 +304,7 @@ void DuplicatorPathController::get_actions() {
             if (action_push_count != -1) {
                 //find resulting power
                 int resulting_power;
-                if (!action_push_count) {
+                if (action_push_count) {
                     resulting_power = src_power;
                 }
                 else {
@@ -314,9 +314,9 @@ void DuplicatorPathController::get_actions() {
                     resulting_power = tile_id_to_val(merged_tile_id).x;
                 }
                 int dot_escape_dir = dot(dir, temp_danger.escape_dir);
-                int target_merge_priority = (!action_push_count && T_NONE_OR_REGULAR.find(curr_type_id) == T_NONE_OR_REGULAR.end() && curr_type_id != TypeId::DUPLICATOR) ? merge_priorities.at(curr_type_id) : -1;
+                int merger_type_id = action_push_count ? TypeId::NONE : curr_type_id;
 
-                actions.emplace_back(this, action, resulting_power, dot_escape_dir, target_merge_priority, temp_danger.level);
+                actions.emplace_back(this, action, resulting_power, dot_escape_dir, merger_type_id, temp_danger.level);
             }
         }
     }
@@ -337,13 +337,20 @@ void DuplicatorPathController::get_actions() {
 // else prefer escape dir over perp dir
 // else prefer higher resulting power
 // else prefer slide over split (to grow power)
-DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_target_merge_priority, bool is_in_danger) :
+// else prefer lower merge priority target
+
+// assume action not in -escape_dir if danger_level not in [0, DANGER_LV_MAX]
+DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector3i p_action, int p_resulting_power, int p_dot_escape_dir, int p_merger_type_id, bool is_in_danger) :
     dpc(p_dpc),
     action(p_action),
     resulting_power(p_resulting_power),
     dot_escape_dir(p_dot_escape_dir),
-    target_merge_priority(p_target_merge_priority)
+    merger_type_id(p_merger_type_id)
 {
+    // init vars
+    target_merge_priority = (T_NONE_OR_REGULAR.find(merger_type_id) == T_NONE_OR_REGULAR.end() && merger_type_id != TypeId::DUPLICATOR) ? merge_priorities.at(merger_type_id) : -1;
+    is_diff_type_merge = (merger_type_id != TypeId::NONE && merger_type_id != TypeId::DUPLICATOR);
+
     // escape-related stuff
     if (is_in_danger) {
         // only move toward danger source if danger_level in [0, DANGER_LV_MAX] and no other directions are available
@@ -360,7 +367,7 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
     weight += (target_merge_priority != -1) * 1000;
 
     // wander-related stuff
-    weight += (action.z == ActionId::SLIDE) * 2;
+    weight += (action.z == ActionId::SPLIT) * 2;
 
     // random term for unpredictability
     uniform_int_distribution<int> dist(0, 10);
@@ -368,9 +375,10 @@ DuplicatorPathController::Action::Action(DuplicatorPathController* p_dpc, Vector
 }
 
 bool DuplicatorPathController::Action::operator<(const Action& other) const {
-    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 8;
-    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * 1;
-    int temp_weight = weight + resulting_power_bonus + merge_priority_bonus;
+    int resulting_power_bonus = signi(resulting_power - other.resulting_power) * 2;
+    int merge_priority_bonus = signi(target_merge_priority - other.target_merge_priority) * -1;
+    int diff_type_merge_bonus = signi(is_diff_type_merge - other.is_diff_type_merge) * 4;
+    int temp_weight = weight + resulting_power_bonus + merge_priority_bonus + diff_type_merge_bonus;
 
     // tiebreaking
     if (temp_weight == other.weight) {

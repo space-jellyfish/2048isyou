@@ -7,7 +7,7 @@ var curr_search_id:int;
 func _ready():
 	super._ready();
 	
-	add_entity(GV.EntityId.VOID, Vector2i(7, 8), Vector2i(7, 8), Entity.new(self, null, GV.EntityId.VOID, Vector2i(7, 8), Vector2i.ONE, false))
+	#add_entity(GV.EntityId.VOID, Vector2i(7, 8), Vector2i(7, 8), Entity.new(self, null, GV.EntityId.VOID, Vector2i(7, 8), Vector2i.ONE, false))
 	add_entity(GV.EntityId.DUPLICATOR, Vector2i(8, 8), Vector2i(8, 8), Entity.new(self, null, GV.EntityId.DUPLICATOR, Vector2i(8, 8), Vector2i.ONE, false))
 	
 	#connect sa_search_id_selector

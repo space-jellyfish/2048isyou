@@ -29,7 +29,7 @@ const WORLD_MAX_POS_T:Vector2i = BORDER_MAX_POS_T - Vector2i.ONE;
 
 #level-related stuff
 const LEVEL_COUNT:int = 4;
-var current_level_index:int = 2;
+var current_level_index:int = 0;
 var current_level_from_save:bool = false;
 var level_scores = [];
 var changing_level:bool = false;
@@ -650,9 +650,9 @@ var action_cooldown_deviations:Dictionary = {
 var entity_base_spawn_weights:Dictionary = {
 	TypeId.NONE : 0,
 	TypeId.PLAYER : 0,
-	TypeId.DUPLICATOR : 1000,#4,
+	TypeId.DUPLICATOR : 4,
 	TypeId.HOSTILE : 50,
-	TypeId.VOID : 1000,#2,
+	TypeId.VOID : 2,
 	TypeId.REGULAR : 10000,
 	TypeId.SQUID : 1,
 }
