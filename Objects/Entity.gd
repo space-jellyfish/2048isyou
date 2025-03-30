@@ -167,7 +167,7 @@ func _init(world:World, body:Node2D, entity_id:int, pos_t:Vector2i, size:Vector2
 		assert(action_timer.is_inside_tree());
 		
 		if is_active():
-			var cd:float = get_action_cooldown(true) if is_split_spawned else get_initial_action_cooldown();
+			var cd:float = get_action_cooldown(false) if is_split_spawned else get_initial_action_cooldown();
 			action_timer.start(cd);
 	
 	# initialize state
