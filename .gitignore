@@ -1,7 +1,6 @@
 # Godot 4+ specific ignores
 .godot/
 
-**/.vscode/*
-text/
-talks/
-**/godot-cpp/
+.vscode/
+GDExtension/.vscode/
+GDExtension/godot-cpp/
